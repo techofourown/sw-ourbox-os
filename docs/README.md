@@ -1,17 +1,19 @@
 # Documentation
 
-This repository uses a lightweight documentation structure focused on RFCs and ADRs.
+This repository uses a lightweight documentation structure focused on app dossiers, RFCs, and ADRs.
 
 ## Structure
 
 ```
 docs/
+├── apps/          # App suite docs + upstream candidate evaluations
 ├── rfcs/          # Pre-decisional exploration and proposals
 └── decisions/     # Architecture Decision Records (ADRs)
 ```
 
 ## When to use what
 
+- **Apps (`apps/`)** — living app suite docs and upstream candidate evaluations.
 - **RFCs (`rfcs/`)** — explore ideas or proposals before deciding; capture options, trade-offs, and
   open questions.
 - **ADRs (`decisions/`)** — record a decision that was made, with context, rationale, consequences,
@@ -22,7 +24,7 @@ docs/
 ```
 Problem or Idea
     ↓
-RFC (exploration) → Discussion → Decision
+Apps (dossiers) / RFC (exploration) → Discussion → Decision
     ↓                              ↓
 Implementation               ADR (record)
 ```
