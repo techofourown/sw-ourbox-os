@@ -1,6 +1,6 @@
 # App: Notes
 
-**Status:** Exploring  
+**Status:** Selected  
 **Bundled:** Yes  
 **Created:** YYYY-MM-DD  
 **Updated:** YYYY-MM-DD
@@ -25,6 +25,7 @@ A personal notes app for writing, organizing, and searching text and media.
 
 ## Candidates
 
+- [Flatnotes](./candidates/flatnotes.md) - selected
 - [Slatnost](./candidates/slatnost.md)
 
 ## Open questions
@@ -34,4 +35,4 @@ A personal notes app for writing, organizing, and searching text and media.
 
 ## Related RFCs / ADRs
 
-- TBD
+- [ADR-0001: Adopt Flatnotes for Notes](../../decisions/ADR-0001-adopt-flatnotes-for-notes.md)
