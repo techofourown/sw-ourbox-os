@@ -1,0 +1,406 @@
+# SAD-0001: OurBox OS System Architecture Document
+
+## Status
+Draft (normative unless explicitly marked “informative”)
+
+## Date
+2026-01-25
+
+## Related decisions
+- ADR-0003: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
+- ADR-0004: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
+- ADR-0005: Standardize on Tenant as the OurBox OS Data Boundary Term
+- ADR-0006: OurBox Document IDs
+
+## Terminology
+- `docs/architecture/OurBox-OS-Terms-and-Definitions.md` is normative for vocabulary.
+
+---
+
+## 1 Introduction
+
+### 1.1 Purpose
+This document defines the high-level system architecture of OurBox OS, including:
+- multi-tenant routing and isolation,
+- offline-first client architecture,
+- tenant DB replication,
+- service boundaries,
+- deployment and operational constraints for a k3s-based appliance.
+
+It is intended to be a stable reference for implementers, maintainers, and contributors.
+
+### 1.2 Scope
+This SAD covers:
+- shipped first-party apps posture (offline-first PWAs),
+- tenant/user/app relationships and how they map to the web platform, CouchDB/PouchDB, and k3s,
+- the canonical routing and storage invariants that make multi-tenancy legible.
+
+It does not specify UI flows or user-facing terminology.
+
+### 1.3 Architectural constraints (from ADRs)
+- Shipped apps MUST be offline-first PWAs (ADR-0003).
+- CouchDB on the box and PouchDB in the browser MUST be the primary data store stack for shipped apps (ADR-0004).
+- Tenant MUST be the canonical top-level data boundary term (ADR-0005).
+- Kubernetes “namespace” is reserved for Kubernetes; it MUST NOT be used as a synonym for tenant (ADR-0005).
+- Tenant DBs MUST be partitioned databases; doc kind MUST be encoded in `_id` (ADR-0004, ADR-0006).
+- OurBox application documents MUST use `_id = "<doc_kind>:<uuidv4>"` and ULIDs are prohibited (ADR-0006).
+- Large blobs MUST NOT be stored as CouchDB attachments by default (ADR-0004).
+
+---
+
+## 2 Architectural drivers
+
+### 2.1 Key quality attributes
+- **Offline-first**: apps remain functional when the box is unreachable after first load.
+- **Sporadic sync**: sync tolerates intermittent connectivity and resumes incrementally.
+- **Mobile-first**: the web experience is the primary distribution mechanism.
+- **Multi-tenant correctness**: Bob and Alice can share the same physical devices without accidental tenant mixing.
+- **Legibility**: boundaries must be obvious in URLs, logs, and database names.
+- **Operational simplicity**: avoid carrying two primary database stacks; avoid custom sync protocols for the v0 posture.
+
+### 2.2 Security posture (Operator Truth)
+OurBox does not claim tenant confidentiality from the device operator. Tenants exist to make normal
+product behavior correct and understandable.
+
+---
+
+## 3 System context (informative)
+
+### 3.1 Actors
+- **User**: authenticates and performs actions.
+- **Device operator**: has physical/root/update control over the box (Operator Truth).
+- **Client device**: phone/tablet/laptop browser running PWAs, sometimes shared.
+- **OurBox instance**: local server hosting gateway, services, CouchDB, and blob/file storage.
+
+### 3.2 Context diagram (informative)
+
++----------------------+ HTTPS +-------------------------------+
+| Browser (PWA) | <----------------> | Gateway (Ingress/Auth/Router) |
+| - tenant origin | | - tenant routing by hostname |
+| - local tenant | | - membership enforcement |
+| replica (PouchDB) | | - stable endpoints |
++----------+-----------+ +-----------+-------------------+
+| |
+| replication (tenant DB) | internal
+v v
++----------------------+ +--------------------------+
+| CouchDB | | Platform Services |
+| - tenant DBs | | - APIs/workflows |
+| - partitioned DBs | | - authz, invariants |
++----------------------+ +--------------------------+
+|
+v
++----------------------+
+| Blob/File Store |
+| - CAS blobs outside |
+| CouchDB by default |
++----------------------+
+
+---
+
+## 4 Architectural model and invariants (normative)
+
+This section defines “how the system works together” as invariants.
+
+### 4.1 Tenants are addressed as web origins
+In web platform terms, an **origin** is the browser security boundary defined by:
+
+- `origin = (scheme, host, port)`
+
+Browsers isolate storage by origin, including:
+- IndexedDB (used by PouchDB)
+- Cache Storage (used by service workers for offline assets)
+- service worker registrations
+
+OurBox encodes `tenant_id` in the hostname so that each tenant is a distinct origin:
+
+- **Canonical pattern:** `https://<tenant_id>.<box-host>/...`
+
+We call this the **tenant origin**.
+
+Rationale:
+- Origin-level storage isolation is the web platform’s native boundary.
+- Tenant-in-hostname ensures Bob and Alice do not share offline caches or local databases by accident, even on the same physical device.
+
+### 4.2 Apps are addressed as paths under a tenant origin
+Apps MUST live under a path on the tenant origin:
+
+- `https://<tenant_id>.<box-host>/<app_slug>`
+
+Examples:
+- `https://bob.<box-host>/simplenote`
+- `https://bob.<box-host>/richnote`
+- `https://alice.<box-host>/tasks`
+
+Apps are not a data boundary; apps are experiences.
+
+### 4.3 Tenant DBs are the replication unit
+Each tenant has exactly one tenant DB on the box:
+
+- CouchDB DB name: `tenant_<tenant_id>`
+
+Within that tenant DB:
+- the DB is a **partitioned database**
+- `doc_kind` is the partition key
+- `_id = "<doc_kind>:<uuidv4>"` for application documents
+
+Replication posture:
+- replicate tenant DB ↔ tenant DB (whole DB)
+- do not require selective replication by partition
+
+### 4.4 Local data is per tenant origin and shared across apps
+On each **client device** (phone/tablet/laptop browser), within a given **tenant origin**
+(e.g., `https://bob.<box-host>`), the browser MUST have exactly one PouchDB database that acts as
+the tenant’s local working store on that device.
+
+We call this database the **local tenant replica**:
+
+- it is local to that device (IndexedDB-backed via PouchDB)
+- it accepts reads/writes while offline
+- it replicates opportunistically with the tenant’s CouchDB database on the box (`tenant_<tenant_id>`)
+
+**Scope clarification:** “exactly one” is per *device + browser + tenant origin*.
+Bob will therefore have multiple local tenant replicas across his devices:
+- one on Bob’s phone for `https://bob.<box-host>`
+- one on Bob’s laptop for `https://bob.<box-host>`
+- etc.
+
+**Shared-across-apps rule:** All shipped apps served under the same tenant origin MUST use the same
+local tenant replica on that device.
+
+Example (single device, Bob tenant origin):
+- `https://bob.<box-host>/simplenote` and `https://bob.<box-host>/richnote` must both read/write
+  through the same local tenant replica so they see the same `note:*` documents while offline.
+
+- Because apps share a tenant origin and a single local tenant replica, app boundaries are not a hard isolation boundary in the browser; preventing cross-doc-kind writes is enforced by discipline and tests (ADR-0003).
+
+Rationale:
+- If each app maintained its own local PouchDB database, then apps would not see each other’s changes offline,
+  breaking the “multiple apps share doc kinds” architecture and creating multiple local sources of truth.
+
+### 4.5 Gateway mediates tenant-scoped CouchDB access
+Normative posture:
+- Shipped apps and clients access CouchDB over HTTP using the standard CouchDB API and replication protocol.
+- CouchDB is exposed externally only through the tenant origin as a tenant-scoped surface (same-origin),
+  not as a raw CouchDB node endpoint.
+- The gateway/reverse proxy maps:
+  - `https://<tenant_id>.<box-host>/db` → CouchDB database `tenant_<tenant_id>`
+- The gateway MUST NOT require clients to know CouchDB ports or internal database topology.
+
+Rationale:
+- Browser correctness: same-origin access avoids CORS/mixed-content/auth pitfalls for PWAs.
+- Tenant correctness: tenant context is derived from hostname and mapped to the correct tenant DB.
+- Surface-area control: we avoid exposing CouchDB node/admin surfaces to the LAN/WAN by default while still using CouchDB “the CouchDB way.”
+
+Rationale:
+- tenant context is derived from hostname
+- membership/authorization is enforced at the gateway
+- stable endpoints reduce client coupling to internal topology
+
+### 4.6 Replication endpoint shape (normative)
+Replication MUST be same-origin with the tenant and MUST NOT require clients to know CouchDB database names.
+
+- Replication endpoint (recommended): `https://<tenant_id>.<box-host>/db`
+
+Gateway mapping:
+- `/db` on tenant origin maps to CouchDB database `tenant_<tenant_id>`
+
+Clients MUST NOT select arbitrary CouchDB database names directly.
+
+### 4.7 Users are actors; tenant membership gates access
+Requests are evaluated in both:
+- **actor context:** `user_id` (who)
+- **tenant context:** `tenant_id` (which tenant DB/origin)
+
+The gateway MUST enforce that the authenticated user is a member of the tenant implied by the hostname,
+and that their role/capabilities allow the requested action.
+
+---
+
+## 5 Architecture views
+
+### 5.1 Logical view (components and responsibilities)
+
+#### 5.1.1 Gateway (edge router + auth)
+Responsibilities:
+- terminate TLS
+- route by hostname (`<tenant_id>.<box-host>`) and path (`/<app_slug>`, `/db`, `/api/...`)
+- authenticate users and establish sessions/tokens
+- authorize access based on tenant membership and roles/capabilities
+- present stable, tenant-scoped endpoints for replication and APIs
+- inject/propagate validated identity context to internal services
+
+#### 5.1.2 Static app hosting (PWA assets)
+Responsibilities:
+- serve PWA bundles for apps under their paths
+- support installable offline-first behavior via service workers and cached assets
+
+Normative requirement:
+- Shipped apps MUST be installable and capable of running from browser cache after first successful load (ADR-0003).
+
+#### 5.1.3 Platform services (optional but expected)
+Responsibilities:
+- provide higher-level APIs and workflows beyond raw replication
+- mediate cross-doc-kind workflows (e.g., “task mentions contact”) where needed
+- implement additional authorization beyond coarse membership (when required)
+- implement invariants and validation rules that are not purely “client convention”
+
+Note:
+- Shipped apps replicate via CouchDB protocol for primary sync (ADR-0004). Platform services are not a required hop for replication.
+
+#### 5.1.4 CouchDB (tenant DB store + replication)
+Responsibilities:
+- store application documents per tenant DB
+- support replication protocol endpoint (internally), surfaced to clients through gateway mapping
+- support change feeds and conflict representation
+- enforce partitioned database constraints on `_id`
+
+Operational requirement (informative):
+- compaction and revision growth management are required operational hygiene.
+
+#### 5.1.5 Blob/file store
+Responsibilities:
+- store large binary content outside CouchDB by default (ADR-0004)
+- provide stable content-addressed references/hashes stored in CouchDB docs
+- support “what is taking storage?” accounting
+
+### 5.2 Data view (partitioning, IDs, and references)
+
+#### 5.2.1 Partitioning model (normative)
+- Primary partition: **tenant** (tenant DB per tenant)
+- Within tenant DB: **doc kinds** via CouchDB partitions
+- Apps do not define data partitions.
+
+#### 5.2.2 Naming summary (normative)
+- Hostname: `<tenant_id>.<box-host>`
+- App path: `/<app_slug>`
+- CouchDB tenant DB: `tenant_<tenant_id>`
+- Replication endpoint: `/db` on tenant origin
+- Local PouchDB DB (within origin): `tenant_local`
+
+#### 5.2.3 Document IDs (normative)
+- `_id = "<doc_kind>:<uuidv4>"` (ADR-0006)
+- `doc_kind` is derived only from `_id`
+- ULIDs are prohibited for `_id` suffixes
+
+#### 5.2.4 Blobs and references (normative)
+- Documents MAY reference blobs by content hash/CID.
+- Blobs MUST NOT be stored as CouchDB attachments by default (ADR-0004).
+
+### 5.3 Runtime/process view (request and sync flows)
+
+#### 5.3.1 Typical app session (informative)
+1) User navigates to `https://family.<box-host>/tasks`
+2) Gateway authenticates user and verifies membership in tenant `family`
+3) PWA loads and uses service worker for offline asset caching
+4) App reads/writes local tenant replica first (`tenant_local`)
+5) When connectivity allows, app replicates with `https://family.<box-host>/db`
+6) Gateway maps to `tenant_family` and enforces authorization
+
+#### 5.3.2 Offline-first requirement (normative)
+Shipped apps MUST:
+- be functional when the box is unreachable (after first successful load),
+- persist working data locally (PouchDB/IndexedDB),
+- attempt opportunistic, incremental replication when available (ADR-0003, ADR-0004).
+
+### 5.4 Deployment view (k3s mapping)
+
+#### 5.4.1 Kubernetes namespaces
+- Kubernetes namespaces are operational partitions only.
+- Tenant boundaries MUST NOT be implemented primarily as Kubernetes namespaces (ADR-0005).
+
+Recommended posture:
+- run shared multi-tenant services (gateway, platform services, CouchDB) in a small number of k3s namespaces (e.g., `ourbox-system`, `ourbox-platform`).
+- run each shipped app workload bundle in its own Kubernetes namespace (e.g., `app-simplenote`, `app-richnote`).
+
+#### 5.4.2 Ingress and routing requirements (normative)
+- Ingress/gateway MUST support wildcard host routing for `*.<box-host>`.
+- TLS MUST be terminated at the gateway for tenant subdomains.
+- Path routing MUST support:
+  - `/<app_slug>` for app assets
+  - `/db` for replication endpoint
+  - `/api/...` for service APIs (when present)
+
+---
+
+## 6 Identity and access (normative)
+
+### 6.1 Separation of concerns
+- Tenant DBs represent tenant-scoped storage and replication units.
+- User identity and membership are enforced by the gateway and platform services.
+- CouchDB SHOULD be treated as internal infrastructure and not exposed directly.
+
+### 6.2 Tenant context derivation
+- `tenant_id` MUST be derived from the request hostname.
+- Services MUST treat tenant context as required input and MUST NOT accept `tenant_id` from untrusted client parameters as the primary authority when hostname is present.
+
+### 6.3 Authorization
+Authorization MUST consider:
+- authenticated user identity (`user_id`)
+- tenant derived from hostname (`tenant_id`)
+- membership and roles/capabilities within that tenant
+- any doc-kind-specific rules where applicable
+
+---
+
+## 7 Replication, conflicts, and policy (normative)
+
+### 7.1 Replication is not backup
+Replication MUST be treated as availability/synchronization, not as backup (ADR-0004).
+
+### 7.2 Conflict policy
+Each shipped app (and/or platform service) MUST define conflict handling policy for the doc kinds it writes, including:
+- merge strategy or conflict surfacing
+- delete/tombstone semantics
+- “last write wins” vs explicit merges (if applicable)
+
+(Exact policies are doc-kind specific and out of scope for this SAD.)
+
+---
+
+## 8 Operational considerations (informative)
+
+### 8.1 CouchDB maintenance
+Operational hygiene includes:
+- compaction schedules
+- monitoring revision growth and storage use
+- clear reporting of “what is taking storage?”
+
+### 8.2 Browser storage eviction risks
+Browsers may evict cached assets or IndexedDB under storage pressure or policy. Shipped apps should
+be resilient and should communicate degraded states appropriately (UI not specified in this SAD).
+
+---
+
+## 9 Extensibility (normative posture)
+
+### 9.1 Multiple apps sharing doc kinds
+The architecture MUST support multiple apps using the same doc kinds by ensuring:
+- local storage is shared per tenant origin (local tenant replica)
+- doc kinds are defined by `_id` structure (ADR-0006)
+- apps are replaceable experiences over stable documents
+
+### 9.2 Adding a new doc kind
+A new doc kind introduction MUST include:
+- name (stable vocabulary token)
+- `_id` prefix commitment
+- indexing/query posture
+- conflict handling posture
+
+---
+
+## 10 Examples (informative)
+
+### 10.1 URLs
+- `https://bob.<box-host>/simplenote`
+- `https://bob.<box-host>/richnote`
+- `https://alice.<box-host>/calendar`
+
+### 10.2 CouchDB tenant DBs
+- `tenant_bob`
+- `tenant_alice`
+- `tenant_family`
+
+### 10.3 Replication endpoints
+- `https://bob.<box-host>/db`
+- `https://family.<box-host>/db`
