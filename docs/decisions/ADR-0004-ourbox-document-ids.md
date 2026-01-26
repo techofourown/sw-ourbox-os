@@ -1,4 +1,4 @@
-# ADR-0006: OurBox Document IDs
+# ADR-0004: OurBox Document IDs
 
 ## Status
 Accepted
@@ -12,9 +12,9 @@ Founder (initial); future Board + Members (ratification/amendment per `docs/poli
 ## Context
 
 OurBox OS shipped apps are offline-first PWAs (ADR-0001) that persist locally in the browser
-(PouchDB/IndexedDB) and sync to the box (CouchDB) via replication (ADR-0004).
+(PouchDB/IndexedDB) and sync to the box (CouchDB) via replication (ADR-0002).
 
-ADR-0004 establishes a “CouchDB way” posture:
+ADR-0002 establishes a “CouchDB way” posture:
 
 - **DB per tenant** (a single tenant DB per tenant)
 - tenant DBs are **partitioned databases** (CouchDB partitions feature)
@@ -55,7 +55,7 @@ ULIDs are prohibited as document identifiers.
    - local (non-replicated) documents: `_local/...`
 
 ### 2) Tenant DBs are partitioned databases
-1. Each tenant has exactly one CouchDB database: the **tenant DB** (ADR-0004).
+1. Each tenant has exactly one CouchDB database: the **tenant DB** (ADR-0002).
 2. Each tenant DB MUST be created as a **partitioned database**.
 3. Every application document MUST have a partition key in `_id` (i.e., MUST match `<doc_kind>:<doc_uuid>`).
 
@@ -97,12 +97,12 @@ ULIDs are prohibited as document identifiers.
    - Example pattern (informative): `{ meta_key: "settings", ... }`
 
 ### 7) Replication ramifications (normative posture)
-1. Replication is **whole tenant DB ↔ whole tenant DB** (ADR-0004). OurBox does not require selective replication by partition.
+1. Replication is **whole tenant DB ↔ whole tenant DB** (ADR-0002). OurBox does not require selective replication by partition.
 2. Partitions are used to:
    - enforce doc-kind vocabulary via `_id`
    - keep doc kinds legible and queryable
    - support partition-scoped access patterns where useful
-3. Because replication and conflict resolution are document-based, the One-Document-Per-Entity rule (ADR-0004) remains critical:
+3. Because replication and conflict resolution are document-based, the One-Document-Per-Entity rule (ADR-0002) remains critical:
    - document boundary = conflict boundary
 
 ### 8) Ordering and “implicit meaning” rules
@@ -155,11 +155,11 @@ ULIDs are prohibited as document identifiers.
 
 ### Mitigation
 - Keep the initial doc-kind vocabulary intentionally stable.
-- Define doc-kind-specific indexing/query posture where needed (Mango and/or views are allowed by ADR-0004).
+- Define doc-kind-specific indexing/query posture where needed (Mango and/or views are allowed by ADR-0002).
 - Keep meta usage narrow and explicit.
 
 ## References
 - ADR-0001: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
-- ADR-0004: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
-- ADR-0005: Standardize on Tenant as the OurBox OS Data Boundary Term
+- ADR-0002: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
+- ADR-0003: Standardize on Tenant as the OurBox OS Data Boundary Term
 - `docs/architecture/OurBox-OS-Terms-and-Definitions.md`

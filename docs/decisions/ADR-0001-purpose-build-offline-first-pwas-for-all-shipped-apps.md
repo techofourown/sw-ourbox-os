@@ -41,7 +41,7 @@ OurBox encodes `tenant_id` into the hostname so that each tenant is a distinct *
 
 Within a given **tenant origin** on a given client device, shipped apps share a single local working
 database in the browser (PouchDB backed by IndexedDB) and replicate with the tenant’s CouchDB database
-on the box (see ADR-0004).
+on the box (see ADR-0002).
 
 **Implication:** within a tenant origin, any JavaScript running in that origin can technically read
 and write any documents in the tenant’s local working store (and may sync those changes back to the
@@ -50,9 +50,9 @@ posture. Preventing accidental cross-doc-kind writes is an engineering disciplin
 libraries, conventions, and automated testing — not by permission prompts between shipped apps.
 
 This ADR is paired with:
-- ADR-0004 (CouchDB + PouchDB, tenant DBs, partitioned DB usage, local-first replication posture)
-- ADR-0005 (tenant vocabulary and boundary semantics)
-- ADR-0006 (OurBox document IDs)
+- ADR-0002 (CouchDB + PouchDB, tenant DBs, partitioned DB usage, local-first replication posture)
+- ADR-0003 (tenant vocabulary and boundary semantics)
+- ADR-0004 (OurBox document IDs)
 
 ## Decision
 
@@ -68,29 +68,29 @@ from the beginning to:
 
 2) **Persist working data locally**
    - local working data is stored in the browser via IndexedDB
-   - shipped apps use PouchDB as the default local store (ADR-0004)
+   - shipped apps use PouchDB as the default local store (ADR-0002)
 
 3) **Sync opportunistically**
    - sync is incremental and resumable
    - we try to sync whenever we can, within reasonable performance/bandwidth constraints
    - sync tolerates intermittent connectivity
-   - shipped apps replicate with CouchDB on the box (ADR-0004)
+   - shipped apps replicate with CouchDB on the box (ADR-0002)
 
 4) **Operate within a tenant**
    - apps operate on a tenant-selected **tenant origin** (e.g., `https://bob.<box-host>/...`)
-   - apps sync with the tenant’s **tenant DB** on the box (ADR-0004)
-   - tenant context is derived from the hostname and enforced by the gateway/platform (ADR-0005)
+   - apps sync with the tenant’s **tenant DB** on the box (ADR-0002)
+   - tenant context is derived from the hostname and enforced by the gateway/platform (ADR-0003)
 
 5) **Remain product-coherent and blast-radius-aware**
    - shipped apps are views over tenant data, not silos
-   - within a tenant origin, shipped apps share one local tenant replica on that device (ADR-0004),
+   - within a tenant origin, shipped apps share one local tenant replica on that device (ADR-0002),
      so apps can read the same documents offline without bothering the user
      - example: SimpleNote and RichNote both operate on the same `note:*` documents
    - app boundaries are not treated as a security boundary inside the browser:
      - within a tenant origin, any code can technically read/write any doc kinds
      - therefore, “this app does not write that doc kind” is enforced as engineering policy
        (discipline + tests), not via user permission prompts between shipped apps
-   - shipped apps MUST adhere to stable doc-kind contracts (ADR-0004, ADR-0006):
+   - shipped apps MUST adhere to stable doc-kind contracts (ADR-0002, ADR-0004):
      - doc kinds are encoded in `_id` as CouchDB partitions
      - doc kind vocabulary is intentionally stable
    - shipped apps SHOULD minimize unintended coupling by treating doc kinds as shared contracts,
@@ -135,7 +135,7 @@ This ADR defines the posture for shipped first-party OurBox apps.
 
 ### Mitigation
 - Start small: ship minimal, high-value workflows first (notes, tasks, files, messaging basics).
-- Adopt strict data modeling rules upfront (ADR-0004, ADR-0006) to reduce conflicts and replication cost.
+- Adopt strict data modeling rules upfront (ADR-0002, ADR-0004) to reduce conflicts and replication cost.
 - Treat doc kinds as stable shared contracts and keep coupling explicit.
 - Enforce “write hygiene” for shipped apps:
   - shipped apps SHOULD declare (in app metadata/manifest) which doc kinds they are intended to write
@@ -145,7 +145,7 @@ This ADR defines the posture for shipped first-party OurBox apps.
 ## References
 - `docs/policies/founding/VALUES.md` (local-first, user sovereignty, no lock-in)
 - `docs/policies/founding/CONSTITUTION.md` (local-first forever; no hostage mechanics)
-- ADR-0004: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
-- ADR-0005: Standardize on Tenant as the OurBox OS Data Boundary Term
-- ADR-0006: OurBox Document IDs
+- ADR-0002: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
+- ADR-0003: Standardize on Tenant as the OurBox OS Data Boundary Term
+- ADR-0004: OurBox Document IDs
 - `docs/architecture/OurBox-OS-Terms-and-Definitions.md`

@@ -8,9 +8,9 @@ Draft (normative unless explicitly marked “informative”)
 
 ## Related decisions
 - ADR-0001: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
-- ADR-0004: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
-- ADR-0005: Standardize on Tenant as the OurBox OS Data Boundary Term
-- ADR-0006: OurBox Document IDs
+- ADR-0002: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
+- ADR-0003: Standardize on Tenant as the OurBox OS Data Boundary Term
+- ADR-0004: OurBox Document IDs
 
 ## Terminology
 - `docs/architecture/OurBox-OS-Terms-and-Definitions.md` is normative for vocabulary.
@@ -39,12 +39,12 @@ It does not specify UI flows or user-facing terminology.
 
 ### 1.3 Architectural constraints (from ADRs)
 - Shipped apps MUST be offline-first PWAs (ADR-0001).
-- CouchDB on the box and PouchDB in the browser MUST be the primary data store stack for shipped apps (ADR-0004).
-- Tenant MUST be the canonical top-level data boundary term (ADR-0005).
-- Kubernetes “namespace” is reserved for Kubernetes; it MUST NOT be used as a synonym for tenant (ADR-0005).
-- Tenant DBs MUST be partitioned databases; doc kind MUST be encoded in `_id` (ADR-0004, ADR-0006).
-- OurBox application documents MUST use `_id = "<doc_kind>:<uuidv4>"` and ULIDs are prohibited (ADR-0006).
-- Large blobs MUST NOT be stored as CouchDB attachments by default (ADR-0004).
+- CouchDB on the box and PouchDB in the browser MUST be the primary data store stack for shipped apps (ADR-0002).
+- Tenant MUST be the canonical top-level data boundary term (ADR-0003).
+- Kubernetes “namespace” is reserved for Kubernetes; it MUST NOT be used as a synonym for tenant (ADR-0003).
+- Tenant DBs MUST be partitioned databases; doc kind MUST be encoded in `_id` (ADR-0002, ADR-0004).
+- OurBox application documents MUST use `_id = "<doc_kind>:<uuidv4>"` and ULIDs are prohibited (ADR-0004).
+- Large blobs MUST NOT be stored as CouchDB attachments by default (ADR-0002).
 
 ---
 
@@ -246,7 +246,7 @@ Responsibilities:
 - implement invariants and validation rules that are not purely “client convention”
 
 Note:
-- Shipped apps replicate via CouchDB protocol for primary sync (ADR-0004). Platform services are not a required hop for replication.
+- Shipped apps replicate via CouchDB protocol for primary sync (ADR-0002). Platform services are not a required hop for replication.
 
 #### 5.1.4 CouchDB (tenant DB store + replication)
 Responsibilities:
@@ -260,7 +260,7 @@ Operational requirement (informative):
 
 #### 5.1.5 Blob/file store
 Responsibilities:
-- store large binary content outside CouchDB by default (ADR-0004)
+- store large binary content outside CouchDB by default (ADR-0002)
 - provide stable content-addressed references/hashes stored in CouchDB docs
 - support “what is taking storage?” accounting
 
@@ -279,13 +279,13 @@ Responsibilities:
 - Local PouchDB DB (within origin): `tenant_local`
 
 #### 5.2.3 Document IDs (normative)
-- `_id = "<doc_kind>:<uuidv4>"` (ADR-0006)
+- `_id = "<doc_kind>:<uuidv4>"` (ADR-0004)
 - `doc_kind` is derived only from `_id`
 - ULIDs are prohibited for `_id` suffixes
 
 #### 5.2.4 Blobs and references (normative)
 - Documents MAY reference blobs by content hash/CID.
-- Blobs MUST NOT be stored as CouchDB attachments by default (ADR-0004).
+- Blobs MUST NOT be stored as CouchDB attachments by default (ADR-0002).
 
 ### 5.3 Runtime/process view (request and sync flows)
 
@@ -301,13 +301,13 @@ Responsibilities:
 Shipped apps MUST:
 - be functional when the box is unreachable (after first successful load),
 - persist working data locally (PouchDB/IndexedDB),
-- attempt opportunistic, incremental replication when available (ADR-0001, ADR-0004).
+- attempt opportunistic, incremental replication when available (ADR-0001, ADR-0002).
 
 ### 5.4 Deployment view (k3s mapping)
 
 #### 5.4.1 Kubernetes namespaces
 - Kubernetes namespaces are operational partitions only.
-- Tenant boundaries MUST NOT be implemented primarily as Kubernetes namespaces (ADR-0005).
+- Tenant boundaries MUST NOT be implemented primarily as Kubernetes namespaces (ADR-0003).
 
 Recommended posture:
 - run shared multi-tenant services (gateway, platform services, CouchDB) in a small number of k3s namespaces (e.g., `ourbox-system`, `ourbox-platform`).
@@ -346,7 +346,7 @@ Authorization MUST consider:
 ## 7 Replication, conflicts, and policy (normative)
 
 ### 7.1 Replication is not backup
-Replication MUST be treated as availability/synchronization, not as backup (ADR-0004).
+Replication MUST be treated as availability/synchronization, not as backup (ADR-0002).
 
 ### 7.2 Conflict policy
 Each shipped app (and/or platform service) MUST define conflict handling policy for the doc kinds it writes, including:
@@ -377,7 +377,7 @@ be resilient and should communicate degraded states appropriately (UI not specif
 ### 9.1 Multiple apps sharing doc kinds
 The architecture MUST support multiple apps using the same doc kinds by ensuring:
 - local storage is shared per tenant origin (local tenant replica)
-- doc kinds are defined by `_id` structure (ADR-0006)
+- doc kinds are defined by `_id` structure (ADR-0004)
 - apps are replaceable experiences over stable documents
 
 ### 9.2 Adding a new doc kind

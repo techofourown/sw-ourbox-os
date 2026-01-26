@@ -46,10 +46,10 @@ Our boundaries are for correct product behavior and legibility, not hostile-admi
 ## Identity and boundary terms
 
 ### Tenant
-The top-level data boundary in OurBox OS (ADR-0005).
+The top-level data boundary in OurBox OS (ADR-0003).
 
 - Tenant context scopes data, access checks, and replication targets.
-- Each tenant has exactly one **tenant DB** (ADR-0004).
+- Each tenant has exactly one **tenant DB** (ADR-0002).
 
 ### Tenancy
 The set of one or more tenants hosted on a single OurBox instance.
@@ -152,7 +152,7 @@ The document database running on the box, acting as the system-of-record and rep
 The document database running in the browser, backed by IndexedDB, acting as the local working store for offline-first apps.
 
 ### Tenant DB
-A CouchDB database that stores all application documents for one tenant (ADR-0004).
+A CouchDB database that stores all application documents for one tenant (ADR-0002).
 
 - Recommended naming: `tenant_<tenant_id>` (e.g., `tenant_bob`)
 - Replication unit: tenant DB ↔ tenant DB (whole-DB replication is the norm).
@@ -180,7 +180,7 @@ A single JSON object stored in CouchDB/PouchDB. Documents are the atomic unit of
 ### _id
 The immutable primary identifier of an application document.
 
-In OurBox OS tenant DBs (ADR-0006):
+In OurBox OS tenant DBs (ADR-0004):
 - `_id = "<doc_kind>:<doc_uuid>"`
 - Example: `note:550e8400-e29b-41d4-a716-446655440000`
 
@@ -216,7 +216,7 @@ Point-in-time retention (snapshots/archives). Replication is not backup.
 ## Blob and storage terms
 
 ### blob
-Large binary content (photos/video/audio/etc.) stored outside CouchDB by default (ADR-0004).
+Large binary content (photos/video/audio/etc.) stored outside CouchDB by default (ADR-0002).
 
 ### content-addressed storage (CAS)
 A storage approach where blob identifiers are derived from the content (e.g., a hash) rather than a mutable name.

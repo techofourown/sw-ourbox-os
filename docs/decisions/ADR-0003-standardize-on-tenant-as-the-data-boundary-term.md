@@ -1,4 +1,4 @@
-# ADR-0005: Standardize on Tenant as the OurBox OS Data Boundary Term
+# ADR-0003: Standardize on Tenant as the OurBox OS Data Boundary Term
 
 ## Status
 Accepted (Updated)
@@ -12,7 +12,7 @@ Founder (initial); future Board + Members (ratification/amendment per `docs/poli
 ## Context
 
 OurBox OS is an offline-first, browser-first system (ADR-0001). We have adopted CouchDB + PouchDB as
-the primary data store for shipped apps and standardized data modeling around tenant DBs and partitions (ADR-0004, ADR-0006).
+the primary data store for shipped apps and standardized data modeling around tenant DBs and partitions (ADR-0002, ADR-0004).
 
 We need a single, canonical word for the top-level boundary that:
 
@@ -57,7 +57,7 @@ A **tenant** is the top-level data boundary that scopes:
 
 - **Data**
   - All application data belongs to exactly one tenant.
-  - Each tenant has exactly one **tenant DB** (ADR-0004).
+  - Each tenant has exactly one **tenant DB** (ADR-0002).
 
 - **Access rules**
   - Access checks are evaluated in a tenant context.
@@ -132,8 +132,8 @@ Tenant boundaries are not a claim of confidentiality from the device operator.
 
 ## References
 - ADR-0001: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
-- ADR-0004: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
-- ADR-0006: OurBox Document IDs
+- ADR-0002: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
+- ADR-0004: OurBox Document IDs
 - `docs/policies/founding/VALUES.md`
 - `docs/policies/founding/CONSTITUTION.md`
 - `docs/architecture/OurBox-OS-Terms-and-Definitions.md`

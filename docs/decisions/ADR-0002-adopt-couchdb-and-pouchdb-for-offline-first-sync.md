@@ -1,4 +1,4 @@
-# ADR-0004: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
+# ADR-0002: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
 
 ## Status
 Accepted (Updated)
@@ -57,7 +57,7 @@ We will standardize on:
 - On each client device, within a given **tenant origin**, shipped apps share **one local PouchDB database**
   (“local tenant replica”) so multiple apps can operate on the same doc kinds offline
 
-Document ID generation and `_id` grammar details are finalized in ADR-0006.
+Document ID generation and `_id` grammar details are finalized in ADR-0004.
 
 ## Normative design rules
 
@@ -98,7 +98,7 @@ Normative rule:
    - Each contact is a document.
    - Each calendar event is a document.
 2. “Giant documents” that aggregate many independent entities (e.g., “all tasks in one doc”) are forbidden for shipped apps,
-   except for explicitly designated `meta` documents as described in ADR-0006.
+   except for explicitly designated `meta` documents as described in ADR-0004.
 
 Rationale: document boundary = conflict boundary. Offline writes require minimizing conflicts.
 
@@ -106,7 +106,7 @@ Rationale: document boundary = conflict boundary. Offline writes require minimiz
 1. `_id` MUST be stable for the lifetime of a document.
 2. Renaming doc kinds (e.g., `note` → `notes`) is a deliberate migration and is acceptable, but MUST be treated as a migration (new IDs).
 3. Moving a document between doc kinds is a migration (new IDs) and is acceptable, but MUST be explicit.
-4. Document ID generation is defined by ADR-0006:
+4. Document ID generation is defined by ADR-0004:
    - `doc_uuid` MUST be UUIDv4
    - ULIDs are prohibited for OurBox document `_id`s
 
@@ -194,8 +194,8 @@ Rationale:
 
 ## References
 - ADR-0001: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
-- ADR-0005: Standardize on Tenant as the OurBox OS Data Boundary Term
-- ADR-0006: OurBox Document IDs
+- ADR-0003: Standardize on Tenant as the OurBox OS Data Boundary Term
+- ADR-0004: OurBox Document IDs
 - `docs/policies/founding/VALUES.md`
 - `docs/policies/founding/CONSTITUTION.md`
 - `docs/architecture/OurBox-OS-Terms-and-Definitions.md`
