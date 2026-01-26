@@ -11,7 +11,7 @@ Founder (initial); future Board + Members (ratification/amendment per `docs/poli
 
 ## Context
 
-ADR-0003 commits OurBox OS to shipped apps that are offline-first PWAs that withstand sporadic sync
+ADR-0001 commits OurBox OS to shipped apps that are offline-first PWAs that withstand sporadic sync
 with resilient sync.
 
 If we choose a traditional relational database (e.g., Postgres) as the primary store, we would need
@@ -139,7 +139,7 @@ Rules:
    - Therefore, the same tenant will naturally have multiple local tenant replicas across multiple devices
      (e.g., Bob’s phone and Bob’s laptop each have their own local tenant replica for `https://bob.<box-host>`).
 4. The local tenant replica MUST replicate opportunistically with the tenant DB on the box (Rule 8).
-5. Because apps share a tenant origin and a single local tenant replica, app boundaries are not a hard isolation boundary in the browser; preventing cross-doc-kind writes is enforced by discipline and tests (ADR-0003).
+5. Because apps share a tenant origin and a single local tenant replica, app boundaries are not a hard isolation boundary in the browser; preventing cross-doc-kind writes is enforced by discipline and tests (ADR-0001).
 
 Local naming (recommended):
 - local PouchDB name: `tenant_local` (within the browser origin)
@@ -193,7 +193,7 @@ Rationale:
 - Keep blobs out of CouchDB by default.
 
 ## References
-- ADR-0003: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
+- ADR-0001: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
 - ADR-0005: Standardize on Tenant as the OurBox OS Data Boundary Term
 - ADR-0006: OurBox Document IDs
 - `docs/policies/founding/VALUES.md`

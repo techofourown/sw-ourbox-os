@@ -11,7 +11,7 @@ Founder (initial); future Board + Members (ratification/amendment per `docs/poli
 
 ## Context
 
-OurBox OS is an offline-first, browser-first system (ADR-0003). We have adopted CouchDB + PouchDB as
+OurBox OS is an offline-first, browser-first system (ADR-0001). We have adopted CouchDB + PouchDB as
 the primary data store for shipped apps and standardized data modeling around tenant DBs and partitions (ADR-0004, ADR-0006).
 
 We need a single, canonical word for the top-level boundary that:
@@ -131,7 +131,7 @@ Tenant boundaries are not a claim of confidentiality from the device operator.
   - “A tenant is the data boundary that your apps sync with on this box.”
 
 ## References
-- ADR-0003: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
+- ADR-0001: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
 - ADR-0004: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
 - ADR-0006: OurBox Document IDs
 - `docs/policies/founding/VALUES.md`

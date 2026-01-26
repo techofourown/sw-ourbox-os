@@ -124,7 +124,7 @@ A user-facing browser experience (a shipped OurBox PWA) reachable under a tenant
 Apps are experiences. Apps are replaceable. Apps do not define data boundaries.
 
 ### shipped app
-A first-party OurBox app distributed as part of OurBox OS that MUST conform to ADR-0003 posture.
+A first-party OurBox app distributed as part of OurBox OS that MUST conform to ADR-0001 posture.
 
 ### app_slug
 The path portion that identifies an app experience under a tenant origin.

@@ -7,7 +7,7 @@ Draft (normative unless explicitly marked “informative”)
 2026-01-25
 
 ## Related decisions
-- ADR-0003: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
+- ADR-0001: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
 - ADR-0004: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
 - ADR-0005: Standardize on Tenant as the OurBox OS Data Boundary Term
 - ADR-0006: OurBox Document IDs
@@ -38,7 +38,7 @@ This SAD covers:
 It does not specify UI flows or user-facing terminology.
 
 ### 1.3 Architectural constraints (from ADRs)
-- Shipped apps MUST be offline-first PWAs (ADR-0003).
+- Shipped apps MUST be offline-first PWAs (ADR-0001).
 - CouchDB on the box and PouchDB in the browser MUST be the primary data store stack for shipped apps (ADR-0004).
 - Tenant MUST be the canonical top-level data boundary term (ADR-0005).
 - Kubernetes “namespace” is reserved for Kubernetes; it MUST NOT be used as a synonym for tenant (ADR-0005).
@@ -172,7 +172,7 @@ Example (single device, Bob tenant origin):
 - `https://bob.<box-host>/simplenote` and `https://bob.<box-host>/richnote` must both read/write
   through the same local tenant replica so they see the same `note:*` documents while offline.
 
-- Because apps share a tenant origin and a single local tenant replica, app boundaries are not a hard isolation boundary in the browser; preventing cross-doc-kind writes is enforced by discipline and tests (ADR-0003).
+- Because apps share a tenant origin and a single local tenant replica, app boundaries are not a hard isolation boundary in the browser; preventing cross-doc-kind writes is enforced by discipline and tests (ADR-0001).
 
 Rationale:
 - If each app maintained its own local PouchDB database, then apps would not see each other’s changes offline,
@@ -236,7 +236,7 @@ Responsibilities:
 - support installable offline-first behavior via service workers and cached assets
 
 Normative requirement:
-- Shipped apps MUST be installable and capable of running from browser cache after first successful load (ADR-0003).
+- Shipped apps MUST be installable and capable of running from browser cache after first successful load (ADR-0001).
 
 #### 5.1.3 Platform services (optional but expected)
 Responsibilities:
@@ -301,7 +301,7 @@ Responsibilities:
 Shipped apps MUST:
 - be functional when the box is unreachable (after first successful load),
 - persist working data locally (PouchDB/IndexedDB),
-- attempt opportunistic, incremental replication when available (ADR-0003, ADR-0004).
+- attempt opportunistic, incremental replication when available (ADR-0001, ADR-0004).
 
 ### 5.4 Deployment view (k3s mapping)
 

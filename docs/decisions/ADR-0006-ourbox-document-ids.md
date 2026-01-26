@@ -11,7 +11,7 @@ Founder (initial); future Board + Members (ratification/amendment per `docs/poli
 
 ## Context
 
-OurBox OS shipped apps are offline-first PWAs (ADR-0003) that persist locally in the browser
+OurBox OS shipped apps are offline-first PWAs (ADR-0001) that persist locally in the browser
 (PouchDB/IndexedDB) and sync to the box (CouchDB) via replication (ADR-0004).
 
 ADR-0004 establishes a “CouchDB way” posture:
@@ -159,7 +159,7 @@ ULIDs are prohibited as document identifiers.
 - Keep meta usage narrow and explicit.
 
 ## References
-- ADR-0003: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
+- ADR-0001: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
 - ADR-0004: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
 - ADR-0005: Standardize on Tenant as the OurBox OS Data Boundary Term
 - `docs/architecture/OurBox-OS-Terms-and-Definitions.md`
