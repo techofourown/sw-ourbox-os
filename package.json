@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "@graphmd/dataset": "0.x",
-    "@noble/hashes": "^1.8.0",
+    "@noble/hashes": "^2.0.1",
     "yaml": "^2.8.2"
   }
 }
