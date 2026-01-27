@@ -1,5 +1,13 @@
-> **Legacy notice:** The canonical GraphMD record is `records/adr.ADR-0000-template/ADR-0000-template.md`. This file is retained for reference only.
-
+---
+typeId: adr
+recordId: ADR-0000-template
+parent: doc_area:decisions
+fields:
+  title: "ADR Template"
+  adrCode: "ADR-0000"
+  status: "Template"
+  legacyPath: "docs/decisions/0000-template.md"
+---
 # ADR-XXXX: [Title in Active Voice]
 
 ## Status

@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Ensure package-lock.json exists
+        run: test -f package-lock.json
+
+      - name: Ensure @graphmd/dataset lock is latest in-range
+        run: |
+          RANGE=$(node -p "require('./package.json').devDependencies['@graphmd/dataset']")
+          LOCKED=$(node -p "require('./package-lock.json').dependencies['@graphmd/dataset'].version")
+          LATEST=$(npm view "@graphmd/dataset@${RANGE}" version)
+          echo "range=${RANGE} locked=${LOCKED} latest=${LATEST}"
+          if [ "${LOCKED}" != "${LATEST}" ]; then
+            echo "package-lock.json has ${LOCKED} but latest in-range is ${LATEST}."
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test (validate dataset + build SPEC.md)
+        run: npm test
+
+      - name: Upload SPEC.md artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ourbox-os-spec
+          path: SPEC.md
