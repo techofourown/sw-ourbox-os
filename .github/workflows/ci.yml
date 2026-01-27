@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+jobs:
+  graphmd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # IMPORTANT: do NOT enable built-in npm caching here.
+      # setup-node cache fails immediately if lockfile is missing.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Fail if package-lock.json missing
+        run: |
+          set -euo pipefail
+          if [ ! -f package-lock.json ]; then
+            echo "FATAL: package-lock.json is missing at repo root."
+            echo "Run: npm install"
+            echo "Then commit package-lock.json."
+            exit 1
+          fi
+
+      - name: Fail if @graphmd/dataset lock is not latest satisfying declared range
+        run: |
+          set -euo pipefail
+          REG='https://registry.npmjs.org'
+
+          RANGE=$(node -p "require('./package.json').devDependencies['@graphmd/dataset']")
+          echo "Declared range: ${RANGE}"
+
+          LATEST=$(npm view "@graphmd/dataset@${RANGE}" version --registry="$REG")
+          echo "Latest in range: ${LATEST}"
+
+          LOCKED=$(node -p "require('./package-lock.json').packages?.['node_modules/@graphmd/dataset']?.version || require('./package-lock.json').dependencies?.['@graphmd/dataset']?.version || ''")
+          if [ -z "$LOCKED" ]; then
+            echo "FATAL: package-lock.json does not include @graphmd/dataset."
+            echo "Fix: rm -rf node_modules package-lock.json && npm install"
+            exit 1
+          fi
+          echo "Locked: ${LOCKED}"
+
+          if [ "$LOCKED" != "$LATEST" ]; then
+            echo "FATAL: validator lockfile is stale."
+            echo "Locked: $LOCKED"
+            echo "Latest:  $LATEST"
+            echo ""
+            echo "Fix:"
+            echo "  rm -rf node_modules package-lock.json"
+            echo "  npm install"
+            echo "  git add package-lock.json"
+            exit 1
+          fi
+
+      - name: Install deps (deterministic)
+        run: npm ci
+
+      - name: Validate dataset + build SPEC.md
+        run: npm test
+
+      - name: Upload SPEC.md artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ourbox-os-spec
+          path: SPEC.md
