@@ -1,6 +1,13 @@
-> **Deprecated:** Canonical GraphMD record lives at
-> `records/rfc.RFC-0000-template/RFC-0000-template.md`.
-
+---
+typeId: rfc
+recordId: RFC-0000-template
+parent: doc_area:rfcs
+fields:
+  title: "RFC Template"
+  rfcCode: "RFC-0000"
+  status: "Template"
+  legacyPath: "docs/rfcs/0000-template.md"
+---
 # RFC-XXXX: [Title]
 
 **Status:** Draft | Discussion | Accepted | Rejected | Withdrawn  
