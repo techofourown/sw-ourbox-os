@@ -13,6 +13,8 @@
     "test": "npm run validate:dataset && npm run build:spec"
   },
   "devDependencies": {
-    "@graphmd/dataset": "0.x"
+    "@graphmd/dataset": "0.x",
+    "@noble/hashes": "^1.8.0",
+    "yaml": "^2.8.2"
   }
 }

@@ -1,40 +1,42 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const { loadGraphmdSnapshot, CANONICAL_DIRS } = require("./load-graphmd-snapshot.cjs");
 
 function loadSnapshot() {
   const dataset = require("@graphmd/dataset");
+  const datasetRootDir = path.resolve(__dirname, "..");
   const loadDatasetSnapshot =
     dataset.loadDatasetSnapshot ||
     dataset.loadDatasetSnapshotFromDir ||
-    dataset.createDatasetSnapshot ||
-    dataset.loadDatasetSnapshotFromDir;
+    dataset.createDatasetSnapshot;
 
-  if (typeof loadDatasetSnapshot !== "function") {
-    throw new Error("@graphmd/dataset does not expose a loadDatasetSnapshot function.");
-  }
+  if (typeof loadDatasetSnapshot === "function") {
+    const optionCandidates = [
+      { datasetRootDir, includeDirs: CANONICAL_DIRS },
+      { datasetRootDir, datasetDirs: CANONICAL_DIRS },
+      { rootDir: datasetRootDir, includeDirs: CANONICAL_DIRS },
+      { rootDir: datasetRootDir, datasetDirs: CANONICAL_DIRS },
+    ];
 
-  const datasetRootDir = path.resolve(__dirname, "..");
-  const canonicalDirs = ["types", "records", "blocks", "plugins"];
-
-  const optionCandidates = [
-    { datasetRootDir, includeDirs: canonicalDirs },
-    { datasetRootDir, datasetDirs: canonicalDirs },
-    { rootDir: datasetRootDir, includeDirs: canonicalDirs },
-    { rootDir: datasetRootDir, datasetDirs: canonicalDirs },
-  ];
-
-  for (const options of optionCandidates) {
-    try {
-      const snapshot = loadDatasetSnapshot(options);
-      if (snapshot) {
-        return snapshot;
+    for (const options of optionCandidates) {
+      try {
+        const snapshot = loadDatasetSnapshot(options);
+        if (snapshot) {
+          return snapshot;
+        }
+      } catch (error) {
+        // Try the next signature.
       }
+    }
+
+    try {
+      return loadDatasetSnapshot(datasetRootDir);
     } catch (error) {
-      // Try the next signature.
+      // Fall back to filesystem loader below.
     }
   }
 
-  return loadDatasetSnapshot(datasetRootDir);
+  return loadGraphmdSnapshot(datasetRootDir, CANONICAL_DIRS);
 }
 
 function validateSnapshot(snapshot) {
