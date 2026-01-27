@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: ["main"]
+
+jobs:
+  graphmd:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: FAIL-FAST — lockfile exists + @graphmd/dataset lock is latest in-range
+        run: |
+          set -euo pipefail
+          REG='https://registry.npmjs.org'
+
+          test -f package-lock.json || {
+            echo "FATAL: package-lock.json is missing."
+            echo "Run: npm install && commit package-lock.json"
+            exit 1
+          }
+
+          RANGE=$(node -p "require('./package.json').devDependencies['@graphmd/dataset']")
+          echo "Declared @graphmd/dataset range: $RANGE"
+
+          LATEST=$(npm view "@graphmd/dataset@${RANGE}" version --registry="$REG" 2>/dev/null || true)
+          if [ -z "$LATEST" ]; then
+            echo "FATAL: @graphmd/dataset range '$RANGE' not resolvable on npm."
+            exit 1
+          fi
+          echo "Latest @graphmd/dataset satisfying range: $LATEST"
+
+          LOCKED=$(node -p "require('./package-lock.json').packages?.['node_modules/@graphmd/dataset']?.version || require('./package-lock.json').dependencies?.['@graphmd/dataset']?.version || ''")
+          if [ -z "$LOCKED" ]; then
+            echo "FATAL: package-lock.json does not include @graphmd/dataset."
+            echo "Fix by running: rm -rf node_modules package-lock.json && npm install"
+            exit 1
+          fi
+          echo "Locked @graphmd/dataset: $LOCKED"
+
+          if [ "$LOCKED" != "$LATEST" ]; then
+            echo "FATAL: validator lockfile is stale."
+            echo "Locked: $LOCKED"
+            echo "Latest:  $LATEST"
+            echo ""
+            echo "Fix:"
+            echo "  rm -rf node_modules package-lock.json"
+            echo "  npm install"
+            echo "  git add package-lock.json"
+            echo "  git commit -m \"chore: bump @graphmd/dataset validator\""
+            exit 1
+          fi
+
+          echo "OK: validator lockfile is current."
+
+      - name: Install (deterministic)
+        run: npm ci
+
+      - name: Validate dataset + build SPEC.md
+        run: npm test
+
+      - name: Upload SPEC.md artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ourbox-os-spec
+          path: SPEC.md
