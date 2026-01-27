@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Ensure package-lock.json exists
+        run: test -f package-lock.json
+
+      - name: Ensure @graphmd/dataset lockfile is latest in-range
+        run: |
+          node - <<'NODE'
+          const pkg = require('./package.json');
+          const lock = require('./package-lock.json');
+          const range = pkg.devDependencies['@graphmd/dataset'];
+          const { execSync } = require('child_process');
+
+          const latest = execSync(`npm view @graphmd/dataset@"${range}" version`, {
+            stdio: ['ignore', 'pipe', 'pipe'],
+          }).toString().trim();
+
+          const locked = lock.packages?.['node_modules/@graphmd/dataset']?.version
+            || lock.dependencies?.['@graphmd/dataset']?.version;
+
+          if (!locked) {
+            console.error('package-lock.json does not include @graphmd/dataset');
+            process.exit(1);
+          }
+
+          if (locked !== latest) {
+            console.error(`Lockfile is stale. Locked ${locked}, latest in-range ${latest}.`);
+            process.exit(1);
+          }
+          console.log(`@graphmd/dataset locked at latest (${locked}).`);
+          NODE
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate dataset and build spec
+        run: npm test
+
+      - name: Upload SPEC.md artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ourbox-os-spec
+          path: SPEC.md

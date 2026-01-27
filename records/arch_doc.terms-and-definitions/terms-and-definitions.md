@@ -1,6 +1,13 @@
+---
+typeId: arch_doc
+recordId: terms-and-definitions
+parent: doc_area:architecture
+fields:
+  title: "OurBox OS — Terms and Definitions"
+  status: "Normative"
+  legacyPath: "docs/architecture/OurBox-OS-Terms-and-Definitions.md"
+---
 # OurBox OS — Terms and Definitions
-
-> **Deprecated:** Canonical source is `records/arch_doc.terms-and-definitions/terms-and-definitions.md`.
 
 ## Purpose
 
