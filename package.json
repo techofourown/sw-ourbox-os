@@ -9,8 +9,8 @@
   },
   "scripts": {
     "validate:dataset": "node tools/validate-dataset.cjs",
-    "build:syrs": "node tools/compile-syrs.cjs",
-    "test": "npm run validate:dataset && npm run build:syrs"
+    "build:specs": "node tools/compile-all-specs.cjs",
+    "test": "npm run validate:dataset && npm run build:specs"
   },
   "devDependencies": {
     "@graphmd/dataset": "<1.0.0",
