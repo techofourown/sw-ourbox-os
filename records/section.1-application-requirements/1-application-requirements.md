@@ -1,7 +1,7 @@
 ---
 typeId: section
 recordId: 1-application-requirements
-parent: spec:ourbox-os-spec
+parent: spec:SyRS-0001
 fields:
   title: "Application Requirements"
   order: 1

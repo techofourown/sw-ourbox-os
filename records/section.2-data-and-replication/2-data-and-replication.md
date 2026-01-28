@@ -1,7 +1,7 @@
 ---
 typeId: section
 recordId: 2-data-and-replication
-parent: spec:ourbox-os-spec
+parent: spec:SyRS-0001
 fields:
   title: "Data and Replication"
   order: 2
