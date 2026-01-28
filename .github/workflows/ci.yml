@@ -61,11 +61,11 @@ jobs:
       - name: Install deps (deterministic)
         run: npm ci
 
-      - name: Validate dataset + build SPEC.md
+      - name: Validate dataset + build SyRS-0001 artifact
         run: npm test
 
-      - name: Upload SPEC.md artifact
+      - name: Upload SyRS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ourbox-os-spec
-          path: SPEC.md
+          name: syrs-0001
+          path: SyRS-0001-ourbox-os-system-requirements-specification.md
