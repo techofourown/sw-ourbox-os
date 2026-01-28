@@ -25,14 +25,14 @@ function loadSnapshot() {
         const snapshot = loadDatasetSnapshot(options);
         if (snapshot) return snapshot;
       } catch (_error) {
-        // Try next signature
+        // Try the next signature.
       }
     }
 
     try {
       return loadDatasetSnapshot(datasetRootDir);
     } catch (_error) {
-      // Fall back to filesystem loader below
+      // Fall back to filesystem loader below.
     }
   }
 
@@ -105,10 +105,16 @@ function slugify(input) {
     .replace(/-+/g, "-");
 }
 
+function computeSpecFileName(specId, title) {
+  const prefixRe = new RegExp(`^${escapeRegExp(specId)}:\\s*`, "i");
+  const titleWithoutId = String(title || specId).replace(prefixRe, "").trim();
+  const suffix = slugify(titleWithoutId) || slugify(specId);
+  return `${specId}-${suffix}.md`;
+}
+
 function renderSpec(snapshot, specId) {
   const records = normalizeRecords(snapshot);
   const recordKey = (record) => `${record.typeId}:${record.recordId}`;
-  const byKey = new Map(records.map((record) => [recordKey(record), record]));
   const byParent = new Map();
 
   for (const record of records) {
@@ -178,58 +184,92 @@ function renderSpec(snapshot, specId) {
   return lines.join("\n").trimEnd() + "\n";
 }
 
-function usage() {
-  console.log("Usage:");
-  console.log("  node tools/compile-spec.cjs <SPEC_ID> [--output <path>]");
-  console.log("");
-  console.log("Examples:");
-  console.log("  node tools/compile-spec.cjs SyRS-0001");
-  console.log("  node tools/compile-spec.cjs SRS-0201");
-  console.log("  node tools/compile-spec.cjs SRS-1001 --output docs/_build/SRS-1001.md");
+function specSortKey(specId) {
+  // Deterministic, opinionated ordering:
+  // 1) SyRS first
+  // 2) then SRS
+  // 3) then anything else
+  if (specId.startsWith("SyRS-")) return `0-${specId}`;
+  if (specId.startsWith("SRS-")) return `1-${specId}`;
+  return `9-${specId}`;
 }
 
 function main() {
-  const argv = process.argv.slice(2);
-  if (!argv.length || argv.includes("--help") || argv.includes("-h")) {
-    usage();
-    process.exit(argv.length ? 0 : 1);
-  }
-
-  const specId = argv[0];
-  let outputOverride = null;
-
-  for (let i = 1; i < argv.length; i++) {
-    if (argv[i] === "--output" && argv[i + 1]) {
-      outputOverride = argv[i + 1];
-      i++;
-    }
-  }
-
+  const repoRoot = path.resolve(__dirname, "..");
   const snapshot = loadSnapshot();
   validateSnapshot(snapshot);
 
-  // Determine default output path (repo root), matching your existing SyRS naming convention.
   const records = normalizeRecords(snapshot);
-  const specRecord = records.find((r) => r.typeId === "spec" && r.recordId === specId);
-  if (!specRecord) {
-    throw new Error(`Missing spec record: spec:${specId}`);
+  const specRecords = records.filter((r) => r.typeId === "spec");
+  const specIds = specRecords.map((r) => r.recordId).sort((a, b) => {
+    return specSortKey(a).localeCompare(specSortKey(b));
+  });
+
+  if (!specIds.length) {
+    console.error("FATAL: No spec records found to compile.");
+    process.exit(1);
   }
 
-  const title = specRecord.fields?.title || specId;
-  const prefixRe = new RegExp(`^${escapeRegExp(specId)}:\\s*`, "i");
-  const titleWithoutId = title.replace(prefixRe, "").trim();
-  const suffix = slugify(titleWithoutId) || slugify(specId);
+  const outputs = [];
 
-  const defaultFileName = `${specId}-${suffix}.md`;
-  const outputPath = outputOverride
-    ? path.resolve(outputOverride)
-    : path.resolve(__dirname, "..", defaultFileName);
+  // Compile each spec to its standard filename at repo root
+  for (const specId of specIds) {
+    const specRecord = specRecords.find((r) => r.recordId === specId);
+    const title = specRecord?.fields?.title || specId;
+    const fileName = computeSpecFileName(specId, title);
+    const outPath = path.resolve(repoRoot, fileName);
 
-  const output = renderSpec(snapshot, specId);
-  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, output, "utf8");
+    const rendered = renderSpec(snapshot, specId);
+    fs.writeFileSync(outPath, rendered, "utf8");
+    outputs.push({ specId, fileName, outPath });
+    console.log(`Wrote ${outPath}`);
+  }
 
-  console.log(`Wrote ${outputPath}`);
+  // Build omnibus: Terms-and-Definitions + all compiled specs
+  const termsPath = path.resolve(repoRoot, "docs", "00-Glossary", "Terms-and-Definitions.md");
+  if (!fs.existsSync(termsPath)) {
+    console.error(`FATAL: Missing Terms-and-Definitions file at ${termsPath}`);
+    process.exit(1);
+  }
+  const terms = fs.readFileSync(termsPath, "utf8").trimEnd();
+
+  const omnibusName = "OurBox-OS-Requirements-Omnibus.md";
+  const omnibusPath = path.resolve(repoRoot, omnibusName);
+
+  const now = new Date();
+  const stamp = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(
+    now.getUTCDate()
+  ).padStart(2, "0")} ${String(now.getUTCHours()).padStart(2, "0")}:${String(
+    now.getUTCMinutes()
+  ).padStart(2, "0")}:${String(now.getUTCSeconds()).padStart(2, "0")} UTC`;
+
+  const lines = [];
+  lines.push("# OurBox OS Requirements Omnibus");
+  lines.push("");
+  lines.push(`**Generated:** ${stamp}`);
+  lines.push("");
+  lines.push("## Included Specifications");
+  for (const o of outputs) {
+    lines.push(`- ${o.fileName} (source: spec:${o.specId})`);
+  }
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+  lines.push(terms);
+  lines.push("");
+  lines.push("---");
+  lines.push("");
+
+  for (const o of outputs) {
+    const content = fs.readFileSync(o.outPath, "utf8").trimEnd();
+    lines.push(content);
+    lines.push("");
+    lines.push("---");
+    lines.push("");
+  }
+
+  fs.writeFileSync(omnibusPath, lines.join("\n").trimEnd() + "\n", "utf8");
+  console.log(`Wrote ${omnibusPath}`);
 }
 
 try {
