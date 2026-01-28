@@ -1,7 +1,7 @@
 ---
 typeId: section
 recordId: 4-kubernetes-and-deployment
-parent: spec:ourbox-os-spec
+parent: spec:SyRS-0001
 fields:
   title: "Kubernetes and Deployment"
   order: 4
