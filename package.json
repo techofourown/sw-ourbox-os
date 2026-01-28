@@ -13,7 +13,7 @@
     "test": "npm run validate:dataset && npm run build:syrs"
   },
   "devDependencies": {
-    "@graphmd/dataset": "0.x",
+    "@graphmd/dataset": "<1.0.0",
     "@noble/hashes": "^1.8.0",
     "yaml": "^2.8.2"
   }
