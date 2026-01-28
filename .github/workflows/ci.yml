@@ -79,23 +79,12 @@ jobs:
       - name: Validate dataset + build SyRS-0001 artifact
         run: npm test
 
-      - name: Build SRS artifacts
-        run: |
-          node tools/compile-spec.cjs SRS-0201
-          node tools/compile-spec.cjs SRS-1001
-          node tools/compile-spec.cjs SRS-1002
-
-      - name: Upload SyRS artifact
+      - name: Upload rendered requirements artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: syrs-0001
-          path: SyRS-0001-ourbox-os-system-requirements-specification.md
-
-      - name: Upload SRS artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: srs-artifacts
+          name: requirements-artifacts
           path: |
-            SRS-0201-gateway-software-requirements-specification.md
-            SRS-1001-simplenote-software-requirements-specification.md
-            SRS-1002-richnote-software-requirements-specification.md
+            OurBox-OS-Requirements-Omnibus.md
+            SyRS-*.md
+            SRS-*.md
+            docs/00-Glossary/Terms-and-Definitions.md
