@@ -236,17 +236,12 @@ function main() {
   const omnibusName = "OurBox-OS-Requirements-Omnibus.md";
   const omnibusPath = path.resolve(repoRoot, omnibusName);
 
-  const now = new Date();
-  const stamp = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(
-    now.getUTCDate()
-  ).padStart(2, "0")} ${String(now.getUTCHours()).padStart(2, "0")}:${String(
-    now.getUTCMinutes()
-  ).padStart(2, "0")}:${String(now.getUTCSeconds()).padStart(2, "0")} UTC`;
+  const sha = process.env.GITHUB_SHA ? process.env.GITHUB_SHA.slice(0, 12) : null;
 
   const lines = [];
   lines.push("# OurBox OS Requirements Omnibus");
   lines.push("");
-  lines.push(`**Generated:** ${stamp}`);
+  if (sha) lines.push(`**Source:** ${sha}`);
   lines.push("");
   lines.push("## Included Specifications");
   for (const o of outputs) {

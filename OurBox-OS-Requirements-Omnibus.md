@@ -1,6 +1,5 @@
 # OurBox OS Requirements Omnibus
 
-**Generated:** 2026-01-28 21:25:35 UTC
 
 ## Included Specifications
 - SyRS-0001-ourbox-os-system-requirements-specification.md (source: spec:SyRS-0001)
