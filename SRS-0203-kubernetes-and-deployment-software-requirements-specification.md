@@ -1,10 +1,10 @@
-# SRS-1001: SimpleNote Software Requirements Specification
+# SRS-0203: Kubernetes and Deployment Software Requirements Specification
 
 **Version:** 0.1 (Draft)
 **Last Updated:** 2026-01-28
 **Status:** Draft
 
-This specification defines the software requirements for the SimpleNote application.
+This specification defines the software requirements for Kubernetes and deployment posture for OurBox OS.
 
 This is intentionally minimal scaffolding; requirements will be added iteratively.
 
@@ -15,9 +15,7 @@ Normative keywords (SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) are defined in
 
 ## Introduction
 
-This SRS defines the requirements for the SimpleNote application software item.
-
-SimpleNote is a user-facing application. Detailed requirements will be added iteratively.
+This SRS defines the requirements for Kubernetes and deployment posture for OurBox OS.
 
 ## Referenced Documents
 
@@ -31,19 +29,18 @@ SimpleNote is a user-facing application. Detailed requirements will be added ite
 
 ## Requirements
 
-This section will be populated with SimpleNote software requirements.
+This section will be populated with Kubernetes/deployment software requirements.
 
 Typical groupings (to be filled in later):
-- Allocated System Requirements (from SyRS)
-- Functional Requirements
-- Data Requirements
-- Quality Requirements (NFRs)
-- Constraints
+- Ingress and routing requirements
+- Namespace usage requirements
+- Service deployment constraints
+- Operational constraints (upgrades, configuration, observability)
 
 ## External Interfaces
 
-External interfaces (UI surface expectations, APIs consumed, replication endpoints, etc.) will be
-specified via ICDs (as applicable) and referenced here.
+External interfaces (ingress configuration surfaces, deployment manifests, operational endpoints)
+will be specified via Interface Control Documents (ICDs) and referenced here.
 
 ## Verification
 
