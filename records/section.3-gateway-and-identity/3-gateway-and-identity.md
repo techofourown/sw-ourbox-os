@@ -1,7 +1,7 @@
 ---
 typeId: section
 recordId: 3-gateway-and-identity
-parent: spec:ourbox-os-spec
+parent: spec:SyRS-0001
 fields:
   title: "Gateway and Identity"
   order: 3
