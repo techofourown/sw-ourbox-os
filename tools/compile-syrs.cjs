@@ -101,7 +101,7 @@ function heading(level, text) {
   return `${"#".repeat(depth)} ${text}`;
 }
 
-function renderSpec(snapshot) {
+function renderSyRS(snapshot) {
   const records = normalizeRecords(snapshot);
   const recordKey = (record) => `${record.typeId}:${record.recordId}`;
   const byKey = new Map(records.map((record) => [recordKey(record), record]));
@@ -116,33 +116,33 @@ function renderSpec(snapshot) {
     byParent.set(record.parent, list);
   }
 
-  const specRecord = records.find(
-    (record) => record.typeId === "spec" && record.recordId === "ourbox-os-spec"
+  const syrsRecord = records.find(
+    (record) => record.typeId === "spec" && record.recordId === "SyRS-0001"
   );
 
-  if (!specRecord) {
-    throw new Error("Missing spec record: spec:ourbox-os-spec");
+  if (!syrsRecord) {
+    throw new Error("Missing spec record: spec:SyRS-0001");
   }
 
   const lines = [];
-  lines.push(heading(1, specRecord.fields?.title || "OurBox OS Specification"));
+  lines.push(heading(1, syrsRecord.fields?.title || "SyRS-0001: OurBox OS System Requirements Specification"));
   lines.push("");
-  if (specRecord.fields?.version) {
-    lines.push(`**Version:** ${specRecord.fields.version}`);
+  if (syrsRecord.fields?.version) {
+    lines.push(`**Version:** ${syrsRecord.fields.version}`);
   }
-  if (specRecord.fields?.lastUpdated) {
-    lines.push(`**Last Updated:** ${specRecord.fields.lastUpdated}`);
+  if (syrsRecord.fields?.lastUpdated) {
+    lines.push(`**Last Updated:** ${syrsRecord.fields.lastUpdated}`);
   }
-  if (specRecord.fields?.status) {
-    lines.push(`**Status:** ${specRecord.fields.status}`);
+  if (syrsRecord.fields?.status) {
+    lines.push(`**Status:** ${syrsRecord.fields.status}`);
   }
   lines.push("");
-  if (specRecord.body) {
-    lines.push(specRecord.body.trim());
+  if (syrsRecord.body) {
+    lines.push(syrsRecord.body.trim());
     lines.push("");
   }
 
-  const sections = (byParent.get(recordKey(specRecord)) || []).sort(sortByOrderThenId);
+  const sections = (byParent.get(recordKey(syrsRecord)) || []).sort(sortByOrderThenId);
 
   for (const section of sections) {
     const level = Number(section.fields?.level ?? 1) + 1;
@@ -187,8 +187,8 @@ function renderSpec(snapshot) {
 try {
   const snapshot = loadSnapshot();
   validateSnapshot(snapshot);
-  const output = renderSpec(snapshot);
-  const outputPath = path.resolve(__dirname, "..", "SPEC.md");
+  const output = renderSyRS(snapshot);
+  const outputPath = path.resolve(__dirname, "..", "SyRS-0001-ourbox-os-system-requirements-specification.md");
   fs.writeFileSync(outputPath, output, "utf8");
   console.log(`Wrote ${outputPath}`);
 } catch (error) {

@@ -9,7 +9,7 @@
   },
   "scripts": {
     "validate:dataset": "node tools/validate-dataset.cjs",
-    "build:spec": "node tools/compile-spec.cjs",
+    "build:spec": "node tools/compile-syrs.cjs",
     "test": "npm run validate:dataset && npm run build:spec"
   },
   "devDependencies": {

@@ -1,13 +1,13 @@
 ---
 typeId: arch_doc
-recordId: terms-and-definitions
+recordId: glossary
 parent: doc_area:architecture
 fields:
-  title: "OurBox OS — Terms and Definitions"
+  title: "Glossary"
   status: "Normative"
-  legacyPath: "docs/architecture/OurBox-OS-Terms-and-Definitions.md"
+  legacyPath: "docs/architecture/Glossary.md"
 ---
-# OurBox OS — Terms and Definitions
+# Glossary
 
 ## Purpose
 
@@ -67,9 +67,9 @@ The set of one or more tenants hosted on a single OurBox instance.
 Stable identifier for a tenant.
 
 Constraints (normative):
-- MUST be lowercase.
-- MUST be safe for use in DNS labels (tenant subdomains).
-- MUST be safe for use in CouchDB database names.
+- SHALL be lowercase.
+- SHALL be safe for use in DNS labels (tenant subdomains).
+- SHALL be safe for use in CouchDB database names.
 
 Examples: `bob`, `alice`, `family`, `roommates-2026`
 
@@ -97,18 +97,18 @@ The canonical identifier for a user identity.
 In OurBox OS, `user_id` is a **human-readable handle**.
 
 Normative rules:
-- `user_id` MUST be unique within an OurBox instance.
+- `user_id` SHALL be unique within an OurBox instance.
 - `user_id` SHOULD be treated as stable/immutable once created.
-  - Renaming a `user_id` is a migration and MUST be explicit.
+  - Renaming a `user_id` is a migration and SHALL be explicit.
 - `user_id` values are not reusable by default.
   - If user `joe` leaves a shared box, a future different person must choose a different `user_id`
     (e.g., `joe2`, `joe-smith`).
-- `user_id` MUST be safe for use in URLs, logs, and configuration.
+- `user_id` SHALL be safe for use in URLs, logs, and configuration.
   - Recommended pattern: lowercase DNS-label-ish tokens (letters, numbers, hyphen/underscore), no spaces.
 
 ### display_name (optional)
 A user-facing string that may contain spaces, capitalization, etc.
-`display_name` is presentation-only and MUST NOT be used as an identifier.
+`display_name` is presentation-only and SHALL NOT be used as an identifier.
 
 ### Tenant membership
 A relationship between a user and a tenant that grants capabilities within that tenant context.
@@ -133,7 +133,7 @@ A user-facing browser experience (a shipped OurBox PWA) reachable under a tenant
 Apps are experiences. Apps are replaceable. Apps do not define data boundaries.
 
 ### shipped app
-A first-party OurBox app distributed as part of OurBox OS that MUST conform to ADR-0001 posture.
+A first-party OurBox app distributed as part of OurBox OS that SHALL conform to ADR-0001 posture.
 
 ### app_slug
 The path portion that identifies an app experience under a tenant origin.
@@ -169,11 +169,11 @@ A CouchDB database that stores all application documents for one tenant (ADR-000
 ### Local tenant replica
 The single PouchDB database within a tenant origin that acts as the local replica of the tenant DB.
 
-All shipped apps under the same tenant origin MUST use the same local tenant replica so they share doc kinds offline.
+All shipped apps under the same tenant origin SHALL use the same local tenant replica so they share doc kinds offline.
 
 ### Partitioned database (CouchDB partitions)
 A CouchDB database created in partitioned mode. In a partitioned database:
-- Application document `_id` MUST be shaped as: `<partitionKey>:<docId>`
+- Application document `_id` SHALL be shaped as: `<partitionKey>:<docId>`
 
 ### Partition key
 The prefix of a partitioned document `_id` before the first `:`.
@@ -256,7 +256,7 @@ The front door for HTTP(S) traffic to the box, responsible for:
 ---
 
 ## Cross-document rule
-All ADRs and architecture docs MUST use these terms and avoid:
+All ADRs and architecture docs SHALL use these terms and avoid:
 - “dataset” (unless explicitly discussing GraphMD)
 - “domain” (unqualified)
 - “namespace” for anything other than Kubernetes namespaces
