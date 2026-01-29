@@ -34,13 +34,13 @@
   * The omnibus embeds the glossary from:
     `docs/00-Glossary/Terms-and-Definitions.md`
 
-### The one rule that makes everything “click”
+### The one rule that makes everything "click"
 
 GraphMD records form a tree using the `parent` field:
 
-* **Spec record**: no parent (root)
+* **Spec record**: `parent: "doc_area:spec"` (all specs share this parent)
 * **Section record**: `parent: "spec:<SPEC_ID>"`
-* **Requirement record**: `parent: "<SECTION_TYPE_ID>:<SECTION_RECORD_ID>"`
+* **Requirement record**: `parent: "section:<SECTION_RECORD_ID>"`
 
 That `"<typeId>:<recordId>"` pair is the canonical identifier everywhere:
 
@@ -60,7 +60,21 @@ The compiler loads GraphMD content from these directories at repo root:
 * `blocks/`
 * `plugins/`
 
-Anything outside those directories won’t be seen by the dataset snapshot loader (unless the upstream GraphMD loader does something special).
+Anything outside those directories won't be seen by the dataset snapshot loader (unless the upstream GraphMD loader does something special).
+
+### Record directory naming convention
+
+Each record lives in a directory named `<typeId>.<recordId>/` containing a file named `<recordId>.md`:
+
+```
+records/
+  spec.SyRS-0001/SyRS-0001.md
+  section.1-application-requirements/1-application-requirements.md
+  req.APP-001/APP-001.md
+  adr.ADR-0001/ADR-0001.md
+```
+
+Follow this convention when creating new records.
 
 ### Narrative docs (non-GraphMD or hybrid)
 
@@ -84,10 +98,18 @@ Whether ADRs/ADs are fully modeled as GraphMD records or are “just docs” wit
 Run:
 
 ```bash
+npm test
+```
+
+This runs validation followed by compilation (equivalent to `npm run validate:dataset && npm run build:specs`).
+
+To skip validation and only compile:
+
+```bash
 node tools/compile-all-specs.cjs
 ```
 
-What it does:
+What the compiler does:
 
 * Loads the dataset snapshot (prefers upstream `@graphmd/dataset` loaders; falls back to filesystem snapshot).
 * Validates the snapshot (`validateDatasetSnapshot`).
@@ -101,13 +123,15 @@ Hard requirement:
 
 * `docs/00-Glossary/Terms-and-Definitions.md` must exist or the build fails.
 
+> Note: Generated files are listed in `.gitignore` — they are build artifacts, not committed to the repository.
+
 ### CI artifact: `requirements-artifacts`
 
 CI publishes an artifact containing:
 
 * one compiled Markdown file per spec (SyRS + each SRS)
-* `OurBox-OS-Requirements-Omnibus.md`
-* `docs/00-Glossary/Terms-and-Definitions.md` (embedded as normative reference)
+* `OurBox-OS-Requirements-Omnibus.md` (which embeds the glossary inline)
+* `docs/00-Glossary/Terms-and-Definitions.md` (also included as a standalone file)
 
 If CI is green, you can assume the compiled outputs are consistent with the GraphMD source.
 
@@ -130,7 +154,7 @@ If CI is green, you can assume the compiled outputs are consistent with the Grap
 
 To create a new section:
 
-* Add a GraphMD record under `records/<sectionTypeId>/...`
+* Create a directory `records/section.<RECORD_ID>/` containing `<RECORD_ID>.md`
 
 * Set:
 
@@ -138,61 +162,80 @@ To create a new section:
 
 * `fields.title`: the section heading text
 
-* `fields.level`: heading level control (see §5)
+* `fields.level`: heading depth offset (the compiler renders at `level + 1`, so `level: 1` → `##`)
 
-* `fields.order`: numeric sort order
+* `fields.order`: numeric sort order (existing sections use sequential integers: 0, 1, 2, …)
 
 > The compiler sorts sections by `fields.order` then by `recordId`.
 
-**Template (section record)**
+**Template (SyRS section)**
 
 ```md
 ---
 typeId: section
-recordId: APP
+recordId: 5-verification
 parent: "spec:SyRS-0001"
 fields:
-  title: "Application Requirements"
+  title: "Verification"
   level: 1
-  order: 10
+  order: 5
 ---
 
 Optional section narrative goes here.
 Keep it short and stable; requirements live in child records.
 ```
 
+**Template (SRS section)**
+
+```md
+---
+typeId: section
+recordId: SRS-0204-3-requirements
+parent: "spec:SRS-0204"
+fields:
+  title: "Requirements"
+  level: 1
+  order: 3
+---
+
+Optional section narrative goes here.
+```
+
 > Notes:
 >
-> * `typeId: section` is an example. Use whatever the repo’s established section type is.
-> * `recordId` should be **stable**, because child records refer to it via `parent`.
+> * SyRS sections use `<order>-<slug>` as their `recordId` (e.g., `1-application-requirements`).
+> * SRS sections use `<SPEC_ID>-<order>-<slug>` (e.g., `SRS-0201-3-requirements`).
+> * `recordId` must be **stable**, because child records refer to it via `parent`.
 
 ### Step 2 — Add the requirement record under that section
 
-Create a new record (commonly in `records/req/` or similar) with:
+Create a directory `records/req.<RECORD_ID>/` containing `<RECORD_ID>.md` with:
 
 * `recordId`: the requirement identifier (e.g., `APP-007`, `DATA-010`, `GW-004`)
-* `parent`: `"section:APP"` (i.e., `"<sectionTypeId>:<sectionRecordId>"`)
+* `parent`: `"section:<SECTION_RECORD_ID>"` (e.g., `"section:1-application-requirements"`)
 * `fields.title`: short human-readable title (shown in headings)
 * `fields.status`: `Draft`, etc.
 * `fields.testable`: `true`/`false`
 * `fields.area`: `app`, `data`, `gateway`, `k8s`, etc.
-* `fields.rationale`: one sentence on “why”
+* `fields.rationale`: one sentence on "why"
 * `fields.order`: numeric sort order within the section
 
 **Template (requirement record)**
+
+File: `records/req.APP-007/APP-007.md`
 
 ```md
 ---
 typeId: req
 recordId: APP-007
-parent: "section:APP"
+parent: "section:1-application-requirements"
 fields:
   title: "Apps SHALL <do the thing>"
   status: "Draft"
   testable: true
   area: "app"
   rationale: "Short why statement that ties to an ADR/AD or system need."
-  order: 70
+  order: 7
 ---
 
 Shipped OurBox apps SHALL ...
@@ -218,7 +261,7 @@ Recommended pattern:
 Run:
 
 ```bash
-node tools/compile-all-specs.cjs
+npm test
 ```
 
 Then inspect:
@@ -241,7 +284,7 @@ Commit:
 * the GraphMD record(s) you added/changed
 * any referenced docs you created/updated (ADR, glossary, etc.)
 
-Do **not** “fix” a generated file by editing it directly.
+Do **not** "fix" a generated file by editing it directly. Generated files (`SyRS-*.md`, `SRS-*.md`, `OurBox-OS-Requirements-Omnibus.md`) are listed in `.gitignore` so Git won't track them.
 
 ---
 
@@ -292,26 +335,26 @@ To keep compiled sections in the right place, use this pattern:
 
 Why: the compiler appends section records *after* the spec body. If you put “Verification” in the spec body and later add requirement sections as records, they’ll show up *after verification*, which is backwards.
 
-**Recommended section order (example)**
+**Section order convention (matches existing SRS specs)**
 
-* 10 — Normative Language
-* 20 — Introduction
-* 30 — Referenced Documents
-* 40+ — Requirements groupings
+* 0 — Normative Language
+* 1 — Introduction
+* 2 — Referenced Documents
+* 3 — Requirements
+* 4 — External Interfaces
+* 5 — Verification
 
-  * Functional Requirements
-  * Data Requirements
-  * Quality Requirements
-  * Constraints
-* 90 — External Interfaces
-* 100 — Verification
+SyRS sections use a similar sequential scheme but with domain-specific groupings (Application Requirements, Data and Replication, etc.).
 
 ### Minimal spec record template
+
+File: `records/spec.SRS-0204/SRS-0204.md`
 
 ```md
 ---
 typeId: spec
 recordId: SRS-0204
+parent: doc_area:spec
 fields:
   title: "SRS-0204: <Component> Software Requirements Specification"
   version: "0.1 (Draft)"
@@ -325,15 +368,17 @@ One-paragraph scope statement for this SRS.
 
 Then add section records under it:
 
+File: `records/section.SRS-0204-1-introduction/SRS-0204-1-introduction.md`
+
 ```md
 ---
 typeId: section
-recordId: SRS-0204-intro
+recordId: SRS-0204-1-introduction
 parent: "spec:SRS-0204"
 fields:
   title: "Introduction"
   level: 1
-  order: 20
+  order: 1
 ---
 
 This SRS defines requirements for ...
@@ -409,7 +454,8 @@ fields:
 ### Ordering
 
 * Use `fields.order` to control ordering.
-* Use gaps (10, 20, 30…) so you can insert later without renumbering everything.
+* Existing records use sequential integers (0, 1, 2, …). You may use gaps (10, 20, 30…) if you anticipate frequent insertions, but keep it consistent within a spec.
+* If `fields.order` is absent the compiler treats it as `0`.
 
 ### Requirement writing rules
 
@@ -452,7 +498,7 @@ For every requirement record:
 * Confirm `parent` is correct:
 
   * Section parent must be exactly: `spec:<SPEC_ID>`
-  * Requirement parent must be exactly: `<SECTION_TYPE_ID>:<SECTION_RECORD_ID>`
+  * Requirement parent must be exactly: `section:<SECTION_RECORD_ID>`
 * Confirm you didn’t typo the parent string (case, punctuation, etc.).
 
 ### “Ordering is weird”
