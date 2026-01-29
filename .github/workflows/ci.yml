@@ -76,7 +76,7 @@ jobs:
       - name: Install deps (deterministic)
         run: npm ci
 
-      - name: Validate dataset + build SyRS-0001 artifact
+      - name: Validate dataset + build requirements artifacts
         run: npm test
 
       - name: Upload rendered requirements artifacts

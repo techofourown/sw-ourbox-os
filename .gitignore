@@ -2,3 +2,7 @@
 node_modules/
 npm-debug.log*
 .DS_Store
+# Generated requirements artifacts (built from GraphMD records)
+OurBox-OS-Requirements-Omnibus.md
+SyRS-*.md
+SRS-*.md
