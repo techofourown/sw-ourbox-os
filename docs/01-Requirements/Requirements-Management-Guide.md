@@ -31,8 +31,11 @@
     `"<specId>-<slugified-title>.md"`
   * One omnibus at repo root:
     `OurBox-OS-Requirements-Omnibus.md`
-  * The omnibus embeds the glossary from:
-    `docs/00-Glossary/Terms-and-Definitions.md`
+  * The omnibus embeds:
+    * `docs/00-Glossary/Terms-and-Definitions.md`
+    * `docs/architecture/Glossary.md`
+    * `docs/architecture/AD-0001-ourbox-os-architecture-description.md`
+    * All compiled specs
 
 ### The one rule that makes everything "click"
 
@@ -119,9 +122,11 @@ What the compiler does:
   * `SyRS-*.md`, `SRS-*.md`, etc. at **repo root**
   * `OurBox-OS-Requirements-Omnibus.md` at **repo root**
 
-Hard requirement:
+Hard requirements:
 
 * `docs/00-Glossary/Terms-and-Definitions.md` must exist or the build fails.
+* `docs/architecture/Glossary.md` must exist or the build fails.
+* `docs/architecture/AD-0001-ourbox-os-architecture-description.md` must exist or the build fails.
 
 > Note: Generated files are listed in `.gitignore` — they are build artifacts, not committed to the repository.
 
@@ -130,8 +135,10 @@ Hard requirement:
 CI publishes an artifact containing:
 
 * one compiled Markdown file per spec (SyRS + each SRS)
-* `OurBox-OS-Requirements-Omnibus.md` (which embeds the glossary inline)
+* `OurBox-OS-Requirements-Omnibus.md` (which embeds the glossary, architecture glossary, and architecture description inline)
 * `docs/00-Glossary/Terms-and-Definitions.md` (also included as a standalone file)
+* `docs/architecture/Glossary.md` (also included as a standalone file)
+* `docs/architecture/AD-0001-ourbox-os-architecture-description.md` (also included as a standalone file)
 
 If CI is green, you can assume the compiled outputs are consistent with the GraphMD source.
 
