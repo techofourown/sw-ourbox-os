@@ -6,7 +6,7 @@
 
 This specification is an early, intentionally small set of normative requirements derived from:
 - architecture docs ([[arch_doc:AD-0001]])
-- decisions ([[adr:ADR-0001]]..[[adr:ADR-0004]])
+- decisions ([[adr:ADR-0001]]..[[adr:ADR-0006]])
 
 It is compiled from GraphMD records into `SyRS-0001-ourbox-os-system-requirements-specification.md`.
 
@@ -83,14 +83,16 @@ vocabulary defined for OurBox OS.
 These requirements capture the canonical data modeling and replication posture for tenant databases
 and local replicas.
 
-### DATA-001: Each tenant SHALL have exactly one tenant DB
+### DATA-001: Each tenant SHALL have exactly one tenant DB and one tenant blob store
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** data  
-**Rationale:** Tenant DBs are the replication unit.
+**Rationale:** Tenant DBs are the replication unit; tenant blob stores provide tenant-scoped blob payload storage.
 
 OurBox SHALL maintain one CouchDB database per tenant, named using the `tenant_<tenant_id>` pattern.
+
+OurBox SHALL maintain one tenant blob store per tenant for blob payload bytes stored outside CouchDB. The tenant blob store uses a tenant-scoped storage root (ADR-0006).
 
 ### DATA-002: Tenant DBs SHALL be partitioned databases
 
@@ -135,10 +137,9 @@ SHALL NOT require selective partition replication.
 **Status:** Draft  
 **Testable:** true  
 **Area:** data  
-**Rationale:** Large binary content should not be default CouchDB attachments.
+**Rationale:** Large binary content should not be default CouchDB attachments; tenant-scoped blob stores enable legible tenant operations.
 
-Large binary assets (photos/video/audio) SHALL be stored outside CouchDB by default with references
-stored in application documents.
+Large binary assets (photos/video/audio) SHALL be stored outside CouchDB by default in the tenant blob store (one blob store per tenant), with references stored in application documents.
 
 ## Gateway and Identity
 

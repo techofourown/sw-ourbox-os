@@ -160,6 +160,7 @@ Rationale:
 ### 9) Large blobs are not stored as CouchDB attachments by default
 1. Photos/video/audio and other large blobs are stored as files (content-addressed where feasible).
 2. CouchDB documents store metadata and references/hashes to blobs.
+3. Blob payload bytes SHALL be stored in the tenant blob store (one blob store per tenant) under a tenant-scoped storage root.
 
 ## Rationale
 

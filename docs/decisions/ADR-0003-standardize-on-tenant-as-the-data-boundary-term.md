@@ -58,6 +58,7 @@ A **tenant** is the top-level data boundary that scopes:
 - **Data**
   - All application data belongs to exactly one tenant.
   - Each tenant has exactly one **tenant DB** (ADR-0002).
+  - Blob payload bytes stored outside CouchDB belong to exactly one tenant and are stored in that tenant's blob store.
 
 - **Access rules**
   - Access checks are evaluated in a tenant context.

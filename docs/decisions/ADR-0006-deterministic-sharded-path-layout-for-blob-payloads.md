@@ -29,7 +29,7 @@ We need a deterministic mapping from a blob identifier to a sharded storage path
 
 * **Storage root**: an implementation-chosen filesystem directory or object-store prefix under which blob payloads are stored.
 
-  * The storage root is resolved in tenant context. Practically, each tenant has a tenant-scoped storage root (the tenant boundary remains the access boundary).
+  * Each tenant SHALL have a tenant-scoped storage root. Blob payload storage is derived relative to that root, which implies one blob store per tenant by default.
 * **Payload**: the raw bytes addressed by a CID.
 * **Blob Key**: the canonical base32 string derived from a CID’s multihash bytes (ADR-0005).
 * **Shard**: a short string derived from the Blob Key used as a directory/prefix component.

@@ -11,6 +11,8 @@ Draft (normative unless explicitly marked “informative”)
 - ADR-0002: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
 - ADR-0003: Standardize on Tenant as the OurBox OS Data Boundary Term
 - ADR-0004: OurBox Document IDs
+- ADR-0005: Store blobs in a content-addressed blob store keyed by a canonical multihash key (no chunking)
+- ADR-0006: Deterministic sharded path layout for blob payloads
 
 ## Terminology
 - `docs/architecture/Glossary.md` is normative for vocabulary.
@@ -41,10 +43,11 @@ It does not specify UI flows or user-facing terminology.
 - Shipped apps SHALL be offline-first PWAs (ADR-0001).
 - CouchDB on the box and PouchDB in the browser SHALL be the primary data store stack for shipped apps (ADR-0002).
 - Tenant SHALL be the canonical top-level data boundary term (ADR-0003).
-- Kubernetes “namespace” is reserved for Kubernetes; it SHALL NOT be used as a synonym for tenant (ADR-0003).
+- Kubernetes "namespace" is reserved for Kubernetes; it SHALL NOT be used as a synonym for tenant (ADR-0003).
 - Tenant DBs SHALL be partitioned databases; doc kind SHALL be encoded in `_id` (ADR-0002, ADR-0004).
 - OurBox application documents SHALL use `_id = "<doc_kind>:<uuidv4>"` and ULIDs are prohibited (ADR-0004).
 - Large blobs SHALL NOT be stored as CouchDB attachments by default (ADR-0002).
+- Each tenant SHALL have a tenant-scoped blob store (one blob store per tenant) with a tenant-scoped storage root; blob payload layout is deterministic per ADR-0006.
 
 ---
 
@@ -138,6 +141,8 @@ Apps are not a data boundary; apps are experiences.
 Each tenant has exactly one tenant DB on the box:
 
 - CouchDB DB name: `tenant_<tenant_id>`
+
+Each tenant also has exactly one **tenant blob store** for blob payload bytes stored outside CouchDB. The blob store is resolved in tenant context (derived from hostname) and uses a tenant-scoped storage root.
 
 Within that tenant DB:
 - the DB is a **partitioned database**
@@ -260,9 +265,10 @@ Operational requirement (informative):
 
 #### 5.1.5 Blob/file store
 Responsibilities:
+- maintain one tenant blob store per tenant (tenant-scoped storage roots) so tenant operations (delete/export/accounting) are self-contained and legible
 - store large binary content outside CouchDB by default (ADR-0002)
 - provide stable content-addressed references/hashes stored in CouchDB docs
-- support “what is taking storage?” accounting
+- support "what is taking storage?" accounting
 
 ### 5.2 Data view (partitioning, IDs, and references)
 
@@ -277,6 +283,7 @@ Responsibilities:
 - CouchDB tenant DB: `tenant_<tenant_id>`
 - Replication endpoint: `/db` on tenant origin
 - Local PouchDB DB (within origin): `tenant_local`
+- Tenant blob store: tenant-scoped storage root (one per tenant); Blob Paths are derived per ADR-0006
 
 #### 5.2.3 Document IDs (normative)
 - `_id = "<doc_kind>:<uuidv4>"` (ADR-0004)
@@ -285,7 +292,7 @@ Responsibilities:
 
 #### 5.2.4 Blobs and references (normative)
 - Documents MAY reference blobs by content hash/CID.
-- Blobs SHALL NOT be stored as CouchDB attachments by default (ADR-0002).
+- Blob payload bytes SHALL be stored outside CouchDB by default in the **tenant blob store** under the tenant's storage root.
 
 ### 5.3 Runtime/process view (request and sync flows)
 

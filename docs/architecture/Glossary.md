@@ -156,6 +156,7 @@ A CouchDB database that stores all application documents for one tenant (ADR-000
 
 - Recommended naming: `tenant_<tenant_id>` (e.g., `tenant_bob`)
 - Replication unit: tenant DB ↔ tenant DB (whole-DB replication is the norm).
+- Each tenant also has exactly one tenant blob store used for blob payload bytes outside CouchDB.
 
 ### Local tenant replica
 The single PouchDB database within a tenant origin that acts as the local replica of the tenant DB.
@@ -216,10 +217,20 @@ Point-in-time retention (snapshots/archives). Replication is not backup.
 ## Blob and storage terms
 
 ### blob
-Large binary content (photos/video/audio/etc.) stored outside CouchDB by default (ADR-0002).
+Large binary content (photos/video/audio/etc.) stored outside CouchDB by default in the **tenant blob store** (one blob store per tenant) (ADR-0002, ADR-0005). Documents store references (e.g., CIDs); the tenant blob store stores payload bytes.
 
 ### content-addressed storage (CAS)
 A storage approach where blob identifiers are derived from the content (e.g., a hash) rather than a mutable name.
+
+### tenant blob store
+A tenant-scoped content-addressed blob store used to store blob payload bytes outside CouchDB.
+
+Normative:
+- Each tenant has exactly one tenant blob store on an OurBox instance.
+- Blob payload bytes belong to exactly one tenant and are stored in that tenant's blob store.
+
+### tenant storage root
+An implementation-chosen filesystem directory or object-store prefix that serves as the root of a tenant's blob store. Blob Paths (ADR-0006) are relative to this root.
 
 ## Web platform terms
 

@@ -16,11 +16,11 @@ Founder (initial); future Board + Members (ratification/amendment per `docs/poli
 
 OurBox OS is an offline-first, browser-first system (ADR-0001) built on CouchDB (box) + PouchDB (browser) replication (ADR-0002). Tenant databases are the replication unit and are partitioned by doc kind (ADR-0002, ADR-0004). Tenant context is derived from hostname and enforced by the gateway (ADR-0003, AD-0001).
 
-We have committed to the posture that **large blobs SHALL NOT be stored as CouchDB attachments by default** (ADR-0002 Rule 9; SyRS-0001 DATA-006). That pushes us toward a separate blob/file store for large binary content (photos, audio, video, etc.) with documents storing references.
+We have committed to the posture that **large blobs SHALL NOT be stored as CouchDB attachments by default** (ADR-0002 Rule 9; SyRS-0001 DATA-006). That pushes us toward a tenant blob store for large binary content (photos, audio, video, etc.) with documents storing references.
 
 We need a canonical, stable way for OurBox application documents to reference blob content stored outside CouchDB that supports:
 
-* **file-level deduplication** (same bytes should not be stored twice),
+* **file-level deduplication within a tenant blob store** (same bytes should not be stored twice within that tenant's blob store),
 * **end-to-end integrity** (the system can verify bytes are exactly what was referenced),
 * and **simple, legible identifiers** that are safe to move around between components and devices.
 
@@ -91,11 +91,11 @@ To derive a Blob Key:
 
 ### 5) Blob store invariants (CAS semantics)
 
-The OurBox blob/file store SHALL act as a content-addressed store keyed by **Blob Key**:
+The OurBox **tenant blob store** SHALL act as a content-addressed store keyed by **Blob Key**:
 
 1. **Idempotent put**
 
-   * Storing bytes whose Blob Key already exists SHALL succeed without creating duplicates.
+   * Storing bytes whose Blob Key already exists SHALL succeed without creating duplicates within that tenant's blob store.
 
 2. **Verifiable persistence**
 
@@ -123,6 +123,7 @@ Blob access SHALL be evaluated in **tenant context** derived from hostname (ADR-
 
 * CIDs and Blob Keys are identifiers for integrity/dedupe and SHALL NOT be treated as secrets or access tokens.
 * Authorization remains a gateway/platform responsibility, consistent with the OurBox posture that tenant membership gates access.
+* Blob payload bytes are stored in the tenant blob store under a tenant-scoped storage root (ADR-0006).
 
 ## Rationale
 

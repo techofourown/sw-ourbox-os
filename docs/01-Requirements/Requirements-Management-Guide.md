@@ -146,11 +146,12 @@ If CI is green, you can assume the compiled outputs are consistent with the Grap
 
 ## 4) Adding or editing a requirement (the common workflow)
 
-### Step 0 — Pick the “home” spec and section
+### Step 0 — Pick the "home" spec and section
 
 1. Decide which **spec** owns the requirement:
 
    * System-level norms → **SyRS** (e.g., `SyRS-0001`)
+     * Tenant boundary invariants: treat **tenant DB + tenant blob store** as a paired system-level norm. When you mention one, mention the other.
    * Gateway-specific → `SRS-0201`
    * Data/replication → `SRS-0202`
    * K8s/deployment → `SRS-0203`
