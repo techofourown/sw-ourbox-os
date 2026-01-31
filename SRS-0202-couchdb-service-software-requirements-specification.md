@@ -23,11 +23,12 @@ Scope includes:
 - tenant DB creation and naming posture (`tenant_<tenant_id>`)
 - partitioned database posture and `_id` scheme
 - replication posture at the database level (tenant DB ↔ tenant DB)
-- on-box blob-store posture insofar as it is part of the tenant storage contract
+- tenant storage contract boundaries for CouchDB usage
 
 Out of scope:
 - gateway routing, `/db` mapping, and host/path policy (see `[[spec:SRS-0201]]`)
 - client local replicas and PouchDB behavior (see `[[spec:SRS-0204]]`)
+- tenant blob store requirements (see `[[spec:SRS-0205]]`)
 
 This SRS is intentionally a minimal scaffold, but it pulls in the already-established requirements from:
 - `[[spec:SyRS-0001]]` (system requirements for data/replication), and
@@ -47,6 +48,7 @@ This SRS is intentionally a minimal scaffold, but it pulls in the already-establ
 - [[adr:ADR-0006]]
 - [[adr:ADR-0007]]
 - [[spec:SRS-0201]]
+- [[spec:SRS-0205]]
 
 ## Requirements
 

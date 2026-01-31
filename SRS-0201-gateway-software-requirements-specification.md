@@ -35,6 +35,7 @@ This SRS intentionally remains a minimal scaffold, but it includes the Gateway r
 - [[adr:ADR-0002]]
 - [[adr:ADR-0003]]
 - [[adr:ADR-0004]]
+- [[spec:SRS-0206]]
 
 ## Requirements
 
