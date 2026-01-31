@@ -1,11 +1,16 @@
 ---
 typeId: section
 recordId: SRS-0203-4-external-interfaces
-parent: spec:SRS-0203
+parent: "spec:SRS-0203"
 fields:
   title: "External Interfaces"
-  order: 4
   level: 1
+  order: 4
 ---
-External interfaces (ingress configuration surfaces, deployment manifests, operational endpoints)
-will be specified via Interface Control Documents (ICDs) and referenced here.
+The k3s platform is treated as internal infrastructure on the OurBox instance.
+
+External interfaces include:
+- Kubernetes deployment artifacts (manifests/charts) used to define the platform baseline
+- operational inspection surfaces (e.g., `kubectl`-visible resources, logs, events)
+
+Precise operational procedures and any operator-facing commands will be specified via future ICDs or operational docs.
