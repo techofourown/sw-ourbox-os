@@ -6,12 +6,7 @@ fields:
   title: "Requirements"
   order: 3
   level: 1
+  includes:
+    - "section:2-data-and-replication"
 ---
-This section will be populated with Data/Replication software requirements.
-
-Typical groupings (to be filled in later):
-- Tenant DB creation and naming requirements
-- Partitioning and document ID requirements
-- Replication posture requirements
-- Blob storage posture requirements (references stored in docs)
-- Operational constraints (compaction/retention posture)
+Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; CouchDB-service-specific requirements follow.

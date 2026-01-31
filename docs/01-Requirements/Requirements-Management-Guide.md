@@ -153,7 +153,8 @@ If CI is green, you can assume the compiled outputs are consistent with the Grap
    * System-level norms → **SyRS** (e.g., `SyRS-0001`)
      * Tenant boundary invariants: treat **tenant DB + tenant blob store** as a paired system-level norm. When you mention one, mention the other.
    * Gateway-specific → `SRS-0201`
-   * Data/replication → `SRS-0202`
+   * On-box CouchDB service + tenant DB posture → `SRS-0202`
+   * Client local tenant replica (PouchDB) → `SRS-0204`
    * K8s/deployment → `SRS-0203`
    * App-specific → `SRS-1001`, `SRS-1002`, etc.
 2. Decide the **section** it belongs in (or create a new section).

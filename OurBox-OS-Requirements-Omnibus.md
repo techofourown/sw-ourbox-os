@@ -4,8 +4,9 @@
 ## Included Specifications
 - SyRS-0001-ourbox-os-system-requirements-specification.md (source: spec:SyRS-0001)
 - SRS-0201-gateway-software-requirements-specification.md (source: spec:SRS-0201)
-- SRS-0202-data-and-replication-software-requirements-specification.md (source: spec:SRS-0202)
+- SRS-0202-couchdb-service-software-requirements-specification.md (source: spec:SRS-0202)
 - SRS-0203-kubernetes-and-deployment-software-requirements-specification.md (source: spec:SRS-0203)
+- SRS-0204-local-tenant-replica-software-requirements-specification.md (source: spec:SRS-0204)
 - SRS-1001-simplenote-software-requirements-specification.md (source: spec:SRS-1001)
 - SRS-1002-richnote-software-requirements-specification.md (source: spec:SRS-1002)
 
@@ -1326,59 +1327,155 @@ Initial verification posture for this SRS:
 
 ---
 
-# SRS-0202: Data and Replication Software Requirements Specification
+# SRS-0202: CouchDB Service Software Requirements Specification
 
 **Version:** 0.1 (Draft)
-**Last Updated:** 2026-01-28
+**Last Updated:** 2026-01-31
 **Status:** Draft
 
-This specification defines the software requirements for the Data and Replication software item,
-including CouchDB tenant databases and browser replication via PouchDB.
-
-This is intentionally minimal scaffolding; requirements will be added iteratively.
+This specification defines the software requirements for the on-box **CouchDB service** (system-of-record for tenant DBs). It is a minimal scaffold; detailed requirements live in section records and the authoritative Glossary.
 
 ## Normative Language
 
-Normative keywords (SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) are defined in
-`docs/00-Glossary/Terms-and-Definitions.md`.
+Normative keywords (SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
+
+Product and architecture terms used in this SRS (including **CouchDB**, **tenant**, **tenant_id**, **tenant DB**, **tenant blob store**, and **replication**) are defined in the OurBox OS Glossary.
+
+- Vocabulary authority: `docs/architecture/Glossary.md` (normative for terminology)
+- Normative keywords (SHALL/SHOULD/MAY): `docs/00-Glossary/Terms-and-Definitions.md`
 
 ## Introduction
 
-This SRS defines the requirements for the Data and Replication software item, including:
-- CouchDB tenant databases (system-of-record)
-- replication surfaces used by browser clients
-- PouchDB local replicas used for offline-first behavior
+This SRS defines requirements for the **on-box CouchDB service**, which acts as the tenant-scoped system-of-record and replication target.
+
+Scope includes:
+- tenant DB creation and naming posture (`tenant_<tenant_id>`)
+- partitioned database posture and `_id` scheme
+- replication posture at the database level (tenant DB ↔ tenant DB)
+- on-box blob-store posture insofar as it is part of the tenant storage contract
+
+Out of scope:
+- gateway routing, `/db` mapping, and host/path policy (see `[[spec:SRS-0201]]`)
+- client local replicas and PouchDB behavior (see `[[spec:SRS-0204]]`)
+
+This SRS is intentionally a minimal scaffold, but it pulls in the already-established requirements from:
+- `[[spec:SyRS-0001]]` (system requirements for data/replication), and
+- `[[arch_doc:AD-0001]]` (architecture invariants for storage/replication posture).
 
 ## Referenced Documents
 
 - `docs/00-Glossary/Terms-and-Definitions.md`
+- `docs/architecture/Glossary.md`
 - [[spec:SyRS-0001]]
 - [[arch_doc:AD-0001]]
 - [[adr:ADR-0001]]
 - [[adr:ADR-0002]]
 - [[adr:ADR-0003]]
 - [[adr:ADR-0004]]
+- [[adr:ADR-0005]]
+- [[adr:ADR-0006]]
+- [[adr:ADR-0007]]
+- [[spec:SRS-0201]]
 
 ## Requirements
 
-This section will be populated with Data/Replication software requirements.
+Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; CouchDB-service-specific requirements follow.
 
-Typical groupings (to be filled in later):
-- Tenant DB creation and naming requirements
-- Partitioning and document ID requirements
-- Replication posture requirements
-- Blob storage posture requirements (references stored in docs)
-- Operational constraints (compaction/retention posture)
+### DATA-001: Each tenant SHALL have exactly one tenant DB and one tenant blob store
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Tenant DBs are the replication unit; tenant blob stores provide tenant-scoped blob payload storage.
+
+OurBox SHALL maintain one CouchDB database per tenant, named using the `tenant_<tenant_id>` pattern.
+
+OurBox SHALL maintain one tenant blob store per tenant for blob payload bytes stored outside CouchDB. The tenant blob store uses a tenant-scoped storage root (ADR-0006).
+
+### DATA-002: Tenant DBs SHALL be partitioned databases
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Partitioning enforces doc-kind boundaries.
+
+All tenant databases SHALL be created as CouchDB partitioned databases.
+
+### DATA-003: Document IDs SHALL use the doc_kind:uuidv4 scheme
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Canonical IDs ensure consistent replication and conflict boundaries.
+
+Application documents SHALL have `_id` values shaped as `<doc_kind>:<uuidv4>` and SHALL NOT use ULIDs.
+
+### DATA-004: Doc kind SHALL be derived from _id only
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Avoids divergent sources of truth for document classification.
+
+Applications and services SHALL derive `doc_kind` from the `_id` prefix and SHALL NOT store a separate
+doc-type field as the authoritative source.
+
+### DATA-005: Tenant replication SHALL be whole-DB
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Replication posture is tenant DB ↔ tenant DB.
+
+Replication between client devices and the box SHALL use the tenant DB as the unit of replication and
+SHALL NOT require selective partition replication.
+
+### DATA-006: Blobs SHALL be stored outside CouchDB by default
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Large binary content should not be default CouchDB attachments; tenant-scoped blob stores enable legible tenant operations.
+
+Large binary assets (photos/video/audio) SHALL be stored outside CouchDB by default in the tenant blob store (one blob store per tenant), with references stored in application documents.
+
+### BOXDB-001: Replication SHALL use the standard CouchDB API and replication protocol
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Preserves interoperability across many clients and enables future peer replication without proprietary protocols.
+
+Replication between clients and the box SHALL use the standard CouchDB HTTP API and replication protocol.
+
+**Trace:** [[arch_doc:AD-0001]] §4.5
+
+### BOXDB-002: Replication SHALL be treated as synchronization, not backup
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Replication can copy deletions and bad changes; backup must be point-in-time retention.
+
+Replication SHALL be treated as availability/synchronization behavior and SHALL NOT be treated as backup.
+
+**Trace:** [[arch_doc:AD-0001]] §7.1
 
 ## External Interfaces
 
-External interfaces (replication endpoints, database interfaces, blob references, operational interfaces)
-will be specified via Interface Control Documents (ICDs) and referenced here.
+The CouchDB service is treated as internal infrastructure.
+
+Client-facing replication endpoints are presented via the Gateway on tenant origins (see `[[spec:SRS-0201]]`). Any direct CouchDB node/admin surface is intentionally out of scope for client access.
+
+Precise service-to-service interface details (ports, auth, internal URLs) will be specified via future ICDs.
 
 ## Verification
 
-Verification provisions (methods, environments, and trace links to evidence) will be defined here.
 Verification methods are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
+
+Initial verification posture:
+- **Inspection:** tenant DB naming, partitioned mode configuration, and blob-store posture.
+- **Test:** replication between a client and the box using the tenant DB as the unit of replication.
 
 ---
 
@@ -1430,6 +1527,131 @@ will be specified via Interface Control Documents (ICDs) and referenced here.
 
 Verification provisions (methods, environments, and trace links to evidence) will be defined here.
 Verification methods are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
+
+---
+
+# SRS-0204: Local Tenant Replica Software Requirements Specification
+
+**Version:** 0.1 (Draft)
+**Last Updated:** 2026-01-31
+**Status:** Draft
+
+This specification defines the software requirements for the **local tenant replica** on client devices (PouchDB/IndexedDB within a tenant origin). It is a minimal scaffold; detailed requirements live in section records and the authoritative Glossary.
+
+## Normative Language
+
+Normative keywords (SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
+
+Product and architecture terms used in this SRS (including **PouchDB**, **IndexedDB**, **tenant origin**, and **local tenant replica**) are defined in the OurBox OS Glossary.
+
+- Vocabulary authority: `docs/architecture/Glossary.md` (normative for terminology)
+- Normative keywords (SHALL/SHOULD/MAY): `docs/00-Glossary/Terms-and-Definitions.md`
+
+## Introduction
+
+This SRS defines requirements for the **local tenant replica** on client devices: the PouchDB database (IndexedDB-backed) within a tenant origin that enables offline-first behavior.
+
+Key posture (already established in architecture):
+- many client devices may exist per tenant
+- connectivity may be intermittent; sync is opportunistic
+- storage isolation is by tenant origin (`https://<tenant_id>.<box-host>`)
+
+Out of scope:
+- on-box CouchDB service requirements (see `[[spec:SRS-0202]]`)
+- gateway routing and `/db` mapping (see `[[spec:SRS-0201]]`)
+
+## Referenced Documents
+
+- `docs/00-Glossary/Terms-and-Definitions.md`
+- `docs/architecture/Glossary.md`
+- [[spec:SyRS-0001]]
+- [[arch_doc:AD-0001]]
+- [[adr:ADR-0001]]
+- [[adr:ADR-0002]]
+- [[adr:ADR-0003]]
+- [[adr:ADR-0004]]
+- [[spec:SRS-0201]]
+- [[spec:SRS-0202]]
+
+## Requirements
+
+Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; local-replica-specific requirements follow.
+
+### APP-002: Shipped apps SHALL persist working data locally
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Offline writes depend on local persistence.
+
+Shipped apps SHALL store working data locally in the tenant origin using PouchDB-backed IndexedDB.
+
+### APP-003: Shipped apps SHALL sync opportunistically
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Supports sporadic connectivity while keeping data consistent.
+
+Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
+
+### APP-005: Apps SHALL share one local tenant replica per origin
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Ensures apps share doc kinds offline.
+
+All shipped apps under the same tenant origin SHALL read and write through a single local tenant
+replica database on that device.
+
+### DATA-005: Tenant replication SHALL be whole-DB
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Replication posture is tenant DB ↔ tenant DB.
+
+Replication between client devices and the box SHALL use the tenant DB as the unit of replication and
+SHALL NOT require selective partition replication.
+
+### BOXDB-001: Replication SHALL use the standard CouchDB API and replication protocol
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Preserves interoperability across many clients and enables future peer replication without proprietary protocols.
+
+Replication between clients and the box SHALL use the standard CouchDB HTTP API and replication protocol.
+
+**Trace:** [[arch_doc:AD-0001]] §4.5
+
+### LCR-001: Local tenant replica SHALL use the stable database name `tenant_local`
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** client  
+**Rationale:** A stable local DB name enables multiple shipped apps under the same tenant origin to share the same working store.
+
+Within a tenant origin, the local tenant replica SHALL use the stable PouchDB database name `tenant_local`.
+
+**Trace:** [[arch_doc:AD-0001]] §5.2.2
+
+## External Interfaces
+
+The local tenant replica interacts with:
+- browser storage via IndexedDB (through PouchDB)
+- replication endpoints on the tenant origin (presented by the Gateway)
+
+Precise replication configuration (credentials/session mechanics, endpoint URLs beyond `/db`) will be specified via future ICDs.
+
+## Verification
+
+Verification methods are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
+
+Initial verification posture:
+- **Test:** offline write/read against the local tenant replica; then reconnect and replicate successfully.
+- **Inspection:** confirm a single local tenant replica is used across shipped apps within the same tenant origin.
 
 ---
 
