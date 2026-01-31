@@ -110,7 +110,7 @@ All tenant databases SHALL be created as CouchDB partitioned databases.
 **Area:** data  
 **Rationale:** Canonical IDs ensure consistent replication and conflict boundaries.
 
-Application documents SHALL have `_id` values shaped as `<doc_kind>:<uuidv4>` and SHALL NOT use ULIDs.
+Application documents SHALL have `_id` values shaped as `<doc_kind>:<uuidv4>`.
 
 ### DATA-004: Doc kind SHALL be derived from _id only
 

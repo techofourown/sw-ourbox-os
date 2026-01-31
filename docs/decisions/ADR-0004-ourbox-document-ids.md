@@ -30,8 +30,7 @@ In CouchDB/PouchDB, the unit of read/write, replication, and conflict is the **d
 The `_id` is the document’s identity across all devices and replicas. If `_id` structure is not
 standardized, the system quickly becomes inconsistent, hard to debug, and hard to compose across apps.
 
-We explicitly reject time-encoding identifiers (e.g., ULIDs) as an implicit sort key. If ordering
-matters, it must be represented explicitly in document fields—never smuggled into IDs.
+Identifiers SHALL be semantically opaque; if ordering matters, it must be represented explicitly in document fields—never smuggled into IDs.
 
 ## Decision
 
@@ -43,8 +42,6 @@ Where:
 
 - `doc_kind` is the **CouchDB partition key** and the canonical document kind identifier
 - `doc_uuid` is a **UUIDv4** string
-
-ULIDs are prohibited as document identifiers.
 
 ## Normative design rules
 
@@ -83,12 +80,7 @@ ULIDs are prohibited as document identifiers.
    - 8-4-4-4-12 with hyphens
 3. `doc_uuid` SHALL be generated without coordination and SHALL work offline (browser-first).
 
-### 5) ULIDs are prohibited as document identifiers
-1. ULIDs SHALL NOT be used as `doc_uuid`.
-2. ULIDs SHALL NOT be used as a primary identifier for OurBox application documents.
-3. If ULIDs appear in imported external data fields, they are treated as opaque external values only and SHALL NOT become `_id`.
-
-### 6) Meta documents
+### 5) Meta documents
 1. `meta` is a doc kind, not a special escape hatch.
 2. Meta documents are application documents and SHALL follow the same `_id` scheme:
    - `_id = "meta:<uuidv4>"`
@@ -96,7 +88,7 @@ ULIDs are prohibited as document identifiers.
    that purpose SHALL be represented as explicit document fields and/or indexes.
    - Example pattern (informative): `{ meta_key: "settings", ... }`
 
-### 7) Replication ramifications (normative posture)
+### 6) Replication ramifications (normative posture)
 1. Replication is **whole tenant DB ↔ whole tenant DB** (ADR-0002). OurBox does not require selective replication by partition.
 2. Partitions are used to:
    - enforce doc-kind vocabulary via `_id`
@@ -105,7 +97,7 @@ ULIDs are prohibited as document identifiers.
 3. Because replication and conflict resolution are document-based, the One-Document-Per-Entity rule (ADR-0002) remains critical:
    - document boundary = conflict boundary
 
-### 8) Ordering and “implicit meaning” rules
+### 7) Ordering and “implicit meaning” rules
 1. Applications SHALL NOT use `_id` ordering as a proxy for time ordering.
 2. If ordering matters (recent notes, tasks by due date), ordering SHALL be represented explicitly in fields and indexed appropriately.
 3. IDs remain semantically opaque aside from `doc_kind`.
@@ -138,7 +130,6 @@ ULIDs are prohibited as document identifiers.
 - CouchDB/PouchDB identity and replication revolve around `_id`. Standardizing it early eliminates ambiguity.
 - Using CouchDB partitioned databases makes `doc_kind` first-class and enforceable.
 - UUIDv4 provides offline-safe uniqueness without embedding time semantics.
-- ULIDs invite accidental coupling between “identifier” and “sort key,” which conflicts with OurBox’s “explicit fields for semantics” posture.
 - The scheme is legible, stable, and composes across apps (SimpleNote/RichNote sharing notes).
 
 ## Consequences

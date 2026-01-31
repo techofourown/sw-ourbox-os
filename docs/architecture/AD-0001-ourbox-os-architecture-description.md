@@ -45,7 +45,7 @@ It does not specify UI flows or user-facing terminology.
 - Tenant SHALL be the canonical top-level data boundary term (ADR-0003).
 - Kubernetes "namespace" is reserved for Kubernetes; it SHALL NOT be used as a synonym for tenant (ADR-0003).
 - Tenant DBs SHALL be partitioned databases; doc kind SHALL be encoded in `_id` (ADR-0002, ADR-0004).
-- OurBox application documents SHALL use `_id = "<doc_kind>:<uuidv4>"` and ULIDs are prohibited (ADR-0004).
+- OurBox application documents SHALL use `_id = "<doc_kind>:<uuidv4>"` (ADR-0004).
 - Large blobs SHALL NOT be stored as CouchDB attachments by default (ADR-0002).
 - Each tenant SHALL have a tenant-scoped blob store (one blob store per tenant) with a tenant-scoped storage root; blob payload layout is deterministic per ADR-0006.
 
@@ -288,7 +288,6 @@ Responsibilities:
 #### 5.2.3 Document IDs (normative)
 - `_id = "<doc_kind>:<uuidv4>"` (ADR-0004)
 - `doc_kind` is derived only from `_id`
-- ULIDs are prohibited for `_id` suffixes
 
 #### 5.2.4 Blobs and references (normative)
 - Documents MAY reference blobs by content hash/CID.

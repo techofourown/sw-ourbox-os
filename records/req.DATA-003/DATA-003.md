@@ -10,4 +10,4 @@ fields:
   area: "data"
   order: 3
 ---
-Application documents SHALL have `_id` values shaped as `<doc_kind>:<uuidv4>` and SHALL NOT use ULIDs.
+Application documents SHALL have `_id` values shaped as `<doc_kind>:<uuidv4>`.
