@@ -19,4 +19,5 @@ fields:
 - [[adr:ADR-0006]]
 - [[adr:ADR-0007]]
 - [[spec:SRS-0201]]
+- [[spec:SRS-0203]]
 - [[spec:SRS-0205]]

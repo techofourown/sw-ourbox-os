@@ -48,6 +48,7 @@ This SRS is intentionally a minimal scaffold, but it pulls in the already-establ
 - [[adr:ADR-0006]]
 - [[adr:ADR-0007]]
 - [[spec:SRS-0201]]
+- [[spec:SRS-0203]]
 - [[spec:SRS-0205]]
 
 ## Requirements
@@ -120,6 +121,30 @@ Large binary assets (photos/video/audio) SHALL be stored outside CouchDB by defa
 OurBox SHALL maintain one tenant blob store per tenant for blob payload bytes stored outside CouchDB.
 
 Each tenant blob store SHALL use a tenant-scoped storage root (ADR-0006).
+
+### K8S-005: CouchDB SHALL run as a k3s workload
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** k8s  
+**Rationale:** ADR-0007 establishes that CouchDB runs as a k3s workload for consistent appliance operations.
+
+The CouchDB service SHALL be deployed and managed as a Kubernetes workload in the on-box k3s cluster and SHALL NOT be operated as an unmanaged host-level daemon.
+
+**Trace:** [[adr:ADR-0007]]
+
+### K8S-006: CouchDB data SHALL be stored on persistent volumes
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** k8s  
+**Rationale:** CouchDB is the system-of-record; when deployed in k3s its data must survive pod restarts and rescheduling.
+
+The CouchDB workload SHALL store CouchDB data files on persistent storage provided via Kubernetes PersistentVolumeClaim(s).
+
+CouchDB SHALL NOT store system-of-record data only on ephemeral container filesystem storage.
+
+**Trace:** [[adr:ADR-0007]]
 
 ### BOXDB-001: Replication SHALL use the standard CouchDB API and replication protocol
 

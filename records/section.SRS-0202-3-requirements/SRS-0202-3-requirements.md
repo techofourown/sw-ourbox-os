@@ -7,6 +7,14 @@ fields:
   order: 3
   level: 1
   includes:
-    - "section:2-data-and-replication"
+    - "req:DATA-001"
+    - "req:DATA-002"
+    - "req:DATA-003"
+    - "req:DATA-004"
+    - "req:DATA-005"
+    - "req:DATA-006"
+    - "req:DATA-007"
+    - "req:K8S-005"
+    - "req:K8S-006"
 ---
 Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; CouchDB-service-specific requirements follow.
