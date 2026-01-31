@@ -214,6 +214,7 @@ Optional section narrative goes here.
 > * SyRS sections use `<order>-<slug>` as their `recordId` (e.g., `1-application-requirements`).
 > * SRS sections use `<SPEC_ID>-<order>-<slug>` (e.g., `SRS-0201-3-requirements`).
 > * `recordId` must be **stable**, because child records refer to it via `parent`.
+> * Sections MAY declare `fields.includes` (array of record keys) to render requirements from other sections before their local children—useful for allocation views. Example: `section:SRS-0201-3-requirements` includes `section:3-gateway-and-identity` so SRS-0201 renders GW-001..GW-003 without duplicating records.
 
 ### Step 2 — Add the requirement record under that section
 

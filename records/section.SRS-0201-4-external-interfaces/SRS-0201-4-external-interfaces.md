@@ -7,5 +7,10 @@ fields:
   order: 4
   level: 1
 ---
-External interfaces (HTTP APIs, endpoints, protocols, headers, identity context propagation, etc.)
-will be specified via Interface Control Documents (ICDs) and referenced here.
+Gateway external interfaces are HTTP(S) surfaces on tenant origins, including:
+- wildcard tenant hosts: `*.<box-host>`
+- app paths: `/<app_slug>`
+- replication path: `/db`
+- API paths: `/api/...` (when present)
+
+Identity context propagation to internal services (headers/claims/etc.) SHALL be specified in a future Interface Control Document (ICD). This SRS does not define header names or token formats.

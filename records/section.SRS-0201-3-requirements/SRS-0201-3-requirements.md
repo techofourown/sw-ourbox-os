@@ -6,12 +6,7 @@ fields:
   title: "Requirements"
   order: 3
   level: 1
+  includes:
+    - "section:3-gateway-and-identity"
 ---
-This section will be populated with Gateway software requirements.
-
-Typical groupings (to be filled in later):
-- Functional Requirements
-- Quality Requirements (NFRs)
-- Constraints
-- Security/Authorization Requirements
-- Operational/Deployment Constraints
+Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; Gateway-specific requirements follow.

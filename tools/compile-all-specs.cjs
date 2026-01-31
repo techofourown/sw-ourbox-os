@@ -116,8 +116,10 @@ function renderSpec(snapshot, specId) {
   const records = normalizeRecords(snapshot);
   const recordKey = (record) => `${record.typeId}:${record.recordId}`;
   const byParent = new Map();
+  const byKey = new Map();
 
   for (const record of records) {
+    byKey.set(recordKey(record), record);
     if (!record.parent) continue;
     const list = byParent.get(record.parent) || [];
     list.push(record);
@@ -158,8 +160,38 @@ function renderSpec(snapshot, specId) {
       lines.push("");
     }
 
-    const requirements = (byParent.get(recordKey(section)) || []).sort(sortByOrderThenId);
-    for (const req of requirements) {
+    const includes = Array.isArray(section.fields?.includes) ? section.fields.includes : [];
+    const seenReqKeys = new Set();
+    const orderedReqs = [];
+
+    const addReq = (req) => {
+      if (!req || req.typeId !== "req") return;
+      const key = recordKey(req);
+      if (seenReqKeys.has(key)) return;
+      seenReqKeys.add(key);
+      orderedReqs.push(req);
+    };
+
+    for (const includeKey of includes) {
+      if (typeof includeKey !== "string") continue;
+      if (includeKey.startsWith("section:")) {
+        const includedReqs = (byParent.get(includeKey) || [])
+          .filter((r) => r.typeId === "req")
+          .sort(sortByOrderThenId);
+        for (const req of includedReqs) addReq(req);
+      } else if (includeKey.startsWith("req:")) {
+        const req = byKey.get(includeKey);
+        addReq(req);
+      }
+    }
+
+    const directRequirements = (byParent.get(recordKey(section)) || [])
+      .filter((r) => r.typeId === "req")
+      .sort(sortByOrderThenId);
+
+    for (const req of directRequirements) addReq(req);
+
+    for (const req of orderedReqs) {
       lines.push(heading(level + 1, `${req.recordId}: ${req.fields?.title || "Requirement"}`));
       lines.push("");
 
