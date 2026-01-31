@@ -119,4 +119,4 @@ governed by ADR-0002/ADR-0004 and SyRS-0001.
 - ADR-0005: Store blobs in a content-addressed blob store keyed by a canonical multihash key (no chunking)
 - ADR-0006: Deterministic sharded path layout for blob payloads
 - `docs/architecture/AD-0001-ourbox-os-architecture-description.md`
-- SyRS-0001: OurBox OS System Requirements Specification (notably DATA-001..DATA-006; GW-001..GW-003; K8S-001..K8S-003)
+- SyRS-0001: OurBox OS System Requirements Specification (notably DATA-001..DATA-007; GW-001..GW-003; K8S-001..K8S-003)
