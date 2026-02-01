@@ -24,6 +24,14 @@ requirements, architecture, design, and verification artifacts.
 
 ---
 
+## Vocabulary authority and precedence
+
+- `docs/architecture/Glossary.md` is the **vocabulary authority** for OurBox OS product terms (tenant, capability, gateway, etc.).
+- This document (`Terms-and-Definitions.md`) defines **requirements language** (SHALL/SHOULD/MAY) and **general systems/software engineering process terms**.
+- If any term conflicts, **`docs/architecture/Glossary.md` wins**.
+
+---
+
 ## Normative keywords
 The following keywords indicate requirement strength when used in requirements specifications:
 
@@ -113,8 +121,9 @@ A statement of a business objective, outcome, or value the system is intended to
 ### Business Requirements Specification (BRS)
 A specification of business requirements and business-level constraints and objectives.
 
-### Capability
+### System capability
 A named ability or function the system provides, typically described at an operational level.
+**Note:** In OurBox OS, the term **capability** (without “system”) is reserved for authorization permissions (see `docs/architecture/Glossary.md`).
 
 ### Change control
 A defined process for proposing, evaluating, approving, implementing, and documenting changes to
@@ -145,7 +154,7 @@ A unique identifier assigned to a document or record to support traceability, co
 management, and referencing.
 
 ### Functional requirement
-A requirement that specifies a function, behavior, or capability the system or system element shall
+A requirement that specifies a function, behavior, or system capability the system or system element shall
 provide.
 
 ### Hazard
@@ -201,7 +210,7 @@ A specification capturing stakeholder needs and expectations, including operatio
 constraints, typically preceding or informing system requirements.
 
 ### Subsystem
-A system element composed of multiple components that together provide a set of capabilities within
+A system element composed of multiple components that together provide a set of system capabilities within
 the larger system.
 
 ### System
@@ -277,6 +286,8 @@ This document defines canonical terms used across OurBox OS architecture, ADRs, 
 - “Namespace” is reserved for Kubernetes namespaces.
 
 If anything conflicts with this document’s vocabulary, this document wins (for terminology).
+
+**Reserved term:** `capability` refers only to tenant-scoped authorization permissions. Use **system capability** for system functions/abilities.
 
 ## Core terms
 
@@ -547,6 +558,7 @@ Draft (normative unless explicitly marked “informative”)
 - ADR-0004: OurBox Document IDs
 - ADR-0005: Store blobs in a content-addressed blob store keyed by a canonical multihash key (no chunking)
 - ADR-0006: Deterministic sharded path layout for blob payloads
+- ADR-0007: Run CouchDB as a k3s Workload (Not a Host Service)
 
 ## Terminology
 - `docs/architecture/Glossary.md` is normative for vocabulary.
@@ -582,6 +594,7 @@ It does not specify UI flows or user-facing terminology.
 - OurBox application documents SHALL use `_id = "<doc_kind>:<uuidv4>"` (ADR-0004).
 - Large blobs SHALL NOT be stored as CouchDB attachments by default (ADR-0002).
 - Each tenant SHALL have a tenant-scoped blob store (one blob store per tenant) with a tenant-scoped storage root; blob payload layout is deterministic per ADR-0006.
+- CouchDB SHALL be deployed as a k3s/Kubernetes workload and its system-of-record data SHALL be stored on persistent volumes (ADR-0007).
 
 ---
 
@@ -1244,16 +1257,15 @@ before allowing access to tenant-scoped services.
 The gateway SHALL expose replication at `/db` on the tenant origin and SHALL NOT require clients to
 know internal CouchDB endpoints.
 
-### GW-004: Gateway ingress SHALL support wildcard tenant hosts
+### K8S-002: Gateway ingress SHALL support wildcard tenant hosts
 
 **Status:** Draft  
 **Testable:** true  
-**Area:** gateway  
+**Area:** k8s  
 **Rationale:** Tenant origins rely on hostname routing.
 
-Ingress/gateway SHALL support wildcard host routing for `*.<box-host>` to enable tenant subdomains.
-
-**Trace:** [[arch_doc:AD-0001]] §5.4.2
+Ingress configuration SHALL support wildcard host routing for `*.<box-host>` to enable tenant
+subdomains.
 
 ### GW-005: TLS SHALL be terminated at the gateway for tenant subdomains
 
@@ -1338,7 +1350,7 @@ and are enforced by automated tests.
 Verification methods are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
 
 Initial verification posture for this SRS:
-- **Inspection:** confirm Gateway configuration supports wildcard hosts and path routing shapes (GW-004..GW-006).
+- **Inspection:** confirm Gateway configuration supports wildcard hosts and path routing shapes (K8S-002, GW-005, GW-006).
 - **Test:** automated integration tests that validate hostname→tenant mapping and membership gating (GW-001..GW-003, GW-007..GW-009).
 - Evidence artifacts (test outputs, config snapshots, and release manifests) will be linked here as they are produced.
 

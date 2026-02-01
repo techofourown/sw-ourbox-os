@@ -71,16 +71,15 @@ before allowing access to tenant-scoped services.
 The gateway SHALL expose replication at `/db` on the tenant origin and SHALL NOT require clients to
 know internal CouchDB endpoints.
 
-### GW-004: Gateway ingress SHALL support wildcard tenant hosts
+### K8S-002: Gateway ingress SHALL support wildcard tenant hosts
 
 **Status:** Draft  
 **Testable:** true  
-**Area:** gateway  
+**Area:** k8s  
 **Rationale:** Tenant origins rely on hostname routing.
 
-Ingress/gateway SHALL support wildcard host routing for `*.<box-host>` to enable tenant subdomains.
-
-**Trace:** [[arch_doc:AD-0001]] §5.4.2
+Ingress configuration SHALL support wildcard host routing for `*.<box-host>` to enable tenant
+subdomains.
 
 ### GW-005: TLS SHALL be terminated at the gateway for tenant subdomains
 
@@ -165,6 +164,6 @@ and are enforced by automated tests.
 Verification methods are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
 
 Initial verification posture for this SRS:
-- **Inspection:** confirm Gateway configuration supports wildcard hosts and path routing shapes (GW-004..GW-006).
+- **Inspection:** confirm Gateway configuration supports wildcard hosts and path routing shapes (K8S-002, GW-005, GW-006).
 - **Test:** automated integration tests that validate hostname→tenant mapping and membership gating (GW-001..GW-003, GW-007..GW-009).
 - Evidence artifacts (test outputs, config snapshots, and release manifests) will be linked here as they are produced.
