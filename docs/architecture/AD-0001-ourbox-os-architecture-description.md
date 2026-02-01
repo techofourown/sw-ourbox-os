@@ -14,6 +14,7 @@ Draft (normative unless explicitly marked “informative”)
 - ADR-0005: Store blobs in a content-addressed blob store keyed by a canonical multihash key (no chunking)
 - ADR-0006: Deterministic sharded path layout for blob payloads
 - ADR-0007: Run CouchDB as a k3s Workload (Not a Host Service)
+- ADR-0008: Deployment Baseline as the Platform Integration Contract
 
 ## Terminology
 - `docs/00-Glossary/Terms-and-Definitions.md` is normative for vocabulary.
@@ -50,6 +51,7 @@ It does not specify UI flows or user-facing terminology.
 - Large blobs SHALL NOT be stored as CouchDB attachments by default (ADR-0002).
 - Each tenant SHALL have a tenant-scoped blob store (one blob store per tenant) with a tenant-scoped storage root; blob payload layout is deterministic per ADR-0006.
 - CouchDB SHALL be deployed as a k3s/Kubernetes workload and its system-of-record data SHALL be stored on persistent volumes (ADR-0007).
+- The versioned deployment baseline (rendered manifests) SHALL be the authoritative platform integration contract; running cluster state SHALL conform to that baseline (ADR-0008).
 
 ---
 
