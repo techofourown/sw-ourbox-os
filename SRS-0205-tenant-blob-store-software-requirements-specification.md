@@ -102,7 +102,9 @@ Blob payload bytes SHALL be stored using a deterministic sharded path layout und
 
 The tenant blob store is treated as internal infrastructure.
 
-Client-visible interfaces for blob upload/download (if any) will be specified via future ICDs and mediated by the Gateway and/or platform services.
+Client-visible blob upload/download interfaces (if/when introduced) are defined as tenant-origin HTTP surfaces and described via
+machine-readable API contracts (OpenAPI/JSON schema), with conformance tests. This SRS specifies blob-store invariants and on-box storage
+posture; HTTP/API surfaces are mediated by the Gateway and/or platform services.
 
 ## Verification
 

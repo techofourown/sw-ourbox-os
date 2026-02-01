@@ -111,7 +111,9 @@ The local tenant replica interacts with:
 - browser storage via IndexedDB (through PouchDB)
 - replication endpoints on the tenant origin (presented by the Gateway)
 
-Precise replication configuration (credentials/session mechanics, endpoint URLs beyond `/db`) will be specified via future ICDs.
+Concrete replication configuration (credentials/session mechanics and any required request metadata) is defined by the deployed Gateway
+and identity implementation, and is verified by automated integration tests. This SRS specifies stable invariants (tenant origin,
+`tenant_local`, whole-DB replication posture) rather than wire-format details.
 
 ## Verification
 

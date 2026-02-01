@@ -1325,7 +1325,13 @@ Gateway external interfaces are HTTP(S) surfaces on tenant origins, including:
 - replication path: `/db`
 - API paths: `/api/...` (when present)
 
-Identity context propagation to internal services (headers/claims/etc.) SHALL be specified in a future Interface Control Document (ICD). This SRS does not define header names or token formats.
+The authoritative definition of these external surfaces (host routing, paths, routing objects, and service bindings)
+is the versioned deployment baseline (rendered Kubernetes manifests) and the running cluster state, verified by
+conformance/integration tests (see ADR-0008).
+
+This SRS intentionally does not define internal identity/session wire details (header names, claim keys, token formats).
+Those concrete wire details are defined as versioned contract artifacts (e.g., OpenAPI security schemes and/or JSON schemas)
+and are enforced by automated tests.
 
 ## Verification
 
@@ -1514,7 +1520,11 @@ The CouchDB service is treated as internal infrastructure.
 
 Client-facing replication endpoints are presented via the Gateway on tenant origins (see `[[spec:SRS-0201]]`). Any direct CouchDB node/admin surface is intentionally out of scope for client access.
 
-Precise service-to-service interface details (ports, auth, internal URLs) will be specified via future ICDs.
+Concrete in-cluster service interfaces (Service names, ports, authentication material, internal URLs, and any network policy)
+are defined by the versioned deployment baseline manifests and are discoverable via cluster inspection (ADR-0008).
+
+Any additional protocol-level contracts introduced between services (beyond what the deployment baseline expresses) are defined
+as machine-readable contract artifacts (OpenAPI/JSON schema) and verified by automated tests.
 
 ## Verification
 
@@ -1687,7 +1697,8 @@ External interfaces include:
 - Kubernetes deployment artifacts (manifests/charts) used to define the platform baseline
 - operational inspection surfaces (e.g., `kubectl`-visible resources, logs, events)
 
-Precise operational procedures and any operator-facing commands will be specified via future ICDs or operational docs.
+Operational procedures and any operator-facing commands are documented as operational runbooks and validated by conformance tests
+where feasible. The deployment baseline manifests are the authoritative definition of platform topology and configuration (ADR-0008).
 
 ## Verification
 
@@ -1814,7 +1825,9 @@ The local tenant replica interacts with:
 - browser storage via IndexedDB (through PouchDB)
 - replication endpoints on the tenant origin (presented by the Gateway)
 
-Precise replication configuration (credentials/session mechanics, endpoint URLs beyond `/db`) will be specified via future ICDs.
+Concrete replication configuration (credentials/session mechanics and any required request metadata) is defined by the deployed Gateway
+and identity implementation, and is verified by automated integration tests. This SRS specifies stable invariants (tenant origin,
+`tenant_local`, whole-DB replication posture) rather than wire-format details.
 
 ## Verification
 
@@ -1930,7 +1943,9 @@ Blob payload bytes SHALL be stored using a deterministic sharded path layout und
 
 The tenant blob store is treated as internal infrastructure.
 
-Client-visible interfaces for blob upload/download (if any) will be specified via future ICDs and mediated by the Gateway and/or platform services.
+Client-visible blob upload/download interfaces (if/when introduced) are defined as tenant-origin HTTP surfaces and described via
+machine-readable API contracts (OpenAPI/JSON schema), with conformance tests. This SRS specifies blob-store invariants and on-box storage
+posture; HTTP/API surfaces are mediated by the Gateway and/or platform services.
 
 ## Verification
 
@@ -1970,7 +1985,7 @@ Scope includes:
 
 Out of scope:
 - gateway routing and ingress mechanics (see `[[spec:SRS-0201]]`)
-- token formats, header names, and session mechanics (future ICDs)
+- token formats, header names, and session mechanics (defined by contract artifacts and enforced by tests; not specified in this SRS)
 - UI flows for login/tenant management (not specified here)
 
 ## Referenced Documents
@@ -2077,9 +2092,10 @@ Authorization SHALL consider:
 
 ## External Interfaces
 
-External interfaces for identity/session/token propagation will be specified via future ICDs.
-
 This SRS does not define token formats, cookie names, header names, or claim shapes.
+
+Concrete identity/session wire formats and internal identity-context propagation are defined as versioned contract artifacts
+(e.g., OpenAPI security schemes and/or JSON schemas) and are enforced by automated tests.
 
 ## Verification
 
@@ -2135,8 +2151,14 @@ Typical groupings (to be filled in later):
 
 ## External Interfaces
 
-External interfaces (UI surface expectations, APIs consumed, replication endpoints, etc.) will be
-specified via ICDs (as applicable) and referenced here.
+SimpleNote external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+
+- App route: `https://<tenant_id>.<box-host>/simplenote`
+- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
+- Local storage: shared local tenant replica `tenant_local` within the tenant origin
+
+Any additional APIs consumed or exposed by SimpleNote are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
+by automated integration tests.
 
 ## Verification
 
@@ -2189,8 +2211,14 @@ Typical groupings (to be filled in later):
 
 ## External Interfaces
 
-External interfaces (UI surface expectations, APIs consumed, replication endpoints, etc.) will be
-specified via ICDs (as applicable) and referenced here.
+RichNote external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+
+- App route: `https://<tenant_id>.<box-host>/richnote`
+- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
+- Local storage: shared local tenant replica `tenant_local` within the tenant origin
+
+Any additional APIs consumed or exposed by RichNote are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
+by automated integration tests.
 
 ## Verification
 

@@ -8,6 +8,7 @@ fields:
   order: 4
 ---
 
-External interfaces for identity/session/token propagation will be specified via future ICDs.
-
 This SRS does not define token formats, cookie names, header names, or claim shapes.
+
+Concrete identity/session wire formats and internal identity-context propagation are defined as versioned contract artifacts
+(e.g., OpenAPI security schemes and/or JSON schemas) and are enforced by automated tests.

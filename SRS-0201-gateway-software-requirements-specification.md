@@ -152,7 +152,13 @@ Gateway external interfaces are HTTP(S) surfaces on tenant origins, including:
 - replication path: `/db`
 - API paths: `/api/...` (when present)
 
-Identity context propagation to internal services (headers/claims/etc.) SHALL be specified in a future Interface Control Document (ICD). This SRS does not define header names or token formats.
+The authoritative definition of these external surfaces (host routing, paths, routing objects, and service bindings)
+is the versioned deployment baseline (rendered Kubernetes manifests) and the running cluster state, verified by
+conformance/integration tests (see ADR-0008).
+
+This SRS intentionally does not define internal identity/session wire details (header names, claim keys, token formats).
+Those concrete wire details are defined as versioned contract artifacts (e.g., OpenAPI security schemes and/or JSON schemas)
+and are enforced by automated tests.
 
 ## Verification
 

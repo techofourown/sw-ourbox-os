@@ -400,7 +400,13 @@ And requirements under the appropriate sections.
 
 ---
 
-## 6) Adding “new documents” (ADRs, Architecture Docs, ICDs, plans)
+## 6) Adding “new documents” (ADRs, Architecture Docs, contract artifacts, plans)
+
+Interface contracts are captured as one of:
+- the versioned deployment baseline (rendered Kubernetes manifests) for platform wiring concerns, and/or
+- machine-readable contract artifacts (OpenAPI/JSON schema/etc.) for API and wire-format concerns.
+
+Avoid introducing standalone interface documents for platform wiring; prefer baseline + tests (ADR-0008).
 
 There are two supported patterns; use whichever matches how the repo currently models docs.
 

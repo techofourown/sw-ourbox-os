@@ -17,5 +17,5 @@ Scope includes:
 
 Out of scope:
 - gateway routing and ingress mechanics (see `[[spec:SRS-0201]]`)
-- token formats, header names, and session mechanics (future ICDs)
+- token formats, header names, and session mechanics (defined by contract artifacts and enforced by tests; not specified in this SRS)
 - UI flows for login/tenant management (not specified here)
