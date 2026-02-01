@@ -70,9 +70,62 @@ function validateSnapshot(snapshot) {
   }
 }
 
+function normalizeRecords(snapshot) {
+  if (Array.isArray(snapshot.records)) return snapshot.records;
+  if (snapshot.recordsById && typeof snapshot.recordsById === "object") {
+    return Object.values(snapshot.recordsById);
+  }
+  if (snapshot.recordsMap && typeof snapshot.recordsMap === "object") {
+    return Object.values(snapshot.recordsMap);
+  }
+  if (snapshot.recordsIndex && typeof snapshot.recordsIndex === "object") {
+    return Object.values(snapshot.recordsIndex);
+  }
+  throw new Error("Unable to locate records in dataset snapshot.");
+}
+
+function normalizeTitle(title) {
+  return String(title || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+function enforceUniqueRequirementTitles(snapshot) {
+  const records = normalizeRecords(snapshot);
+  const titleMap = new Map(); // normalizedTitle -> [recordIds]
+
+  for (const record of records) {
+    if (record?.typeId !== "req") continue;
+    const title = record.fields?.title;
+    const normalized = normalizeTitle(title);
+    if (!normalized) continue;
+    const list = titleMap.get(normalized) || [];
+    list.push(record.recordId);
+    titleMap.set(normalized, list);
+  }
+
+  const duplicates = [];
+  for (const [title, ids] of titleMap.entries()) {
+    const uniqueIds = Array.from(new Set(ids));
+    if (uniqueIds.length > 1) {
+      duplicates.push({ title, ids: uniqueIds });
+    }
+  }
+
+  if (duplicates.length > 0) {
+    console.error("Duplicate requirement titles detected (DRY violation):");
+    for (const dup of duplicates) {
+      console.error(`- "${dup.title}" -> ${dup.ids.join(", ")}`);
+    }
+    process.exit(1);
+  }
+}
+
 try {
   const snapshot = loadSnapshot();
   validateSnapshot(snapshot);
+  enforceUniqueRequirementTitles(snapshot);
   console.log("GraphMD dataset is valid.");
 } catch (error) {
   console.error(error?.stack || error?.message || error);

@@ -11,6 +11,8 @@ This document defines canonical terms used across OurBox OS architecture, ADRs, 
 
 If anything conflicts with this document’s vocabulary, this document wins (for terminology).
 
+**Reserved term:** `capability` refers only to tenant-scoped authorization permissions. Use **system capability** for system functions/abilities.
+
 ## Core terms
 
 ### OurBox instance

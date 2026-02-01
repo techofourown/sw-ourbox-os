@@ -223,7 +223,7 @@ Optional section narrative goes here.
 
 Create a directory `records/req.<RECORD_ID>/` containing `<RECORD_ID>.md` with:
 
-* `recordId`: the requirement identifier (e.g., `APP-007`, `DATA-010`, `GW-004`)
+* `recordId`: the requirement identifier (e.g., `APP-007`, `DATA-010`, `GW-009`)
 * `parent`: `"section:<SECTION_RECORD_ID>"` (e.g., `"section:1-application-requirements"`)
 * `fields.title`: short human-readable title (shown in headings)
 * `fields.status`: `Draft`, etc.
@@ -496,10 +496,10 @@ For every requirement record:
 
 ### Glossary discipline
 
-* If you introduce a new term or use a word in a specialized way, add it to:
-
-  * `docs/00-Glossary/Terms-and-Definitions.md`
-* Remember: this glossary is embedded into the omnibus and is part of the normative context.
+* Product vocabulary (tenant, tenant origin, capability, etc.) goes in `docs/architecture/Glossary.md`.
+* Requirements language and SE/process terms go in `docs/00-Glossary/Terms-and-Definitions.md`.
+* If there is ever a conflict, the architecture glossary wins.
+* The glossaries are embedded into the omnibus and are part of the normative context.
 
 ---
 
