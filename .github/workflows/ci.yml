@@ -88,5 +88,4 @@ jobs:
             SyRS-*.md
             SRS-*.md
             docs/00-Glossary/Terms-and-Definitions.md
-            docs/architecture/Glossary.md
             docs/architecture/AD-0001-ourbox-os-architecture-description.md

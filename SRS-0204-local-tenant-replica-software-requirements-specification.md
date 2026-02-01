@@ -8,12 +8,7 @@ This specification defines the software requirements for the **local tenant repl
 
 ## Normative Language
 
-Normative keywords (SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
-
-Product and architecture terms used in this SRS (including **PouchDB**, **IndexedDB**, **tenant origin**, and **local tenant replica**) are defined in the OurBox OS Glossary.
-
-- Vocabulary authority: `docs/architecture/Glossary.md` (normative for terminology)
-- Normative keywords (SHALL/SHOULD/MAY): `docs/00-Glossary/Terms-and-Definitions.md`
+Normative keywords (SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) and OurBox OS product/architecture vocabulary are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
 
 ## Introduction
 
@@ -31,7 +26,6 @@ Out of scope:
 ## Referenced Documents
 
 - `docs/00-Glossary/Terms-and-Definitions.md`
-- `docs/architecture/Glossary.md`
 - [[spec:SyRS-0001]]
 - [[arch_doc:AD-0001]]
 - [[adr:ADR-0001]]

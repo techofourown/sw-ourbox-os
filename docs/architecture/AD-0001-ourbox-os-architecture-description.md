@@ -16,7 +16,7 @@ Draft (normative unless explicitly marked “informative”)
 - ADR-0007: Run CouchDB as a k3s Workload (Not a Host Service)
 
 ## Terminology
-- `docs/architecture/Glossary.md` is normative for vocabulary.
+- `docs/00-Glossary/Terms-and-Definitions.md` is normative for vocabulary.
 
 ---
 

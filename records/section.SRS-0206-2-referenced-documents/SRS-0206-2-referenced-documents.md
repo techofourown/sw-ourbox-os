@@ -9,7 +9,6 @@ fields:
 ---
 
 - `docs/00-Glossary/Terms-and-Definitions.md`
-- `docs/architecture/Glossary.md`
 - [[spec:SyRS-0001]]
 - [[arch_doc:AD-0001]]
 - [[adr:ADR-0003]]

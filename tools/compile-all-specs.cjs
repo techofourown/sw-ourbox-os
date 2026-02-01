@@ -265,13 +265,6 @@ function main() {
   }
   const terms = fs.readFileSync(termsPath, "utf8").trimEnd();
 
-  const archGlossaryPath = path.resolve(repoRoot, "docs", "architecture", "Glossary.md");
-  if (!fs.existsSync(archGlossaryPath)) {
-    console.error(`FATAL: Missing architecture Glossary file at ${archGlossaryPath}`);
-    process.exit(1);
-  }
-  const archGlossary = fs.readFileSync(archGlossaryPath, "utf8").trimEnd();
-
   const archDescPath = path.resolve(repoRoot, "docs", "architecture", "AD-0001-ourbox-os-architecture-description.md");
   if (!fs.existsSync(archDescPath)) {
     console.error(`FATAL: Missing architecture description file at ${archDescPath}`);
@@ -297,10 +290,6 @@ function main() {
   lines.push("---");
   lines.push("");
   lines.push(terms);
-  lines.push("");
-  lines.push("---");
-  lines.push("");
-  lines.push(archGlossary);
   lines.push("");
   lines.push("---");
   lines.push("");

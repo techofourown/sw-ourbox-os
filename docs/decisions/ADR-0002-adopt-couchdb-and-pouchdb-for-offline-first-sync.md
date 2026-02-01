@@ -198,4 +198,4 @@ Rationale:
 - ADR-0004: OurBox Document IDs
 - `docs/policies/founding/VALUES.md`
 - `docs/policies/founding/CONSTITUTION.md`
-- `docs/architecture/Glossary.md`
+- `docs/00-Glossary/Terms-and-Definitions.md`

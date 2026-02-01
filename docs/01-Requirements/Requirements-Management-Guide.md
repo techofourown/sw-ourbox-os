@@ -33,7 +33,6 @@
     `OurBox-OS-Requirements-Omnibus.md`
   * The omnibus embeds:
     * `docs/00-Glossary/Terms-and-Definitions.md`
-    * `docs/architecture/Glossary.md`
     * `docs/architecture/AD-0001-ourbox-os-architecture-description.md`
     * All compiled specs
 
@@ -125,7 +124,6 @@ What the compiler does:
 Hard requirements:
 
 * `docs/00-Glossary/Terms-and-Definitions.md` must exist or the build fails.
-* `docs/architecture/Glossary.md` must exist or the build fails.
 * `docs/architecture/AD-0001-ourbox-os-architecture-description.md` must exist or the build fails.
 
 > Note: Generated files are listed in `.gitignore` — they are build artifacts, not committed to the repository.
@@ -135,9 +133,8 @@ Hard requirements:
 CI publishes an artifact containing:
 
 * one compiled Markdown file per spec (SyRS + each SRS)
-* `OurBox-OS-Requirements-Omnibus.md` (which embeds the glossary, architecture glossary, and architecture description inline)
+* `OurBox-OS-Requirements-Omnibus.md` (which embeds the glossary and architecture description inline)
 * `docs/00-Glossary/Terms-and-Definitions.md` (also included as a standalone file)
-* `docs/architecture/Glossary.md` (also included as a standalone file)
 * `docs/architecture/AD-0001-ourbox-os-architecture-description.md` (also included as a standalone file)
 
 If CI is green, you can assume the compiled outputs are consistent with the GraphMD source.
@@ -496,7 +493,7 @@ For every requirement record:
 
 ### Glossary discipline
 
-* Product vocabulary (tenant, tenant origin, capability, etc.) goes in `docs/architecture/Glossary.md`.
+* Product vocabulary (tenant, tenant origin, capability, etc.) goes in `docs/00-Glossary/Terms-and-Definitions.md`.
 * Requirements language and SE/process terms go in `docs/00-Glossary/Terms-and-Definitions.md`.
 * If there is ever a conflict, the architecture glossary wins.
 * The glossaries are embedded into the omnibus and are part of the normative context.

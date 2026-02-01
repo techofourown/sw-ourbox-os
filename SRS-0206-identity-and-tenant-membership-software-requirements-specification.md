@@ -8,12 +8,7 @@ This specification defines the software requirements for OurBox OS identity prim
 
 ## Normative Language
 
-Normative keywords (SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
-
-Product and architecture terms used in this SRS (including **Tenant**, **tenant_id**, **User**, **user_id**, **tenant membership**, **role**, and **capability**) are defined in the OurBox OS Glossary.
-
-- Vocabulary authority: `docs/architecture/Glossary.md` (normative for terminology)
-- Normative keywords (SHALL/SHOULD/MAY): `docs/00-Glossary/Terms-and-Definitions.md`
+Normative keywords (SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) and OurBox OS product/architecture vocabulary are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
 
 ## Introduction
 
@@ -32,7 +27,6 @@ Out of scope:
 ## Referenced Documents
 
 - `docs/00-Glossary/Terms-and-Definitions.md`
-- `docs/architecture/Glossary.md`
 - [[spec:SyRS-0001]]
 - [[arch_doc:AD-0001]]
 - [[adr:ADR-0003]]
@@ -88,7 +82,7 @@ Within an OurBox instance, `user_id` SHALL be unique.
 
 `user_id` SHALL be safe for use in URLs, logs, and configuration.
 
-**Trace:** `docs/architecture/Glossary.md` (user_id)
+**Trace:** `docs/00-Glossary/Terms-and-Definitions.md` (user_id)
 
 ### ID-002: tenant_id SHALL satisfy hostname and CouchDB naming constraints
 
@@ -103,7 +97,7 @@ Within an OurBox instance, `user_id` SHALL be unique.
 
 `tenant_id` SHALL be safe for use in CouchDB database names.
 
-**Trace:** `docs/architecture/Glossary.md` (tenant_id)
+**Trace:** `docs/00-Glossary/Terms-and-Definitions.md` (tenant_id)
 
 ### ID-003: display_name SHALL NOT be used as an identifier
 
@@ -114,7 +108,7 @@ Within an OurBox instance, `user_id` SHALL be unique.
 
 `display_name` is presentation-only and SHALL NOT be used as an identifier.
 
-**Trace:** `docs/architecture/Glossary.md` (display_name)
+**Trace:** `docs/00-Glossary/Terms-and-Definitions.md` (display_name)
 
 ### ID-004: Authorization SHALL consider user identity, tenant context, and tenant-scoped roles/capabilities
 
