@@ -1,5 +1,3 @@
-File: /techofourown/sw-ourbox-os/docs/decisions/ADR-0007-run-couchdb-as-a-k3s-workload.md
-
 # ADR-0007: Run CouchDB as a k3s Workload (Not a Host Service)
 
 ## Status
