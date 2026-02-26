@@ -7,6 +7,8 @@ DIST_DIR="${ROOT}/dist"
 TAG="${1:-edge}"
 REF="ghcr.io/techofourown/sw-ourbox-os/platform-contract:${TAG}"
 ARTIFACT_TYPE="application/vnd.techofourown.ourbox.platform-contract.v1.tar+gzip"
+BLOB_REL="dist/platform-contract.tar.gz"
+PUSH_LOG="${DIST_DIR}/platform-contract.push.log"
 
 command -v oras >/dev/null 2>&1 || {
   echo "oras is required (https://oras.land/). Install it on your build host/CI." >&2
@@ -17,10 +19,11 @@ command -v oras >/dev/null 2>&1 || {
 # shellcheck disable=SC1090
 source "${DIST_DIR}/platform-contract.meta.env"
 
+pushd "${ROOT}" >/dev/null
 set +e
 OUT="$(oras push "${REF}" \
   --artifact-type "${ARTIFACT_TYPE}" \
-  "${DIST_DIR}/platform-contract.tar.gz:application/gzip" \
+  "${BLOB_REL}:application/gzip" \
   --annotation "org.opencontainers.image.source=${OURBOX_PLATFORM_CONTRACT_SOURCE}" \
   --annotation "org.opencontainers.image.revision=${OURBOX_PLATFORM_CONTRACT_REVISION}" \
   --annotation "org.opencontainers.image.version=${OURBOX_PLATFORM_CONTRACT_VERSION}" \
@@ -29,13 +32,14 @@ OUT="$(oras push "${REF}" \
   2>&1)"
 STATUS=$?
 set -e
+popd >/dev/null
 
-printf '%s\n' "${OUT}" | tee "${DIST_DIR}/platform-contract.push.log"
+printf '%s\n' "${OUT}" | tee "${PUSH_LOG}"
 
 if [[ "${STATUS}" -ne 0 ]]; then
   echo "" >&2
   echo "ERROR: oras push failed (exit ${STATUS})" >&2
-  echo "See: ${DIST_DIR}/platform-contract.push.log" >&2
+  echo "See: ${PUSH_LOG}" >&2
   exit "${STATUS}"
 fi
 
