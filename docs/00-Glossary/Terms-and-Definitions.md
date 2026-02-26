@@ -539,3 +539,33 @@ A specification of the conventions for constructing and using a view (e.g., nota
 techniques, analysis methods, and stakeholder concerns addressed).
 
 ---
+
+## OCI and artifact distribution terms
+
+### OCI artifact
+A non-container (or container-adjacent) payload stored and distributed through an OCI-compliant
+registry, addressable by digest.
+
+### OCI image
+A container image stored in an OCI-compliant registry. In OurBox OS docs, this term is used for
+container workloads; "OCI artifact" is the broader category.
+
+### Digest
+A content-addressed identifier (for example, `sha256:<hex>`) derived from artifact bytes.
+
+Normative guidance:
+- Tags are human-facing aliases and MAY move.
+- Digest is identity and SHOULD be used for repeatable installs/releases.
+
+### Platform contract artifact
+The OCI artifact form of the versioned OurBox OS deployment baseline contract (ADR-0008, ADR-0009).
+This is the canonical producer output from `sw-ourbox-os` for downstream image-repo consumption.
+
+### Release manifest
+A (future) signed artifact that enumerates the exact digests that define an official OurBox release
+or profile.
+
+### Trust policy
+A device-local rule set that decides which signers and/or digests are accepted for install/update.
+
+---
