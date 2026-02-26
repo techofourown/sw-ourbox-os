@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ourbox-system
+  labels:
+    app.kubernetes.io/name: ourbox-platform-contract
+    app.kubernetes.io/part-of: ourbox-os
