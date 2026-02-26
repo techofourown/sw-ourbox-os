@@ -23,3 +23,16 @@ related components.
 
 The model is one lane, explicit trust: everyone uses the same artifact mechanics; trust is layered
 through signer/policy choices over time.
+
+## Platform contract producer workflow
+
+This repository now produces a platform contract bundle from `platform-contract/` as a tarball
+that can be published to GHCR as an OCI artifact.
+
+- Build locally: `./tools/platform-contract/build.sh`
+- Publish (defaults to `edge`): `./tools/platform-contract/publish.sh [tag]`
+- Pinned digest output: `dist/platform-contract.ref`
+
+A GitHub Actions workflow publishes:
+- `edge` on pushes to `main`
+- `v*` tags as versioned contract tags
