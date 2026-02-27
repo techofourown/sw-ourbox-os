@@ -1,3 +1,10 @@
+# [0.3.0](https://github.com/techofourown/sw-ourbox-os/compare/v0.2.1...v0.3.0) (2026-02-27)
+
+
+### Features
+
+* publish airgap platform bundle and vendor todo-bloom ([58c2751](https://github.com/techofourown/sw-ourbox-os/commit/58c2751fd880afa083a644ac3fc2673c1ba2a247))
+
 ## [0.2.1](https://github.com/techofourown/sw-ourbox-os/compare/v0.2.0...v0.2.1) (2026-02-27)
 
 
