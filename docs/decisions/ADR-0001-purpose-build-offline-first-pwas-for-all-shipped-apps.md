@@ -1,8 +1,5 @@
 # ADR-0001: Purpose-build Offline‑First PWAs for All Shipped OurBox Apps
 
-## Status
-Accepted (Updated)
-
 ## Date
 2026-01-25
 

@@ -1,14 +1,7 @@
 # ADR-0007: Run CouchDB as a k3s Workload (Not a Host Service)
 
-## Status
-Accepted
-
 ## Date
 2026-01-30
-
-## Deciders
-Founder (initial); future Board + Members (ratification/amendment per `docs/policies/founding/CONSTITUTION.md`)
-
 ## Context
 
 OurBox OS is an offline-first, browser-first appliance whose shipped apps use PouchDB in the browser

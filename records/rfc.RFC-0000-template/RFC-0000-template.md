@@ -5,12 +5,10 @@ parent: doc_area:rfcs
 fields:
   title: "RFC Template"
   rfcCode: "RFC-0000"
-  status: "Template"
   legacyPath: "docs/rfcs/0000-template.md"
 ---
 # RFC-XXXX: [Title]
 
-**Status:** Draft | Discussion | Accepted | Rejected | Withdrawn  
 **Created:** YYYY-MM-DD  
 **Updated:** YYYY-MM-DD
 

@@ -1,8 +1,5 @@
 # ADR-0008: Deployment Baseline as the Platform Integration Contract
 
-## Status
-Draft
-
 ## Date
 2026-01-31
 

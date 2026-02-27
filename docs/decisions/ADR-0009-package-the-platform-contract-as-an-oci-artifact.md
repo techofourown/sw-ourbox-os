@@ -1,8 +1,6 @@
 # ADR-0009: Package the OurBox OS Platform Contract as an OCI Artifact
 
 - **Date:** 2026-02-26
-- **Status:** Proposed (intended to be Accepted once first consumer exists)
-- **Deciders:** OurBox OS maintainers
 - **Related:**
   - Org ADR: `org-techofourown/docs/decisions/ADR-0007-adopt-oci-artifacts-for-app-distribution.md`
   - Org RFC: `org-techofourown/docs/rfcs/RFC-0001-oci-artifacts-trust-and-attestations.md`

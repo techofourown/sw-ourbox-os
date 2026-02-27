@@ -1,6 +1,5 @@
 # RFC-0001: OurBox OS Artifact Contract and Phased OCI Adoption
 
-**Status:** Draft  
 **Created:** 2026-02-26  
 **Updated:** 2026-02-26  
 

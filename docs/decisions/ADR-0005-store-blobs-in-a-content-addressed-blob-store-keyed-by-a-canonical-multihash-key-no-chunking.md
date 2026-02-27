@@ -1,17 +1,8 @@
 # ADR-0005: Store blobs in a content-addressed blob store keyed by a canonical multihash key (no chunking)
 
-## Status
-
-Accepted
-
 ## Date
 
 2026-01-29
-
-## Deciders
-
-Founder (initial); future Board + Members (ratification/amendment per `docs/policies/founding/CONSTITUTION.md`)
-
 ## Context
 
 OurBox OS is an offline-first, browser-first system (ADR-0001) built on CouchDB (box) + PouchDB (browser) replication (ADR-0002). Tenant databases are the replication unit and are partitioned by doc kind (ADR-0002, ADR-0004). Tenant context is derived from hostname and enforced by the gateway (ADR-0003, AD-0001).

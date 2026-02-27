@@ -1,14 +1,7 @@
 # ADR-0002: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
 
-## Status
-Accepted (Updated)
-
 ## Date
 2026-01-25
-
-## Deciders
-Founder (initial); future Board + Members (ratification/amendment per `docs/policies/founding/CONSTITUTION.md`)
-
 ## Context
 
 ADR-0001 commits OurBox OS to shipped apps that are offline-first PWAs that withstand sporadic sync

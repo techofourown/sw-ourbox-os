@@ -1,14 +1,7 @@
 # ADR-0004: OurBox Document IDs
 
-## Status
-Accepted
-
 ## Date
 2026-01-25
-
-## Deciders
-Founder (initial); future Board + Members (ratification/amendment per `docs/policies/founding/CONSTITUTION.md`)
-
 ## Context
 
 OurBox OS shipped apps are offline-first PWAs (ADR-0001) that persist locally in the browser

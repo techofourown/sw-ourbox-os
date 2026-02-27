@@ -1,17 +1,8 @@
 # ADR-0006: Deterministic sharded path layout for blob payloads
 
-## Status
-
-Accepted
-
 ## Date
 
 2026-01-29
-
-## Deciders
-
-Founder (initial); future Board + Members (ratification/amendment per `docs/policies/founding/CONSTITUTION.md`)
-
 ## Context
 
 OurBox stores large binary payloads (photos, audio, video, etc.) outside CouchDB (ADR-0005, ADR-0002 Rule 9; SyRS DATA-006). Payloads are addressed content-wise (CID) and stored under a canonical **Blob Key** derived from the CID’s multihash bytes (ADR-0005).

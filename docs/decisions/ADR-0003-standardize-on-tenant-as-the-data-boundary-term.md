@@ -1,14 +1,7 @@
 # ADR-0003: Standardize on Tenant as the OurBox OS Data Boundary Term
 
-## Status
-Accepted (Updated)
-
 ## Date
 2026-01-25
-
-## Deciders
-Founder (initial); future Board + Members (ratification/amendment per `docs/policies/founding/CONSTITUTION.md`)
-
 ## Context
 
 OurBox OS is an offline-first, browser-first system (ADR-0001). We have adopted CouchDB + PouchDB as
