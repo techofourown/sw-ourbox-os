@@ -72,13 +72,16 @@ jobs:
 
           test -f /tmp/airgap-platform/dist/airgap-platform.tar.gz
 
-          echo "Tar listing (head):"
-          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | sed -n '1,50p'
+          TAR_LIST="/tmp/airgap-platform/tar.list"
+          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz > "${TAR_LIST}"
 
-          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | grep -q '^k3s/k3s$'
-          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | grep -q '^k3s/k3s-airgap-images-'${ARCH}'\.tar$'
-          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | grep -q '^manifest.env$'
-          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | grep -q '^platform/images/'
+          echo "Tar listing (head):"
+          sed -n '1,50p' "${TAR_LIST}"
+
+          grep -q '^k3s/k3s$' "${TAR_LIST}"
+          grep -q '^k3s/k3s-airgap-images-'${ARCH}'\.tar$' "${TAR_LIST}"
+          grep -q '^manifest.env$' "${TAR_LIST}"
+          grep -q '^platform/images/' "${TAR_LIST}"
 
       - name: Upload publish outputs
         uses: actions/upload-artifact@v4
