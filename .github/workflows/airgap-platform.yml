@@ -73,7 +73,7 @@ jobs:
           test -f /tmp/airgap-platform/dist/airgap-platform.tar.gz
 
           echo "Tar listing (head):"
-          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | head -n 50
+          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | sed -n '1,50p'
 
           tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | grep -q '^k3s/k3s$'
           tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | grep -q '^k3s/k3s-airgap-images-'${ARCH}'\.tar$'
