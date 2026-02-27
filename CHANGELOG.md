@@ -1,3 +1,10 @@
+## [0.3.1](https://github.com/techofourown/sw-ourbox-os/compare/v0.3.0...v0.3.1) (2026-02-27)
+
+
+### Bug Fixes
+
+* avoid false failure in airgap tar smoke listing ([2748d21](https://github.com/techofourown/sw-ourbox-os/commit/2748d2144cd57b7821d1511f50fecb5bb50bf25f))
+
 # [0.3.0](https://github.com/techofourown/sw-ourbox-os/compare/v0.2.1...v0.3.0) (2026-02-27)
 
 
