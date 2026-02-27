@@ -1,3 +1,10 @@
+# [0.2.0](https://github.com/techofourown/sw-ourbox-os/compare/v0.1.1...v0.2.0) (2026-02-27)
+
+
+### Features
+
+* add Messager SRS records and compiled spec ([9e49f18](https://github.com/techofourown/sw-ourbox-os/commit/9e49f18f18adbf56b573cab866e84666f8ffbf5a))
+
 ## [0.1.1](https://github.com/techofourown/sw-ourbox-os/compare/v0.1.0...v0.1.1) (2026-02-26)
 
 
