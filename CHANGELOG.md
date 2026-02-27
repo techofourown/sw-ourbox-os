@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/techofourown/sw-ourbox-os/compare/v0.2.0...v0.2.1) (2026-02-27)
+
+
+### Bug Fixes
+
+* unbreak platform-contract workflow ([0a52c82](https://github.com/techofourown/sw-ourbox-os/commit/0a52c820f6c6300412ada7d085f1f90a20354dba))
+
 # [0.2.0](https://github.com/techofourown/sw-ourbox-os/compare/v0.1.1...v0.2.0) (2026-02-27)
 
 
