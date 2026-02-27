@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Todo Bloom · OurBox demo</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header>
+        <p class="eyebrow">Offline demo workload</p>
+        <h1>Todo Bloom</h1>
+        <p class="lede">A tiny placeholder UI shipped in the platform contract. Your real app can replace this bundle later.</p>
+      </header>
+
+      <section class="composer">
+        <label for="task-input">New task</label>
+        <div class="input-row">
+          <input id="task-input" autocomplete="off" placeholder="Write docs, check airgap bundle, ship" />
+          <button id="add-btn" type="button">Add</button>
+        </div>
+      </section>
+
+      <section class="list" aria-live="polite">
+        <ul id="task-list"></ul>
+      </section>
+
+      <footer>
+        <small>
+          Stored locally on the device. This bundle lives at <code>/opt/ourbox/airgap/platform/todo-bloom/</code> and is managed by
+          <code>sw-ourbox-os</code>.
+        </small>
+      </footer>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,91 @@
+name: Airgap Platform
+
+on:
+  push:
+    branches: ["main"]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: airgap-platform-${{ github.ref_type }}-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, amd64]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up QEMU (multi-arch pulls)
+        uses: docker/setup-qemu-action@v3
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Publish bundle
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          TAG=edge
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          fi
+
+          TAG="${TAG}" ARCH="${ARCH}" ./tools/airgap-platform/publish.sh "${ARCH}" "${TAG}"
+
+      - name: Smoke pull published digest and verify layout
+        if: always()
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+
+          REF_FILE="dist/airgap-platform.${ARCH}.ref"
+          if [[ ! -f "${REF_FILE}" ]]; then
+            echo "No ${REF_FILE} found (publish may have been skipped)."
+            exit 0
+          fi
+
+          REF="$(cat "${REF_FILE}")"
+          echo "Smoke pull: ${REF}"
+
+          rm -rf /tmp/airgap-platform
+          mkdir -p /tmp/airgap-platform
+          oras pull "${REF}" -o /tmp/airgap-platform
+
+          test -f /tmp/airgap-platform/dist/airgap-platform.tar.gz
+
+          echo "Tar listing (head):"
+          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | head -n 50
+
+          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | grep -q '^k3s/k3s$'
+          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | grep -q '^k3s/k3s-airgap-images-'${ARCH}'\.tar$'
+          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | grep -q '^manifest.env$'
+          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz | grep -q '^platform/images/'
+
+      - name: Upload publish outputs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: airgap-platform-${{ matrix.arch }}-${{ github.run_id }}
+          path: |
+            dist/airgap-platform.${{ matrix.arch }}.ref
+            dist/airgap-platform.${{ matrix.arch }}.push.log
+          if-no-files-found: warn
