@@ -1,3 +1,10 @@
+## [0.3.2](https://github.com/techofourown/sw-ourbox-os/compare/v0.3.1...v0.3.2) (2026-02-27)
+
+
+### Bug Fixes
+
+* make airgap smoke checks pipe-safe ([10f8bf8](https://github.com/techofourown/sw-ourbox-os/commit/10f8bf82c214a33ad888e9e098629c6ef2085d61))
+
 ## [0.3.1](https://github.com/techofourown/sw-ourbox-os/compare/v0.3.0...v0.3.1) (2026-02-27)
 
 
