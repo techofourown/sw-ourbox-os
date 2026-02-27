@@ -9,7 +9,10 @@ on:
 permissions:
   contents: read
   packages: write
-  id-token: write
+
+concurrency:
+  group: platform-contract-${{ github.ref_type }}-${{ github.ref_name }}
+  cancel-in-progress: true
 
 jobs:
   publish:
@@ -34,6 +37,32 @@ jobs:
       - name: Publish version tag
         if: startsWith(github.ref, 'refs/tags/v')
         run: ./tools/platform-contract/publish.sh "${GITHUB_REF_NAME}"
+
+      - name: Smoke: pull published digest and verify layout
+        if: always()
+        run: |
+          set -euo pipefail
+
+          if [ ! -f dist/platform-contract.ref ]; then
+            echo "No dist/platform-contract.ref found (publish may have been skipped)."
+            exit 0
+          fi
+
+          REF="$(cat dist/platform-contract.ref)"
+          echo "Smoke pull: ${REF}"
+
+          rm -rf /tmp/platform-contract
+          mkdir -p /tmp/platform-contract
+          oras pull "${REF}" -o /tmp/platform-contract
+
+          test -f /tmp/platform-contract/dist/platform-contract.tar.gz
+
+          echo "Tar listing (head):"
+          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | head -n 50
+
+          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/contract\.env$'
+          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/manifests/'
+          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/landing/'
 
       - name: Upload publish outputs
         uses: actions/upload-artifact@v4

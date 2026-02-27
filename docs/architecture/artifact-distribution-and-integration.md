@@ -84,6 +84,11 @@ The installed system SHOULD record:
 - Identity remains digest-based.
 - In an airgapped environment, the device should still be able to answer: "what digests are these bits?"
 
+### Consumer pinning (operational)
+- Consumers SHOULD pin `ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:<digest>`.
+- The platform-contract workflow writes the digest to `dist/platform-contract.ref` (uploaded as a workflow artifact for each publish).
+- DIY users can also pull `:edge` and read the digest from the ORAS output or GHCR UI before pinning.
+
 ---
 
 ## Build-from-source remains first-class
