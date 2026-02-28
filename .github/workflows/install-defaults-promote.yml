@@ -1,0 +1,64 @@
+name: Install Defaults Promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: Existing source tag to promote from
+        required: true
+        default: edge
+      target_tag:
+        description: Target tag to write (for example stable)
+        required: true
+        default: stable
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: install-defaults-promote-${{ github.event.inputs.target_tag }}
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Promote tag
+        run: |
+          set -euo pipefail
+
+          REF_BASE="ghcr.io/techofourown/sw-ourbox-os/install-defaults"
+          SOURCE_TAG="${{ github.event.inputs.source_tag }}"
+          TARGET_TAG="${{ github.event.inputs.target_tag }}"
+
+          SOURCE_REF="${REF_BASE}:${SOURCE_TAG}"
+          DIGEST="$(oras resolve "${SOURCE_REF}")"
+          [[ -n "${DIGEST}" ]] || { echo "Failed to resolve digest for ${SOURCE_REF}" >&2; exit 1; }
+
+          SOURCE_PINNED="${REF_BASE}@${DIGEST}"
+          oras tag "${SOURCE_PINNED}" "${TARGET_TAG}"
+
+          mkdir -p dist
+          printf '%s\n' "${SOURCE_REF}" > dist/install-defaults.promote.source.ref
+          printf '%s\n' "${SOURCE_PINNED}" > dist/install-defaults.promote.digest.ref
+          printf '%s\n' "${REF_BASE}:${TARGET_TAG}" > dist/install-defaults.promote.target.ref
+
+          echo "Promoted ${SOURCE_REF} (${DIGEST}) -> ${REF_BASE}:${TARGET_TAG}"
+
+      - name: Upload promote outputs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: install-defaults-promote-${{ github.run_id }}
+          path: |
+            dist/install-defaults.promote.source.ref
+            dist/install-defaults.promote.digest.ref
+            dist/install-defaults.promote.target.ref
+          if-no-files-found: warn

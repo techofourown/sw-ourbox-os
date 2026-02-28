@@ -48,7 +48,15 @@ Recommended OCI repo:
 
 The platform contract SHOULD reference app images by digest in manifests.
 
-### 3) Release Manifest (future)
+### 3) Install Defaults (installer remote config)
+**Kind:** `install-defaults`  
+**Meaning:** upstream-maintained installer selection defaults per hardware installer ID (recommended default ref, channel tags, catalog tag, repo override).  
+**Canonical distribution:** OCI artifact identified by digest, consumed at install time with local fallback.
+
+Recommended OCI repo:
+- `ghcr.io/techofourown/sw-ourbox-os/install-defaults`
+
+### 4) Release Manifest (future)
 **Kind:** `release-manifest`  
 **Meaning:** a signed "bill of materials" listing the exact digests that define an official release/profile.
 
@@ -83,6 +91,11 @@ The installed system SHOULD record:
 - Airgap bundles may embed the contract and image tars.
 - Identity remains digest-based.
 - In an airgapped environment, the device should still be able to answer: "what digests are these bits?"
+
+4) **Installer defaults should be remotely overridable with local fallback**
+- Installers may pull `install-defaults` by OCI ref at runtime.
+- Failure to pull defaults must not block install; baked defaults remain the fallback.
+- Boot-media overrides remain highest priority so operators can force custom refs/channels.
 
 ### Consumer pinning (operational)
 - Consumers SHOULD pin `ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:<digest>`.

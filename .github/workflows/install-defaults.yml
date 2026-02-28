@@ -1,4 +1,4 @@
-name: Platform Contract
+name: Install Defaults
 
 on:
   push:
@@ -17,12 +17,13 @@ permissions:
   packages: write
 
 concurrency:
-  group: platform-contract-${{ github.event_name }}-${{ github.ref_name || github.event.release.tag_name || github.event.inputs.tag || github.run_id }}
+  group: install-defaults-${{ github.event_name }}-${{ github.ref_name || github.event.release.tag_name || github.event.inputs.tag || github.run_id }}
   cancel-in-progress: true
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,43 +55,47 @@ jobs:
 
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
 
-      - name: Publish platform-contract bundle
+      - name: Publish install-defaults bundle
         run: |
           set -euo pipefail
-          ./tools/platform-contract/publish.sh "${{ steps.resolve-tag.outputs.tag }}"
+          TAG="${{ steps.resolve-tag.outputs.tag }}" ./tools/install-defaults/publish.sh "${{ steps.resolve-tag.outputs.tag }}"
 
       - name: Smoke pull published digest and verify layout
         if: always()
         run: |
           set -euo pipefail
 
-          if [ ! -f dist/platform-contract.ref ]; then
-            echo "No dist/platform-contract.ref found (publish may have been skipped)."
+          REF_FILE="dist/install-defaults.ref"
+          if [[ ! -f "${REF_FILE}" ]]; then
+            echo "No ${REF_FILE} found (publish may have been skipped)."
             exit 0
           fi
 
-          REF="$(cat dist/platform-contract.ref)"
+          REF="$(cat "${REF_FILE}")"
           echo "Smoke pull: ${REF}"
 
-          rm -rf /tmp/platform-contract
-          mkdir -p /tmp/platform-contract
-          oras pull "${REF}" -o /tmp/platform-contract
+          rm -rf /tmp/install-defaults
+          mkdir -p /tmp/install-defaults
+          oras pull "${REF}" -o /tmp/install-defaults
 
-          test -f /tmp/platform-contract/dist/platform-contract.tar.gz
+          test -f /tmp/install-defaults/dist/install-defaults.tar.gz
+
+          TAR_LIST="/tmp/install-defaults/tar.list"
+          tar -tzf /tmp/install-defaults/dist/install-defaults.tar.gz > "${TAR_LIST}"
 
           echo "Tar listing (head):"
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | head -n 50
+          sed -n '1,50p' "${TAR_LIST}"
 
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/contract\.env$'
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/manifests/'
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/landing/'
+          grep -q '^install-defaults/schema\.env$' "${TAR_LIST}"
+          grep -q '^install-defaults/manifest\.env$' "${TAR_LIST}"
+          grep -q '^install-defaults/defaults/matchbox\.env$' "${TAR_LIST}"
 
       - name: Upload publish outputs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: platform-contract-publish-${{ github.run_id }}
+          name: install-defaults-${{ github.run_id }}
           path: |
-            dist/platform-contract.ref
-            dist/platform-contract.push.log
+            dist/install-defaults.ref
+            dist/install-defaults.push.log
           if-no-files-found: warn
