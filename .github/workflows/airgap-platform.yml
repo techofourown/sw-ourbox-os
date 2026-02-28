@@ -3,15 +3,21 @@ name: Airgap Platform
 on:
   push:
     branches: ["main"]
-    tags: ["v*"]
+  release:
+    types: [published]
   workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag to publish (edge, stable, vX.Y.Z, etc.)
+        required: false
+        default: edge
 
 permissions:
   contents: read
   packages: write
 
 concurrency:
-  group: airgap-platform-${{ github.ref_type }}-${{ github.ref_name }}
+  group: airgap-platform-${{ github.event_name }}-${{ github.ref_name || github.event.release.tag_name || github.event.inputs.tag || github.run_id }}
   cancel-in-progress: true
 
 jobs:
@@ -38,16 +44,30 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      - name: Resolve publish tag
+        id: resolve-tag
+        run: |
+          set -euo pipefail
+
+          TAG=edge
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && -n "${{ github.event.inputs.tag }}" ]]; then
+            TAG="${{ github.event.inputs.tag }}"
+          fi
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+          fi
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          fi
+
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+
       - name: Publish bundle
         env:
           ARCH: ${{ matrix.arch }}
         run: |
           set -euo pipefail
-          TAG=edge
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            TAG="${GITHUB_REF_NAME}"
-          fi
-
+          TAG="${{ steps.resolve-tag.outputs.tag }}"
           TAG="${TAG}" ARCH="${ARCH}" ./tools/airgap-platform/publish.sh "${ARCH}" "${TAG}"
 
       - name: Smoke pull published digest and verify layout
