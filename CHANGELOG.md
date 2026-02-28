@@ -1,3 +1,10 @@
+# [0.4.0](https://github.com/techofourown/sw-ourbox-os/compare/v0.3.2...v0.4.0) (2026-02-28)
+
+
+### Features
+
+* add install-defaults artifact and release-based publishing ([3c4b491](https://github.com/techofourown/sw-ourbox-os/commit/3c4b491799a9f3507c49f62e9e085d541baba9ea))
+
 ## [0.3.2](https://github.com/techofourown/sw-ourbox-os/compare/v0.3.1...v0.3.2) (2026-02-27)
 
 
