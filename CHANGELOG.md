@@ -1,3 +1,10 @@
+## [0.4.1](https://github.com/techofourown/sw-ourbox-os/compare/v0.4.0...v0.4.1) (2026-03-01)
+
+
+### Bug Fixes
+
+* pin airgap-platform build to podman on self-hosted runner ([241a226](https://github.com/techofourown/sw-ourbox-os/commit/241a226849b957e13ba5f06b093a0b8440059135))
+
 # [0.4.0](https://github.com/techofourown/sw-ourbox-os/compare/v0.3.2...v0.4.0) (2026-02-28)
 
 
