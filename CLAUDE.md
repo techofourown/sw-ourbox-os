@@ -1,0 +1,66 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## What This Is
+
+A **GraphMD dataset** defining the OurBox OS platform — a local-first application platform for user-owned hardware. Two distinct things live here:
+
+1. **Requirements dataset** — structured Markdown with YAML frontmatter: system requirements (SyRS), software requirements (SRS), architecture docs, ADRs, RFCs, types. Validated in CI by `@graphmd/dataset`.
+2. **OCI artifact producers** — tooling in `tools/` that builds and publishes the platform contract bundle and airgap platform bundle to GHCR.
+
+## Key Commands
+
+```bash
+npm ci                         # Install validator
+npm test                       # Validate dataset + build compiled spec artifacts
+```
+
+Platform contract:
+```bash
+./tools/platform-contract/build.sh           # Build tarball into dist/
+./tools/platform-contract/publish.sh [tag]   # Publish to GHCR (default: edge)
+```
+
+Airgap platform (requires Docker/Podman, large download):
+```bash
+ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 [tag]
+```
+
+Workflow safety check:
+```bash
+bash tools/check-workflow-safety.sh          # Run locally; also runs in CI on every PR/push
+```
+
+## Architecture
+
+### Dataset surface
+
+GraphMD YAML frontmatter types are defined in `types/`. Records live in `records/`, `docs/`, and top-level `SyRS-*.md`/`SRS-*.md` files. All cross-references use `[[type:recordId]]` wikilink syntax. Broken links and missing required fields fail `npm test`.
+
+### OCI artifact outputs
+
+| Artifact | Registry path | Trigger |
+|---|---|---|
+| Platform contract | `ghcr.io/techofourown/sw-ourbox-os/platform-contract` | push to `main`, `v*` tag |
+| Airgap platform (arm64/amd64) | `ghcr.io/techofourown/sw-ourbox-os/airgap-platform` | push to `main`, `v*` tag |
+| Install defaults | `ghcr.io/techofourown/sw-ourbox-os/install-defaults` | push to `main`, `v*` tag |
+
+Channel tags: `edge` (main), `v*` (releases). All artifacts are digest-addressable.
+
+Image build repos (e.g., `img-ourbox-matchbox`) consume these artifacts via digest-pinned refs in their `release/official-inputs.env`.
+
+### Workflow safety
+
+`tools/check-workflow-safety.sh` enforces:
+1. No self-hosted workflow triggered by `pull_request`/`pull_request_target` — prevents untrusted PR code on privileged airgap builders
+2. No official publish workflow exposes `workflow_dispatch` — official publication flows only from push-to-main or tag push
+
+Official publish workflows (`airgap-platform.yml`) run on `[self-hosted, official-heavy, airgap-builder]` per [ADR-0008](https://github.com/techofourown/org-techofourown/blob/main/docs/decisions/ADR-0008-adopt-organization-controlled-build-infrastructure-for-heavy-artifacts.md). Lightweight workflows (`platform-contract.yml`, `install-defaults.yml`) run on `ubuntu-latest`.
+
+## Conventions
+
+- Commit messages: Conventional Commits with required body (see root CLAUDE.md)
+- ADRs in `docs/decisions/`, RFCs in `docs/rfcs/` — follow 0000-template pattern
+- Architecture documentation in `docs/architecture/`
+- `dist/` outputs are gitignored; `platform-contract/` and `install-defaults/` contain the source bundles
