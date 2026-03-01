@@ -6,6 +6,16 @@ on:
     branches: ["main"]
 
 jobs:
+  workflow-safety:
+    name: Workflow trust boundary check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check workflow trust boundaries
+        run: bash tools/check-workflow-safety.sh
+
   graphmd:
     runs-on: ubuntu-latest
     steps:
