@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   publish:
-    runs-on: [self-hosted, ourbox-builder]
+    runs-on: [self-hosted, official-heavy, airgap-builder]
     strategy:
       fail-fast: false
       matrix:
