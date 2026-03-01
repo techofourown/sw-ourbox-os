@@ -53,6 +53,7 @@ jobs:
       - name: Publish bundle
         env:
           ARCH: ${{ matrix.arch }}
+          CONTAINER_CLI: podman
         run: |
           set -euo pipefail
           TAG="${{ steps.resolve-tag.outputs.tag }}"
