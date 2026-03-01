@@ -320,6 +320,8 @@ This acts as the upstream control plane for "where should this installer look by
 
 A hardware-specific `img-*` repo consumes the chosen platform contract and combines it with hardware-specific integration, boot/runtime behavior, and install mechanics.
 
+In the official lane, upstream artifact refs are pinned by digest in the repo (for example in a `release/official-inputs.env` file). Updating the pinned upstream ref is a normal PR change. This makes upstream consumption explicit, traceable, and change-controlled, rather than floating on a tag.
+
 ### Step 4: the `img-*` repo builds OS payloads and, where applicable, installer media
 
 The image repo produces:
