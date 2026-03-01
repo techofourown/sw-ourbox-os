@@ -5,24 +5,18 @@ on:
     branches: ["main"]
   release:
     types: [published]
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: Tag to publish (edge, stable, vX.Y.Z, etc.)
-        required: false
-        default: edge
 
 permissions:
   contents: read
   packages: write
 
 concurrency:
-  group: airgap-platform-${{ github.event_name }}-${{ github.ref_name || github.event.release.tag_name || github.event.inputs.tag || github.run_id }}
-  cancel-in-progress: true
+  group: airgap-platform-${{ github.event_name }}-${{ github.ref_name || github.event.release.tag_name || github.run_id }}
+  cancel-in-progress: false
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, official-heavy, airgap-builder]
     strategy:
       fail-fast: false
       matrix:
@@ -35,12 +29,6 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
-      - name: Set up QEMU (multi-arch pulls)
-        uses: docker/setup-qemu-action@v3
-
-      - name: Install ORAS
-        uses: oras-project/setup-oras@v1
-
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
@@ -50,9 +38,6 @@ jobs:
           set -euo pipefail
 
           TAG=edge
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" && -n "${{ github.event.inputs.tag }}" ]]; then
-            TAG="${{ github.event.inputs.tag }}"
-          fi
           if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
             TAG="${{ github.event.release.tag_name }}"
           fi
