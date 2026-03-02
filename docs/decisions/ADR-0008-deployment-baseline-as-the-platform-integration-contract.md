@@ -17,6 +17,10 @@ deployment manifests and frequently become stale.
 We must create deployment manifests regardless, and we intend to build strong integration and
 conformance tests. We prefer a single, inspectable, versioned source of truth for platform wiring.
 
+This ADR is intentionally about the deployed platform wiring above the hardware seam. It does not
+decide host distro, kernel, firmware, flashing path, or other hardware enablement details. Those
+target-specific concerns belong to the image repo boundary described in ADR-0011.
+
 ## Decision
 We will treat the versioned Kubernetes deployment baseline (rendered manifests) as the authoritative
 platform integration contract for k3s wiring concerns.
@@ -32,6 +36,11 @@ Specifically:
 5) We will not produce standalone ICD documents for Kubernetes wiring. Where non-Kubernetes interfaces
    exist (e.g., HTTP APIs), the contract will be expressed as machine-readable artifacts
    (e.g., OpenAPI/JSON schema) and verified by tests.
+6) This ADR governs deployed platform wiring only.
+   - It does not define base OS selection, kernel policy, boot chain, storage layout, installer
+     mechanics, or target-specific hardware enablement.
+   - Those concerns are handled by hardware image repos and the target integration contract
+     boundary defined in ADR-0011.
 
 SRS documents remain the source of normative invariants and constraints; the deployment baseline and
 tests provide the concrete, inspectable wiring contract and verification evidence.
@@ -42,6 +51,7 @@ tests provide the concrete, inspectable wiring contract and verification evidenc
 - Reduced doc drift and duplicated interface definitions
 - Inspectable running system via `kubectl` and contract metadata
 - Stronger governance and reproducibility of releases
+- Clearer scope boundary between platform wiring and hardware enablement
 
 ### Costs / Tradeoffs
 - Requires disciplined naming conventions and pinned versions
@@ -53,3 +63,8 @@ tests provide the concrete, inspectable wiring contract and verification evidenc
 - Establish `deploy/` baseline structure and deterministic render tooling
 - Add standard labels/annotations and a contract metadata ConfigMap
 - Add policy checks and runtime conformance tests in CI
+- Pair this ADR with the target integration contract documentation so cross-target debates stay at
+  the correct architectural layer
+
+## References
+- ADR-0011: Separate Hardware Enablement from the Platform Contract

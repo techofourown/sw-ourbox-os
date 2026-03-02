@@ -5,6 +5,7 @@
   - Org ADR: `org-techofourown/docs/decisions/ADR-0007-adopt-oci-artifacts-for-app-distribution.md`
   - Org RFC: `org-techofourown/docs/rfcs/RFC-0001-oci-artifacts-trust-and-attestations.md`
   - OurBox OS ADR-0008: Deployment Baseline as the Platform Integration Contract
+  - OurBox OS ADR-0011: Separate Hardware Enablement from the Platform Contract
 
 ---
 
@@ -19,8 +20,14 @@ We also want a single "lane" for everyone (TOOO, users, hackers) where:
 - the *distribution shape is the same*,
 - and the only difference is **who you choose to trust** (TOOO signer vs yourself vs a friend vs "some random mod").
 
-At the org level, we adopted OCI artifacts + digests as the canonical distribution substrate for apps and platform components.
-This repository needs a minimal, OurBox-specific allocation of that posture for the **Platform Contract**.
+At the org level, we adopted OCI artifacts + digests as the canonical distribution substrate for
+apps and platform components. This repository needs a minimal, OurBox-specific allocation of that
+posture for the **Platform Contract**.
+
+The consumers of this artifact are hardware-specific image repos that may legitimately differ below
+the hardware seam. Some consumers may use a general-purpose distro. Others may use a vendor BSP or
+another hardware-native substrate. The distribution shape of the platform contract should stay stable
+even when the target substrate does not.
 
 ---
 
@@ -53,7 +60,14 @@ The platform contract OCI artifact SHOULD carry OCI labels/annotations sufficien
 It SHOULD also include an OurBox-specific "kind" annotation, e.g.:
 - `techofourown.artifact.kind=platform-contract`
 
-5) **No hardening requirements in this ADR**
+5) **Consumer boundary**
+- The platform contract is consumed above the hardware seam.
+- A consumer MAY be Ubuntu-based, Debian-based, Jetson-L4T-based, Pi-native, or another
+  hardware-appropriate substrate.
+- Digest identity of the platform contract does **not** imply one universal base OS, kernel,
+  firmware stack, or flashing path across all targets.
+
+6) **No hardening requirements in this ADR**
 This ADR does NOT mandate, today:
 - signatures
 - SBOM referrers
@@ -69,6 +83,7 @@ Those are part of the org-level phased plan and will be adopted when they start 
 - **Decoupling:** image repos can become consumers of a platform contract artifact instead of embedding bespoke manifests forever.
 - **Auditability:** even before signatures, digest identity makes "what's installed" unambiguous.
 - **Forkability:** users can build their own contract artifact and deploy it using the exact same mechanism.
+- **Cross-target neutrality:** the platform contract can stay stable even when hardware-native substrates differ.
 
 ---
 
@@ -78,6 +93,8 @@ Those are part of the org-level phased plan and will be adopted when they start 
 - Establishes a clean producer/consumer boundary between `sw-ourbox-os` (contract) and `img-*` (hardware-specific flashing).
 - Makes "build from source and run your own version" a first-class path (same lane).
 - Prepares for later trust hardening without redesigning distribution.
+- Clarifies that consumer diversity below the hardware seam is compatible with a stable platform
+  contract above it.
 
 ### Negative / Trade-offs
 - Requires some discipline around capturing/publishing digests in future automation.
@@ -86,6 +103,8 @@ Those are part of the org-level phased plan and will be adopted when they start 
 ### Mitigation
 - Provide an integration doc describing the artifact model and how image repos consume it.
 - Keep this ADR minimal; defer heavy requirements to the org RFC and a repo RFC.
+- Pair this ADR with the target integration contract reference so readers do not confuse artifact
+  identity with substrate uniformity.
 
 ---
 
@@ -93,3 +112,4 @@ Those are part of the org-level phased plan and will be adopted when they start 
 - Org ADR-0007 (OCI substrate)
 - Org RFC-0001 (phased trust/attestations)
 - OurBox OS ADR-0008 (deployment baseline is the integration contract)
+- OurBox OS ADR-0011 (separate hardware enablement from the platform contract)
