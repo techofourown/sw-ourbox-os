@@ -3,6 +3,18 @@ name: Install Defaults
 on:
   push:
     branches: ["main"]
+    paths-ignore:
+      - 'docs/**'
+      - 'records/**'
+      - 'types/**'
+      - 'SyRS-*.md'
+      - 'SRS-*.md'
+      - 'OurBox-OS-Requirements-Omnibus.md'
+      - 'CHANGELOG.md'
+      - 'README.md'
+      - 'CLAUDE.md'
+      - 'package.json'
+      - 'package-lock.json'
   release:
     types: [published]
 
