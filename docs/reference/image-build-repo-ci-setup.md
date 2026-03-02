@@ -68,7 +68,7 @@ gh api /orgs/techofourown/actions/runner-groups/${GROUP_ID}/repositories \
 ### 1b. Runner capability labels
 
 The workflow `runs-on:` must exactly match labels registered on a runner. The label
-catalog is in `ops-techofourown-private/runners/label-catalog.md`.
+catalog is maintained privately — contact an org maintainer.
 
 **Example for a new Tinderbox target:**
 ```yaml
