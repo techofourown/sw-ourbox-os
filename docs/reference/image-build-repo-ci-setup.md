@@ -299,48 +299,40 @@ FORBIDDEN_FILES=(
 
 ### 5b. Forbidden content patterns
 
-Patterns that must not appear anywhere in tracked content. These are shared across
-all public repos — do not remove them:
+Patterns that must not appear anywhere in tracked content. Two categories:
 
-```bash
-declare -A PATTERNS=(
-  ["registry\\.benac\\.dev"]="internal registry hostname"
-  ["/etc/ssl/centroid-ca"]="internal CA cert path"
-  ["nodeName:.*centroid"]="internal node name in Kubernetes manifest"
-  ["hostPID:.*true"]="privileged host access in Kubernetes manifest"
-  ["privileged:.*true"]="privileged container in Kubernetes manifest"
-  ["hostPath:"]="host filesystem mount in Kubernetes manifest"
-)
-```
+**Internal infrastructure identifiers** — the internal registry hostname, the
+internal CA certificate path, and the build host name as it appears in Kubernetes
+`nodeName:` fields. Copy the exact regex strings from `tools/check-public-sanitization.sh`
+in an existing repo (Woodbox or Matchbox). Do not reproduce them in documentation,
+as documentation is scanned too.
+
+**Kubernetes security patterns** — manifests must not contain privileged host access,
+privileged containers, or host filesystem mounts. Same rule: copy the exact patterns
+from the script, don't document them as literal strings here.
 
 ### 5c. Banned words
 
 Words that must not appear anywhere in tracked files (word-boundary matched,
-case-insensitive). Required in every public repo:
+case-insensitive). Copy the list from `tools/check-public-sanitization.sh` in an
+existing repo — it includes the internal build host name and the private
+infrastructure repo name.
 
-```bash
-BANNED_WORDS=(
-  "centroid"                   # internal machine name
-  "ops-techofourown-private"   # private infrastructure repo — must not be referenced publicly
-)
-```
+Also add any **retired target names** specific to your repo. If the target was known
+by a different internal codename during development, ban the old name the same way
+Woodbox bans its own retired codename.
 
-Add any **retired target names** for your specific repo:
-
-```bash
-  "tinderbox-legacy-name"   # example: whatever the old internal codename was, if any
-```
-
-The banned-word scan uses `\b${word}\b` so substring matches (e.g. `forgetting`)
-do not trigger it. But the exact word anywhere in any tracked file — including docs,
-templates, and baked default files like `installer/ourbox/rootfs/etc/ourbox/release`
-— will fail CI. Check those files before opening a PR.
+The scan uses `\b<word>\b` so substring matches do not trigger it. But the exact
+word anywhere in any tracked file — including docs, templates, and baked default
+files like `installer/ourbox/rootfs/etc/ourbox/release` — will fail CI. Check
+those files before opening a PR.
 
 ### 5d. The script excludes itself
 
 The sanitization script references the banned strings as patterns. The scan
-automatically excludes `tools/check-public-sanitization.sh` itself, so the script
-can contain the banned strings without triggering its own check.
+automatically excludes `tools/check-public-sanitization.sh` itself from the scan,
+so the script can contain the banned strings without triggering its own check.
+All other tracked files (including docs) are scanned without exception.
 
 ---
 
