@@ -9,6 +9,8 @@
 - [`docs/architecture/artifact-distribution-and-integration.md`](./artifact-distribution-and-integration.md)
 - [`docs/decisions/ADR-0008-deployment-baseline-as-the-platform-integration-contract.md`](../decisions/ADR-0008-deployment-baseline-as-the-platform-integration-contract.md)
 - [`docs/decisions/ADR-0009-package-the-platform-contract-as-an-oci-artifact.md`](../decisions/ADR-0009-package-the-platform-contract-as-an-oci-artifact.md)
+- [`docs/decisions/ADR-0011-separate-hardware-enablement-from-the-platform-contract.md`](../decisions/ADR-0011-separate-hardware-enablement-from-the-platform-contract.md)
+- [`docs/reference/target-integration-contract.md`](../reference/target-integration-contract.md)
 - `org-techofourown/docs/decisions/ADR-0007-adopt-oci-artifacts-for-app-distribution.md`
 - `org-techofourown/docs/rfcs/RFC-0001-oci-artifacts-trust-and-attestations.md`
 - `org-techofourown/docs/decisions/ADR-0008-adopt-organization-controlled-build-infrastructure-for-heavy-artifacts.md`
@@ -98,6 +100,28 @@ What should stay stable is the public model for:
 - how they are identified
 - how installed systems record what they consumed
 
+### 3.5 Commonality and divergence across hardware targets
+
+OurBox standardizes the platform above the hardware seam. It does not require one universal base OS,
+kernel, flashing path, or vendor substrate across all targets.
+
+Stable commonality should exist in areas such as:
+- platform contract consumption,
+- install-defaults and catalog resolution,
+- artifact identity and provenance,
+- installed-system release metadata,
+- the public production/consumption model.
+
+Allowed divergence should exist in areas such as:
+- base OS or vendor BSP,
+- kernel line,
+- boot chain and firmware,
+- storage layout,
+- flashing transport,
+- installer UX.
+
+The target integration contract is the place where that seam becomes concrete.
+
 ## 4. Roles in the System
 
 ### 4.1 `sw-ourbox-os`
@@ -125,6 +149,7 @@ An `img-*` repo is responsible for one or more of:
 - building installer media or flashing assets
 - publishing official target-specific artifacts
 - documenting target-specific install paths and compatibility notes
+- documenting how the target satisfies the target integration contract
 
 Examples include repos like:
 
@@ -322,6 +347,9 @@ A hardware-specific `img-*` repo consumes the chosen platform contract and combi
 
 In the official lane, upstream artifact refs are pinned by digest in the repo (for example in a `release/official-inputs.env` file). Updating the pinned upstream ref is a normal PR change. This makes upstream consumption explicit, traceable, and change-controlled, rather than floating on a tag.
 
+The repo satisfies the target integration contract while still allowing the target substrate to be
+hardware-appropriate.
+
 ### Step 4: the `img-*` repo builds OS payloads and, where applicable, installer media
 
 The image repo produces:
@@ -332,7 +360,7 @@ The image repo produces:
 
 ### Step 5: official artifacts are published through TOOO-controlled release channels
 
-The image repo’s release path publishes:
+The image repo's release path publishes:
 
 - immutable payload references
 - optional moving channel tags such as stable/beta/nightly
@@ -476,7 +504,7 @@ That distinction keeps the system open without blurring who is claiming responsi
 
 ### 10.1 Today: digest and checksum are the ground truth
 
-Today’s model is intentionally minimal and honest:
+Today's model is intentionally minimal and honest:
 
 - the canonical identity of OCI-shaped artifacts is the digest
 - the canonical identity of file-shaped artifacts should include a stable checksum
@@ -576,7 +604,7 @@ This record is what lets the device answer:
 - Where did it come from?
 - What exact bits or references define it?
 
-That is a core part of TOOO’s inspectability posture.
+That is a core part of TOOO's inspectability posture.
 
 ## 12. How Custom Builders Use the Same Mechanisms
 
@@ -617,6 +645,7 @@ Each `img-*` repository should still document its own target-specific details, i
 - official artifact locations for that target
 - custom override instructions for that target
 - what "installer media" means for that hardware family
+- which target-specific choices are intentionally divergent below the hardware seam
 
 For example, a directly flashed embedded target may have a very different host-side flow than a bootable USB installer, but both should still fit the artifact model described here.
 

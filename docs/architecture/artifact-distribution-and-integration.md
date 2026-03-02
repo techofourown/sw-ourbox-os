@@ -20,7 +20,7 @@ This document defines:
 
 Everyone uses the same mechanics:
 
-- build → publish → get digest → deploy/flash by digest
+- build -> publish -> get digest -> deploy/flash by digest
 
 The only difference is what the user chooses to trust:
 
@@ -29,6 +29,26 @@ The only difference is what the user chooses to trust:
 - "I trust my own key / my friend's key."
 
 There is no special "developer lane." There is only explicit trust.
+
+---
+
+## Boundary: platform contract above the hardware seam
+
+`sw-ourbox-os` standardizes the platform above the hardware seam. `img-*` repositories own the
+target-specific substrate below it.
+
+That means:
+
+- `sw-ourbox-os` is responsible for the platform contract, artifact model, and common consumer
+  expectations,
+- `img-*` repos are responsible for base OS image assembly, hardware enablement, bootstrap,
+  installer flows, and target-specific packaging,
+- image repos may legitimately differ in base distro, vendor BSP, kernel, boot chain, driver
+  stack, flashing workflow, or partitioning strategy.
+
+What must stay stable is the contract above that boundary. See also:
+- `docs/decisions/ADR-0011-separate-hardware-enablement-from-the-platform-contract.md`
+- `docs/reference/target-integration-contract.md`
 
 ---
 
@@ -65,12 +85,21 @@ Recommended OCI repo:
 ## Consumer contract: what `img-*` repos must do
 
 Hardware image repos are responsible for:
-- base OS image assembly
-- bootstrap and first-boot behavior
-- installer flows (if present)
-- embedding or fetching the platform contract
+- base OS image assembly,
+- hardware enablement,
+- bootstrap and first-boot behavior,
+- installer flows (if present),
+- embedding or fetching the platform contract.
 
 They SHOULD NOT be the long-term source of truth for platform manifests.
+
+They SHOULD document how they satisfy the target integration contract:
+- platform contract consumption,
+- installed-system provenance,
+- persistent data contract,
+- bootstrap behavior,
+- status and observability surfaces,
+- airgap behavior where relevant.
 
 ### Required (documented now; implemented later)
 
@@ -78,14 +107,15 @@ They SHOULD NOT be the long-term source of truth for platform manifests.
 - The image build must have a way to consume a platform contract reference like:
   - `.../platform-contract@sha256:...`
 
-2) **Image must record "what platform contract it shipped"**
+2) **Image must record what platform contract it shipped**
 The installed system SHOULD record:
 - `OURBOX_PLATFORM_CONTRACT_SOURCE`
 - `OURBOX_PLATFORM_CONTRACT_REVISION`
 - `OURBOX_PLATFORM_CONTRACT_VERSION`
 - `OURBOX_PLATFORM_CONTRACT_DIGEST` (when available)
 
-(Exact storage location is an implementation detail, but `/etc/ourbox/release` is the recommended home.)
+Recommended location:
+- `/etc/ourbox/release`
 
 3) **Airgap is a packaging concern, not an identity concern**
 - Airgap bundles may embed the contract and image tars.
@@ -96,6 +126,16 @@ The installed system SHOULD record:
 - Installers may pull `install-defaults` by OCI ref at runtime.
 - Failure to pull defaults must not block install; baked defaults remain the fallback.
 - Boot-media overrides remain highest priority so operators can force custom refs/channels.
+
+5) **Consumer must expose an operator-readable installed-system identity**
+At minimum, an operator should be able to determine:
+- which target build is installed,
+- which platform contract source/revision it corresponds to,
+- and where target-specific logs or bootstrap status can be inspected.
+
+6) **Persistent-data behavior must be documented**
+- The image repo must document the stable persistent data contract it exposes to the platform.
+- The preferred canonical data root is `/data`, but justified target-specific divergence is allowed.
 
 ### Consumer pinning (operational)
 - Consumers SHOULD pin `ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:<digest>`.
@@ -131,9 +171,23 @@ Official TOOO releases will eventually be signed and verifiable offline, per the
 
 ---
 
+## Recommended repo-local doc pattern
+
+Each `img-*` repo SHOULD eventually carry a small, repeatable doc pattern:
+
+- a repo-local ADR that says the repo consumes the platform contract from `sw-ourbox-os`,
+- a repo-local platform-contract provenance/update reference,
+- a repo-local contracts doc describing the target's realization of the target integration contract.
+
+This keeps the central model stable while making target-specific behavior legible where it belongs.
+
+---
+
 ## References
 
 - ADR-0009: Platform contract as OCI artifact (this repo)
+- ADR-0011: Separate Hardware Enablement from the Platform Contract
+- `docs/reference/target-integration-contract.md`
 - Org ADR-0007: OCI artifacts as distribution substrate
 - Org RFC-0001: Trust/attestations phased plan
 - OurBox OS ADR-0008: Deployment baseline is the integration contract

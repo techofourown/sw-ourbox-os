@@ -223,6 +223,56 @@ A Kubernetes namespace used for operational grouping of an app’s workloads.
 
 ---
 
+## Hardware target and integration terms
+
+### Hardware target
+A specific supported device family or hardware configuration for which an `img-*` repository builds
+an OS payload, installer media, or another install artifact.
+
+### Hardware seam
+The conceptual boundary between target-specific hardware enablement below the seam and the
+standardized OurBox platform behavior above it.
+
+### Hardware enablement
+The target-specific work required to make a hardware target viable, including substrate selection,
+boot integration, drivers, storage provisioning, flashing, installer mechanics, and related bring-up.
+
+### Target substrate
+The base operating foundation for a target, including base distro or vendor BSP, kernel, firmware,
+boot chain, and driver stack.
+
+### Base substrate
+Synonym for target substrate. Central docs should prefer **target substrate**.
+
+### Platform contract
+The versioned deployed OurBox platform baseline produced by `sw-ourbox-os`, including the k3s
+wiring baseline and related platform configuration expectations.
+
+### Target integration contract
+The stable set of consumer-facing expectations that a target-specific image repo must satisfy so
+the OurBox platform can be consumed consistently above the hardware seam.
+
+### Host contract
+Informal repo-local synonym for target integration contract. Central `sw-ourbox-os` docs should
+prefer **target integration contract**.
+
+### Image repo
+A hardware-specific `img-*` repository that consumes the platform contract and turns it into a
+target-specific OS payload, installer flow, or install artifact.
+
+### Installer profile
+The installer identity used to resolve default artifact selection for a target, commonly keyed by
+something like `INSTALLER_ID`.
+
+### OS payload
+The target-specific installable operating system artifact produced by an `img-*` repo.
+
+### Official installer media
+A TOOO-published artifact used to initiate installation on a hardware target. It is distinct from
+the OS payload even when both are produced by the same repo.
+
+---
+
 ## Storage and sync terms
 
 ### CouchDB

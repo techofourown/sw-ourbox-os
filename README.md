@@ -18,8 +18,11 @@ OurBox OS uses OCI artifacts + digests as the distribution substrate for the pla
 related components.
 
 - Decision: [ADR-0009](docs/decisions/ADR-0009-package-the-platform-contract-as-an-oci-artifact.md)
+- Boundary decision: [ADR-0011](docs/decisions/ADR-0011-separate-hardware-enablement-from-the-platform-contract.md)
 - Plan: [RFC-0001](docs/rfcs/RFC-0001-ourbox-os-artifact-contract-and-phased-oci-adoption.md)
 - Integration reference: [Artifact distribution and integration contract](docs/architecture/artifact-distribution-and-integration.md)
+- Target integration contract: [Reference](docs/reference/target-integration-contract.md)
+- New hardware target checklist: [Reference](docs/reference/new-hardware-target-checklist.md)
 
 The model is one lane, explicit trust: everyone uses the same artifact mechanics; trust is layered
 through signer/policy choices over time.
