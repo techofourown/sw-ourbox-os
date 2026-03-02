@@ -4,6 +4,7 @@
 - Audience: maintainers proposing or reviewing a new `img-*` target
 - Related:
   - `./target-integration-contract.md`
+  - `./image-build-repo-ci-setup.md`
   - `../decisions/ADR-0011-separate-hardware-enablement-from-the-platform-contract.md`
 
 ## Purpose
