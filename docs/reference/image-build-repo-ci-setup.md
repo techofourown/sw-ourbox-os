@@ -118,7 +118,7 @@ Every `img-*` repo uses the same six-workflow pattern (adapt from `img-ourbox-wo
 | `ci.yml` | PR + push to main | `ubuntu-latest` | No |
 | `release.yml` | Push to main | `ubuntu-latest` | No (semantic-release tags only) |
 | `official-nightly.yml` | Push to main | `[self-hosted, official-heavy, <target>-image]` | Yes (nightly channel) |
-| `official-release.yml` | Push to `v*` tag | `[self-hosted, official-heavy, <target>-image]` | Yes (stable channel) |
+| `official-release.yml` | GitHub Release `published` | `[self-hosted, official-heavy, <target>-image]` | Yes (stable channel) |
 | `build-publish-os-self-hosted.yml` | `workflow_dispatch` | `[self-hosted, official-heavy, <target>-image]` | No |
 | `revalidate-<target>-build.yml` | `workflow_dispatch` + weekly cron | `[self-hosted, official-heavy, <target>-image]` | No |
 
@@ -154,7 +154,7 @@ privileged builders.
 **Rule 2 — Official publish workflows must not expose workflow_dispatch**
 Any workflow that calls `publish-*-artifact-official.sh` must NOT have a
 `workflow_dispatch:` trigger. Official publication only flows from push-to-main
-(nightly) or tag push (release).
+(nightly) or GitHub Release `published` event (release).
 
 Consequence: smoke build workflows (`build-publish-os-self-hosted.yml`) are safe
 to use `workflow_dispatch` precisely because they do NOT invoke the official
@@ -162,7 +162,22 @@ publish scripts.
 
 **Rule 3 — Nightly workflows must declare a path filter**
 Branch-push workflows (nightly) must have `paths:` or `paths-ignore:` to avoid
-rebuilding on doc-only commits. Release workflows (tag-push) do not need this.
+rebuilding on doc-only commits. Release workflows do not need this.
+
+**Rule 4 — Official publish workflows using `release:` must constrain to `types: [published]`**
+A `release:` trigger without `types: [published]` would fire on draft creation,
+pre-release edits, and deletions. Official publication must only occur on a
+fully published, non-draft release.
+
+### Why `release: types: [published]` and not `push: tags: ['v*']`
+
+`push: tags` does **not** fire when semantic-release pushes the version tag via
+a GitHub App token, because the release commit message contains `[skip ci]`.
+The `release: types: [published]` event fires when `@semantic-release/github`
+publishes the GitHub Release object — that step is unaffected by `[skip ci]`.
+
+This is the same pattern used by `sw-ourbox-os`'s own publish workflows
+(`platform-contract.yml`, `airgap-platform.yml`) and is the proven working trigger.
 
 ```yaml
 # Standard path filter for nightly:
