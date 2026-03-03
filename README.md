@@ -39,4 +39,3 @@ that can be published to GHCR as an OCI artifact.
 A GitHub Actions workflow publishes:
 - `edge` on pushes to `main`
 - `v*` tags as versioned contract tags
-test
