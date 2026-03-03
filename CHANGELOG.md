@@ -1,3 +1,11 @@
+## [0.4.2](https://github.com/techofourown/sw-ourbox-os/compare/v0.4.1...v0.4.2) (2026-03-03)
+
+
+### Bug Fixes
+
+* remove banned strings from CI setup guide doc ([e3cd4fe](https://github.com/techofourown/sw-ourbox-os/commit/e3cd4fe5d681d8d17092f385cb13f92c88cf120c))
+* remove remaining private repo reference from CI setup guide ([a23a02f](https://github.com/techofourown/sw-ourbox-os/commit/a23a02feb5c10d3681e4018af4d26a586458ccea))
+
 ## [0.4.1](https://github.com/techofourown/sw-ourbox-os/compare/v0.4.0...v0.4.1) (2026-03-01)
 
 
