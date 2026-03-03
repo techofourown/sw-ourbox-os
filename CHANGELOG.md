@@ -1,3 +1,10 @@
+## [0.4.3](https://github.com/techofourown/sw-ourbox-os/compare/v0.4.2...v0.4.3) (2026-03-03)
+
+
+### Bug Fixes
+
+* correct xargs split exit code in sanitization scan ([029052a](https://github.com/techofourown/sw-ourbox-os/commit/029052a535f468c74cf49a54212804cb4f1c849a))
+
 ## [0.4.2](https://github.com/techofourown/sw-ourbox-os/compare/v0.4.1...v0.4.2) (2026-03-03)
 
 
