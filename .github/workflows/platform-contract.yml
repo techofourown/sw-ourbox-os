@@ -36,8 +36,19 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install platform-contract validation deps
+        run: python3 -m pip install --disable-pip-version-check pyyaml
+
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
+
+      - name: Validate platform-contract render + lint
+        run: bash tools/platform-contract/validate.sh
 
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
@@ -86,7 +97,13 @@ jobs:
 
           tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/contract\.env$'
           tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/manifests/'
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/landing/'
+          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/rendered/defaults/demo-apps/manifests/'
+          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/tools/check-target-prereqs\.sh$'
+          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/tools/contract-identity\.sh$'
+          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/tools/render-contract\.py$'
+          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/tools/verify-runtime\.sh$'
+          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/tools/verify-persistence\.sh$'
+          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/profiles/demo-apps/images\.lock\.json$'
 
       - name: Upload publish outputs
         uses: actions/upload-artifact@v4
