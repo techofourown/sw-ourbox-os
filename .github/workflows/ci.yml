@@ -99,6 +99,9 @@ jobs:
       - name: Validate dataset + build requirements artifacts
         run: npm test
 
+      - name: Verify compiled spec outputs and omnibus index coverage
+        run: npm run verify:spec-artifacts
+
       - name: Upload rendered requirements artifacts
         uses: actions/upload-artifact@v4
         with:
