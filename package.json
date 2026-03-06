@@ -10,7 +10,8 @@
   "scripts": {
     "validate:dataset": "node tools/validate-dataset.cjs",
     "build:specs": "node tools/compile-all-specs.cjs",
-    "test": "npm run validate:dataset && npm run build:specs"
+    "test": "npm run validate:dataset && npm run build:specs",
+    "verify:spec-artifacts": "node tools/verify-spec-artifacts.cjs"
   },
   "devDependencies": {
     "@graphmd/dataset": "<1.0.0",
