@@ -139,7 +139,7 @@ jobs:
           git commit -m "$(printf 'chore: add compiled spec artifacts for new specs\n\nCommitted by CI for specs that did not previously exist in the\nrepository. Triggered by %s.' "${GITHUB_SHA::12}")"
           git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push origin "$BRANCH"
-          PR_URL=$(gh pr create \
+          PR_URL=$(GH_TOKEN="$PR_TOKEN" gh pr create \
             --title "chore: add compiled spec artifacts for new specs" \
             --body "$(printf 'Compiled spec files for specs that did not previously exist in the\nrepository. Opened by CI after merging %s.' "${GITHUB_SHA::12}")" \
             --base main \
