@@ -28,6 +28,8 @@ jobs:
 
   graphmd:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -101,6 +103,24 @@ jobs:
 
       - name: Verify compiled spec outputs and omnibus index coverage
         run: npm run verify:spec-artifacts
+
+      - name: Commit new compiled spec artifacts
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          set -euo pipefail
+          NEW_FILES=$(git ls-files --others --exclude-standard -- 'SRS-*.md' 'SyRS-*.md' 2>/dev/null || true)
+          if [ -z "$NEW_FILES" ]; then
+            echo "No new compiled spec artifacts to commit."
+            exit 0
+          fi
+          echo "New compiled spec files:"
+          echo "$NEW_FILES"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          echo "$NEW_FILES" | xargs git add --
+          git add OurBox-OS-Requirements-Omnibus.md
+          git commit -m "$(printf 'chore: add compiled spec artifacts for new specs\n\nAuto-generated compiled spec files committed by CI for specs that did\nnot previously exist in the repository.')"
+          git push
 
       - name: Upload rendered requirements artifacts
         uses: actions/upload-artifact@v4
