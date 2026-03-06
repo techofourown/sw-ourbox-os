@@ -90,20 +90,25 @@ jobs:
           mkdir -p /tmp/platform-contract
           oras pull "${REF}" -o /tmp/platform-contract
 
-          test -f /tmp/platform-contract/dist/platform-contract.tar.gz
+          TAR_FILE=/tmp/platform-contract/dist/platform-contract.tar.gz
+          TAR_LIST="$(mktemp)"
+          trap 'rm -f "${TAR_LIST}"' EXIT
+
+          test -f "${TAR_FILE}"
+          tar -tzf "${TAR_FILE}" > "${TAR_LIST}"
 
           echo "Tar listing (head):"
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | head -n 50
+          sed -n '1,50p' "${TAR_LIST}"
 
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/contract\.env$'
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/manifests/'
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/rendered/defaults/demo-apps/manifests/'
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/tools/check-target-prereqs\.sh$'
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/tools/contract-identity\.sh$'
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/tools/render-contract\.py$'
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/tools/verify-runtime\.sh$'
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/tools/verify-persistence\.sh$'
-          tar -tzf /tmp/platform-contract/dist/platform-contract.tar.gz | grep -q '^platform-contract/profiles/demo-apps/images\.lock\.json$'
+          grep -q '^platform-contract/contract\.env$' "${TAR_LIST}"
+          grep -q '^platform-contract/manifests/' "${TAR_LIST}"
+          grep -q '^platform-contract/rendered/defaults/demo-apps/manifests/' "${TAR_LIST}"
+          grep -q '^platform-contract/tools/check-target-prereqs\.sh$' "${TAR_LIST}"
+          grep -q '^platform-contract/tools/contract-identity\.sh$' "${TAR_LIST}"
+          grep -q '^platform-contract/tools/render-contract\.py$' "${TAR_LIST}"
+          grep -q '^platform-contract/tools/verify-runtime\.sh$' "${TAR_LIST}"
+          grep -q '^platform-contract/tools/verify-persistence\.sh$' "${TAR_LIST}"
+          grep -q '^platform-contract/profiles/demo-apps/images\.lock\.json$' "${TAR_LIST}"
 
       - name: Upload publish outputs
         uses: actions/upload-artifact@v4
