@@ -1,3 +1,10 @@
+# [0.6.0](https://github.com/techofourown/sw-ourbox-os/compare/v0.5.0...v0.6.0) (2026-03-06)
+
+
+### Features
+
+* add Compass SRS GraphMD source records (SRS-1005) ([b9be3b5](https://github.com/techofourown/sw-ourbox-os/commit/b9be3b5484f650b21fde6db3dfc59d3d4905f123))
+
 # [0.5.0](https://github.com/techofourown/sw-ourbox-os/compare/v0.4.3...v0.5.0) (2026-03-06)
 
 
