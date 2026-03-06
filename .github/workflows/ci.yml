@@ -32,7 +32,20 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@v4
+      # Mint first so checkout can use the App token, which means git push
+      # later will also use the App credential rather than github-actions[bot].
+      - name: Mint org-bot token
+        id: app-token
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SEMREL_APP_ID }}
+          private-key: ${{ secrets.SEMREL_APP_PRIVATE_KEY }}
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main' && steps.app-token.outputs.token) || github.token }}
 
       # IMPORTANT: do NOT enable built-in npm caching here.
       # setup-node cache fails immediately if lockfile is missing.
@@ -104,14 +117,6 @@ jobs:
 
       - name: Verify compiled spec outputs and omnibus index coverage
         run: npm run verify:spec-artifacts
-
-      - name: Mint org-bot token
-        id: app-token
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.SEMREL_APP_ID }}
-          private-key: ${{ secrets.SEMREL_APP_PRIVATE_KEY }}
 
       - name: Open PR for new compiled spec artifacts
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
