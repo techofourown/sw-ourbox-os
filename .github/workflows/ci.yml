@@ -28,8 +28,6 @@ jobs:
 
   graphmd:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -104,8 +102,18 @@ jobs:
       - name: Verify compiled spec outputs and omnibus index coverage
         run: npm run verify:spec-artifacts
 
-      - name: Commit new compiled spec artifacts
+      - name: Mint org-bot token
+        id: app-token
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SEMREL_APP_ID }}
+          private-key: ${{ secrets.SEMREL_APP_PRIVATE_KEY }}
+
+      - name: Open PR for new compiled spec artifacts
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           set -euo pipefail
           NEW_FILES=$(git ls-files --others --exclude-standard -- 'SRS-*.md' 'SyRS-*.md' 2>/dev/null || true)
@@ -115,12 +123,20 @@ jobs:
           fi
           echo "New compiled spec files:"
           echo "$NEW_FILES"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          BRANCH="ci/compiled-specs-${GITHUB_SHA::8}"
+          git checkout -b "$BRANCH"
+          git config user.name "semantic-release-bot"
+          git config user.email "semantic-release-bot@martynus.net"
           echo "$NEW_FILES" | xargs git add --
           git add OurBox-OS-Requirements-Omnibus.md
-          git commit -m "$(printf 'chore: add compiled spec artifacts for new specs\n\nAuto-generated compiled spec files committed by CI for specs that did\nnot previously exist in the repository.')"
-          git push
+          git commit -m "$(printf 'chore: add compiled spec artifacts for new specs\n\nCommitted by CI for specs that did not previously exist in the\nrepository. Triggered by %s.' "${GITHUB_SHA::12}")"
+          git remote set-url origin "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git"
+          git push origin "$BRANCH"
+          gh pr create \
+            --title "chore: add compiled spec artifacts for new specs" \
+            --body "$(printf 'Compiled spec files for specs that did not previously exist in the\nrepository. Opened by CI after merging %s.\n\nMerge when ready.' "${GITHUB_SHA::12}")" \
+            --base main \
+            --head "$BRANCH"
 
       - name: Upload rendered requirements artifacts
         uses: actions/upload-artifact@v4
