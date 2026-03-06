@@ -33,6 +33,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install platform-contract validation deps
+        run: python3 -m pip install --disable-pip-version-check pyyaml
+
       - name: Validate rendered platform contract
         run: bash tools/platform-contract/validate.sh
 
