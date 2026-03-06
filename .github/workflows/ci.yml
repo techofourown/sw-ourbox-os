@@ -116,8 +116,8 @@ jobs:
       - name: Open PR for new compiled spec artifacts
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
-          APP_TOKEN: ${{ steps.app-token.outputs.token }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          PR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           NEW_FILES=$(git ls-files --others --exclude-standard -- 'SRS-*.md' 'SyRS-*.md' 2>/dev/null || true)
@@ -134,9 +134,8 @@ jobs:
           echo "$NEW_FILES" | xargs git add --
           git add OurBox-OS-Requirements-Omnibus.md
           git commit -m "$(printf 'chore: add compiled spec artifacts for new specs\n\nCommitted by CI for specs that did not previously exist in the\nrepository. Triggered by %s.' "${GITHUB_SHA::12}")"
-          git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${{ github.repository }}.git"
           git push origin "$BRANCH"
-          gh pr create \
+          GH_TOKEN="$PR_TOKEN" gh pr create \
             --title "chore: add compiled spec artifacts for new specs" \
             --body "$(printf 'Compiled spec files for specs that did not previously exist in the\nrepository. Opened by CI after merging %s.\n\nMerge when ready.' "${GITHUB_SHA::12}")" \
             --base main \
