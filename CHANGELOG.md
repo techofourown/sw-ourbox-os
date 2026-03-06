@@ -1,3 +1,11 @@
+# [0.5.0](https://github.com/techofourown/sw-ourbox-os/compare/v0.4.3...v0.5.0) (2026-03-06)
+
+
+### Features
+
+* add spec artifacts verification to CI pipeline ([39f3271](https://github.com/techofourown/sw-ourbox-os/commit/39f3271003ca39921ee0e91a753b4a53166bac7f))
+* add verify-spec-artifacts tool ([5d04653](https://github.com/techofourown/sw-ourbox-os/commit/5d0465382932f7062aa1b1c6f6daed657a9f025d))
+
 ## [0.4.3](https://github.com/techofourown/sw-ourbox-os/compare/v0.4.2...v0.4.3) (2026-03-03)
 
 
