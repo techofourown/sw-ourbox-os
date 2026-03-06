@@ -26,6 +26,16 @@ jobs:
       - name: Check workflow trust boundaries
         run: bash tools/check-workflow-safety.sh
 
+  platform-contract:
+    name: Platform contract render + lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate rendered platform contract
+        run: bash tools/platform-contract/validate.sh
+
   graphmd:
     runs-on: ubuntu-latest
     permissions:
