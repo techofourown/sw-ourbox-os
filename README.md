@@ -23,6 +23,8 @@ related components.
 - Integration reference: [Artifact distribution and integration contract](docs/architecture/artifact-distribution-and-integration.md)
 - Target integration contract: [Reference](docs/reference/target-integration-contract.md)
 - New hardware target checklist: [Reference](docs/reference/new-hardware-target-checklist.md)
+- Matchbox consumer reference: [`img-ourbox-matchbox` platform contract consumption](https://github.com/techofourown/img-ourbox-matchbox/blob/main/docs/reference/platform-contract.md)
+- Woodbox consumer reference: [`img-ourbox-woodbox` platform contract consumption](https://github.com/techofourown/img-ourbox-woodbox/blob/main/docs/reference/platform-contract.md)
 
 The model is one lane, explicit trust: everyone uses the same artifact mechanics; trust is layered
 through signer/policy choices over time.
