@@ -61,7 +61,7 @@
       apps.forEach(function(app) {
         var a = document.createElement("a");
         a.className = "app";
-        a.href = "http://" + app.sub + "." + host;
+        a.href = location.protocol + "//" + app.sub + "." + host;
         a.innerHTML = "<h2>" + app.name + "</h2><p>" + app.desc + "</p>";
         container.appendChild(a);
       });

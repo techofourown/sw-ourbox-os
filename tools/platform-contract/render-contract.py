@@ -365,9 +365,9 @@ def configmap(
 def write_routes(path: Path, box_host: str) -> None:
     lines = [
         "host\tpath\texpected_status\tbody_marker\tdescription",
-        f"{box_host}\t/\t200\tOurBox Platform Contract Baseline\tlanding-root",
-        f"files.{box_host}\t/\t200\tDUFS\tdufs-root",
-        f"notes.{box_host}\t/\t200\tFlatnotes\tflatnotes-root",
+        f"{box_host}\t/\t200\tYour apps, served by your machine, to your phone.\tlanding-root",
+        f"files.{box_host}\t/\t200\tUpload files\tdufs-root",
+        f"notes.{box_host}\t/\t200\tflatnotes\tflatnotes-root",
         f"todo.{box_host}\t/\t200\tTodo Bloom\ttodo-bloom-root",
     ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
