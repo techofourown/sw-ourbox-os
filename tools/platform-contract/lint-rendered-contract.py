@@ -27,6 +27,25 @@ REQUIRED_ANNOTATIONS = (
     "ourbox.techofourown.io/storage-class",
 )
 
+EXPECTED_ROUTE_MARKERS = {
+    "landing-root": {
+        "body_marker": "Your apps, served by your machine, to your phone.",
+        "source_file": "landing/index.html",
+    },
+    "dufs-root": {
+        "body_marker": "Upload files",
+        "source_file": None,
+    },
+    "flatnotes-root": {
+        "body_marker": "flatnotes",
+        "source_file": None,
+    },
+    "todo-bloom-root": {
+        "body_marker": "Todo Bloom",
+        "source_file": "todo-bloom/index.html",
+    },
+}
+
 
 def load_resources(manifests_dir: Path) -> list[dict]:
     resources: list[dict] = []
@@ -56,6 +75,12 @@ def get_service_ports(service: dict) -> set[int | str]:
         if "name" in entry:
             ports.add(entry["name"])
     return ports
+
+
+def wildcard_suffix(host: str) -> str | None:
+    if host.startswith("*.") and len(host) > 2:
+        return host[1:]
+    return None
 
 
 def main() -> int:
@@ -152,6 +177,7 @@ def main() -> int:
         if resource["kind"] != "Ingress":
             continue
         namespace = resource["metadata"].get("namespace", "")
+        rule_hosts = [rule.get("host", "") for rule in resource.get("spec", {}).get("rules", []) if rule.get("host")]
         backends = []
         default_backend = resource.get("spec", {}).get("defaultBackend", {})
         if "service" in default_backend:
@@ -174,6 +200,19 @@ def main() -> int:
                     f"Ingress/{resource['metadata']['name']} references Service/{service_ref['name']} port {expected_port}, "
                     "but the service does not expose it"
                 )
+        for host in rule_hosts:
+            suffix = wildcard_suffix(host)
+            if suffix is None:
+                continue
+            overlapping_hosts = [
+                other_host
+                for other_host in rule_hosts
+                if other_host != host and other_host.endswith(suffix)
+            ]
+            if overlapping_hosts:
+                errors.append(
+                    f"Ingress/{resource['metadata']['name']} wildcard host {host} overlaps exact hosts {sorted(overlapping_hosts)}"
+                )
 
     routes_file = render_dir / "verification" / "http-routes.tsv"
     if not routes_file.is_file():
@@ -185,6 +224,7 @@ def main() -> int:
         elif lines[0] != "host\tpath\texpected_status\tbody_marker\tdescription":
             errors.append("verification/http-routes.tsv header does not match expected 5-column format")
         else:
+            seen_descriptions: set[str] = set()
             for line in lines[1:]:
                 parts = line.split("\t")
                 if len(parts) != 5:
@@ -193,6 +233,34 @@ def main() -> int:
                 host, path, expected_status, body_marker, description = parts
                 if not all((host, path, expected_status, body_marker, description)):
                     errors.append(f"verification/http-routes.tsv has empty required field: {line}")
+                    continue
+                seen_descriptions.add(description)
+                expected = EXPECTED_ROUTE_MARKERS.get(description)
+                if expected is None:
+                    continue
+                if body_marker != expected["body_marker"]:
+                    errors.append(
+                        f"verification/http-routes.tsv route {description} uses marker '{body_marker}', "
+                        f"expected '{expected['body_marker']}'"
+                    )
+                    continue
+                source_file = expected["source_file"]
+                if source_file:
+                    source_path = contract_root / source_file
+                    if not source_path.is_file():
+                        errors.append(f"verification marker source file missing: {source_path}")
+                        continue
+                    if expected["body_marker"] not in source_path.read_text(encoding="utf-8"):
+                        errors.append(
+                            f"verification marker '{expected['body_marker']}' for route {description} "
+                            f"not found in source file {source_file}"
+                        )
+            missing_descriptions = sorted(set(EXPECTED_ROUTE_MARKERS) - seen_descriptions)
+            if missing_descriptions:
+                errors.append(
+                    "verification/http-routes.tsv is missing expected routes "
+                    f"{missing_descriptions}"
+                )
 
     if errors:
         raise SystemExit("\n".join(errors))

@@ -167,6 +167,8 @@ def deployment(
     volume_mounts: list[dict] | None = None,
     env: list[dict] | None = None,
     args: list[str] | None = None,
+    readiness_probe: dict | None = None,
+    liveness_probe: dict | None = None,
     storage_required: bool = False,
 ) -> dict:
     pod_labels = {
@@ -179,8 +181,10 @@ def deployment(
         "image": image,
         "imagePullPolicy": "IfNotPresent",
         "ports": [{"containerPort": container_port, "name": "http"}],
-        "readinessProbe": {"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 5, "periodSeconds": 5},
-        "livenessProbe": {"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 15, "periodSeconds": 15},
+        "readinessProbe": readiness_probe
+        or {"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 5, "periodSeconds": 5},
+        "livenessProbe": liveness_probe
+        or {"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 15, "periodSeconds": 15},
     }
     if args:
         container["args"] = args
@@ -313,10 +317,6 @@ def ingress(
                     "http": {"paths": [{"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "landing", "port": {"number": 80}}}}]},
                 },
                 {
-                    "host": f"*.{box_host}",
-                    "http": {"paths": [{"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "landing", "port": {"number": 80}}}}]},
-                },
-                {
                     "host": f"files.{box_host}",
                     "http": {"paths": [{"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "dufs", "port": {"number": 5000}}}}]},
                 },
@@ -365,9 +365,9 @@ def configmap(
 def write_routes(path: Path, box_host: str) -> None:
     lines = [
         "host\tpath\texpected_status\tbody_marker\tdescription",
-        f"{box_host}\t/\t200\tOurBox Platform Contract Baseline\tlanding-root",
-        f"files.{box_host}\t/\t200\tDUFS\tdufs-root",
-        f"notes.{box_host}\t/\t200\tFlatnotes\tflatnotes-root",
+        f"{box_host}\t/\t200\tYour apps, served by your machine, to your phone.\tlanding-root",
+        f"files.{box_host}\t/\t200\tUpload files\tdufs-root",
+        f"notes.{box_host}\t/\t200\tflatnotes\tflatnotes-root",
         f"todo.{box_host}\t/\t200\tTodo Bloom\ttodo-bloom-root",
     ]
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -570,7 +570,9 @@ def main() -> int:
             image=image_refs["dufs"],
             container_port=5000,
             container_name="dufs",
-            args=["/data", "--bind", "0.0.0.0", "--port", "5000", "--allow-all", "--render-index"],
+            args=["/data", "--bind", "0.0.0.0", "--port", "5000", "--allow-all"],
+            readiness_probe={"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 5, "periodSeconds": 5},
+            liveness_probe={"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 15, "periodSeconds": 15},
             volumes=[{"name": "data", "persistentVolumeClaim": {"claimName": "dufs-data"}}],
             volume_mounts=[{"name": "data", "mountPath": "/data"}],
             storage_required=True,
@@ -614,7 +616,11 @@ def main() -> int:
             image=image_refs["flatnotes"],
             container_port=8080,
             container_name="flatnotes",
-            env=[{"name": "FLATNOTES_PATH", "value": "/data"}, {"name": "FLATNOTES_PORT", "value": "8080"}],
+            env=[
+                {"name": "FLATNOTES_AUTH_TYPE", "value": "none"},
+                {"name": "FLATNOTES_PATH", "value": "/data"},
+                {"name": "FLATNOTES_PORT", "value": "8080"},
+            ],
             volumes=[{"name": "data", "persistentVolumeClaim": {"claimName": "flatnotes-data"}}],
             volume_mounts=[{"name": "data", "mountPath": "/data"}],
             storage_required=True,

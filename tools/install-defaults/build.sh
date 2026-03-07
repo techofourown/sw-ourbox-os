@@ -29,6 +29,9 @@ cp -a "${SRC_DIR}/." "${BUILD_DIR}/install-defaults/"
 for profile in "${BUILD_DIR}/install-defaults/defaults/"*.env; do
   [[ -f "${profile}" ]] || die "No profile files found in defaults/"
   grep -q '^INSTALLER_ID=' "${profile}" || die "Profile missing INSTALLER_ID: ${profile}"
+  grep -q '^OS_REPO=' "${profile}" || die "Profile missing OS_REPO: ${profile}"
+  grep -q '^OS_CATALOG_TAG=' "${profile}" || die "Profile missing OS_CATALOG_TAG: ${profile}"
+  grep -q '^CHANNEL_STABLE_TAG=' "${profile}" || die "Profile missing CHANNEL_STABLE_TAG: ${profile}"
 done
 
 cat > "${BUILD_DIR}/install-defaults/manifest.env" <<EOF_MANIFEST
