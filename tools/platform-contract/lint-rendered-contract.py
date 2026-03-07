@@ -58,6 +58,12 @@ def get_service_ports(service: dict) -> set[int | str]:
     return ports
 
 
+def wildcard_suffix(host: str) -> str | None:
+    if host.startswith("*.") and len(host) > 2:
+        return host[1:]
+    return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Lint a rendered platform contract bundle.")
     parser.add_argument("--contract-root", required=True)
@@ -152,6 +158,7 @@ def main() -> int:
         if resource["kind"] != "Ingress":
             continue
         namespace = resource["metadata"].get("namespace", "")
+        rule_hosts = [rule.get("host", "") for rule in resource.get("spec", {}).get("rules", []) if rule.get("host")]
         backends = []
         default_backend = resource.get("spec", {}).get("defaultBackend", {})
         if "service" in default_backend:
@@ -173,6 +180,19 @@ def main() -> int:
                 errors.append(
                     f"Ingress/{resource['metadata']['name']} references Service/{service_ref['name']} port {expected_port}, "
                     "but the service does not expose it"
+                )
+        for host in rule_hosts:
+            suffix = wildcard_suffix(host)
+            if suffix is None:
+                continue
+            overlapping_hosts = [
+                other_host
+                for other_host in rule_hosts
+                if other_host != host and other_host.endswith(suffix)
+            ]
+            if overlapping_hosts:
+                errors.append(
+                    f"Ingress/{resource['metadata']['name']} wildcard host {host} overlaps exact hosts {sorted(overlapping_hosts)}"
                 )
 
     routes_file = render_dir / "verification" / "http-routes.tsv"

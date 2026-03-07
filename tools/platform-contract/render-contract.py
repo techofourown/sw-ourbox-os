@@ -167,6 +167,8 @@ def deployment(
     volume_mounts: list[dict] | None = None,
     env: list[dict] | None = None,
     args: list[str] | None = None,
+    readiness_probe: dict | None = None,
+    liveness_probe: dict | None = None,
     storage_required: bool = False,
 ) -> dict:
     pod_labels = {
@@ -179,8 +181,10 @@ def deployment(
         "image": image,
         "imagePullPolicy": "IfNotPresent",
         "ports": [{"containerPort": container_port, "name": "http"}],
-        "readinessProbe": {"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 5, "periodSeconds": 5},
-        "livenessProbe": {"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 15, "periodSeconds": 15},
+        "readinessProbe": readiness_probe
+        or {"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 5, "periodSeconds": 5},
+        "livenessProbe": liveness_probe
+        or {"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 15, "periodSeconds": 15},
     }
     if args:
         container["args"] = args
@@ -310,10 +314,6 @@ def ingress(
             "rules": [
                 {
                     "host": box_host,
-                    "http": {"paths": [{"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "landing", "port": {"number": 80}}}}]},
-                },
-                {
-                    "host": f"*.{box_host}",
                     "http": {"paths": [{"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "landing", "port": {"number": 80}}}}]},
                 },
                 {
@@ -570,7 +570,9 @@ def main() -> int:
             image=image_refs["dufs"],
             container_port=5000,
             container_name="dufs",
-            args=["/data", "--bind", "0.0.0.0", "--port", "5000", "--allow-all", "--render-index"],
+            args=["/data", "--bind", "0.0.0.0", "--port", "5000", "--allow-all"],
+            readiness_probe={"httpGet": {"path": "/__dufs__/health", "port": "http"}, "initialDelaySeconds": 5, "periodSeconds": 5},
+            liveness_probe={"httpGet": {"path": "/__dufs__/health", "port": "http"}, "initialDelaySeconds": 15, "periodSeconds": 15},
             volumes=[{"name": "data", "persistentVolumeClaim": {"claimName": "dufs-data"}}],
             volume_mounts=[{"name": "data", "mountPath": "/data"}],
             storage_required=True,
@@ -614,7 +616,11 @@ def main() -> int:
             image=image_refs["flatnotes"],
             container_port=8080,
             container_name="flatnotes",
-            env=[{"name": "FLATNOTES_PATH", "value": "/data"}, {"name": "FLATNOTES_PORT", "value": "8080"}],
+            env=[
+                {"name": "FLATNOTES_AUTH_TYPE", "value": "none"},
+                {"name": "FLATNOTES_PATH", "value": "/data"},
+                {"name": "FLATNOTES_PORT", "value": "8080"},
+            ],
             volumes=[{"name": "data", "persistentVolumeClaim": {"claimName": "flatnotes-data"}}],
             volume_mounts=[{"name": "data", "mountPath": "/data"}],
             storage_required=True,
