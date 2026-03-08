@@ -92,6 +92,8 @@ jobs:
           grep -q '^install-defaults/schema\.env$' "${TAR_LIST}"
           grep -q '^install-defaults/manifest\.env$' "${TAR_LIST}"
           grep -q '^install-defaults/defaults/matchbox\.env$' "${TAR_LIST}"
+          grep -q '^install-defaults/defaults/woodbox\.env$' "${TAR_LIST}"
+          grep -q '^install-defaults/defaults/tinderbox\.env$' "${TAR_LIST}"
 
       - name: Upload publish outputs
         uses: actions/upload-artifact@v4

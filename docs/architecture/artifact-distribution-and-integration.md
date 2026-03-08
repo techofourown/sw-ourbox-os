@@ -126,6 +126,9 @@ Recommended location:
 - Installers may pull `install-defaults` by OCI ref at runtime.
 - Failure to pull defaults must not block install; baked defaults remain the fallback.
 - Boot-media overrides remain highest priority so operators can force custom refs/channels.
+- The shared precedence, catalog rules, digest rules, and provenance vocabulary for this decision
+  surface are defined by the installer-selection contract in
+  `docs/reference/installer-selection-contract.md`.
 
 5) **Consumer must expose an operator-readable installed-system identity**
 At minimum, an operator should be able to determine:
