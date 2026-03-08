@@ -15,15 +15,12 @@ on:
       - 'CLAUDE.md'
       - 'package.json'
       - 'package-lock.json'
-  release:
-    types: [published]
-
 permissions:
   contents: read
   packages: write
 
 concurrency:
-  group: airgap-platform-${{ github.event_name }}-${{ github.ref_name || github.event.release.tag_name || github.run_id }}
+  group: airgap-platform-${{ github.ref_name || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -47,29 +44,25 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Resolve publish tag
-        id: resolve-tag
-        run: |
-          set -euo pipefail
-
-          TAG=edge
-          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            TAG="${{ github.event.release.tag_name }}"
-          fi
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            TAG="${GITHUB_REF_NAME}"
-          fi
-
-          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
-
-      - name: Publish bundle
+      - name: Publish immutable candidate bundle
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
         run: |
           set -euo pipefail
-          TAG="${{ steps.resolve-tag.outputs.tag }}"
-          TAG="${TAG}" ARCH="${ARCH}" ./tools/airgap-platform/publish.sh "${ARCH}" "${TAG}"
+          TAG="main-${GITHUB_SHA:0:12}" ARCH="${ARCH}" ./tools/airgap-platform/publish.sh "${ARCH}" "main-${GITHUB_SHA:0:12}"
+
+      - name: Tag edge channel from candidate digest
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          REF_FILE="dist/airgap-platform.${ARCH}.ref"
+          [[ -f "${REF_FILE}" ]] || {
+            echo "Missing ${REF_FILE}" >&2
+            exit 1
+          }
+          oras tag "$(cat "${REF_FILE}")" "edge-${ARCH}" >/dev/null
 
       - name: Smoke pull published digest and verify layout
         if: always()
@@ -112,4 +105,5 @@ jobs:
           path: |
             dist/airgap-platform.${{ matrix.arch }}.ref
             dist/airgap-platform.${{ matrix.arch }}.push.log
+            dist/airgap-platform.meta.env
           if-no-files-found: warn
