@@ -5,7 +5,8 @@
 #   1. No workflow that runs on a self-hosted runner may be triggered by
 #      pull_request or pull_request_target (untrusted code on privileged builder).
 #   2. No official publish workflow may expose a broad workflow_dispatch trigger
-#      (official publication must only flow from push-to-main or tag push).
+#      (official publication must only flow from push-to-main or constrained
+#      release events).
 #   3. Official publish workflows triggered by branch push must declare a path
 #      filter (paths-ignore or paths) to avoid rebuilding on docs-only changes.
 #
@@ -59,7 +60,7 @@ while IFS= read -r wf; do
   fi
 
   if grep -qE '^  workflow_dispatch:' "${wf}"; then
-    fail "${name}: official publish workflow exposes workflow_dispatch — official publication must only trigger from push-to-main or tag push"
+    fail "${name}: official publish workflow exposes workflow_dispatch — official publication must only trigger from push-to-main or constrained release events"
   else
     PASS=$((PASS + 1))
   fi

@@ -1,43 +1,28 @@
-name: Install Defaults Promote
+name: Install Defaults Promote Stable
 
 on:
-  workflow_dispatch:
-    inputs:
-      source_tag:
-        description: Existing source tag to promote from
-        required: true
-        default: edge
-      target_tag:
-        description: Target tag to write (for example stable)
-        required: true
-        default: stable
-      matchbox_os_default_ref:
-        description: Optional pinned Matchbox OS default ref for curated stable defaults
-        required: false
-        default: ''
-      woodbox_os_default_ref:
-        description: Optional pinned Woodbox OS default ref for curated stable defaults
-        required: false
-        default: ''
-      tinderbox_os_default_ref:
-        description: Optional pinned Tinderbox OS default ref for curated stable defaults
-        required: false
-        default: ''
+  release:
+    types: [published]
 
 permissions:
   contents: read
   packages: write
 
 concurrency:
-  group: install-defaults-promote-${{ github.event.inputs.target_tag }}
+  group: install-defaults-promote-stable-${{ github.event.release.tag_name || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   promote:
+    if: startsWith(github.event.release.tag_name, 'v') && !github.event.release.draft && !github.event.release.prerelease
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ github.event.release.tag_name }}
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
@@ -50,11 +35,37 @@ jobs:
           set -euo pipefail
 
           REF_BASE="ghcr.io/techofourown/sw-ourbox-os/install-defaults"
-          SOURCE_TAG="${{ github.event.inputs.source_tag }}"
-          TARGET_TAG="${{ github.event.inputs.target_tag }}"
-          MATCHBOX_REF="${{ github.event.inputs.matchbox_os_default_ref }}"
-          WOODBOX_REF="${{ github.event.inputs.woodbox_os_default_ref }}"
-          TINDERBOX_REF="${{ github.event.inputs.tinderbox_os_default_ref }}"
+          SOURCE_TAG="${{ github.event.release.tag_name }}"
+          TARGET_TAG="stable"
+
+          wait_for_digest() {
+            local source_ref="$1"
+            local timeout="${PROMOTE_WAIT_TIMEOUT_SECONDS:-1800}"
+            local interval="${PROMOTE_WAIT_INTERVAL_SECONDS:-15}"
+            local elapsed=0
+            local digest=""
+
+            while (( elapsed <= timeout )); do
+              digest="$(oras resolve "${source_ref}" 2>/dev/null || true)"
+              if [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+                printf '%s\n' "${digest}"
+                return 0
+              fi
+              if (( elapsed == 0 )); then
+                echo "Waiting for publish workflow to make ${source_ref} available..."
+              fi
+              sleep "${interval}"
+              elapsed=$((elapsed + interval))
+            done
+
+            return 1
+          }
+
+          # shellcheck disable=SC1091
+          source ./release/install-defaults-stable.env
+          MATCHBOX_REF="${MATCHBOX_OS_DEFAULT_REF_OVERRIDE:-}"
+          WOODBOX_REF="${WOODBOX_OS_DEFAULT_REF_OVERRIDE:-}"
+          TINDERBOX_REF="${TINDERBOX_OS_DEFAULT_REF_OVERRIDE:-}"
 
           mkdir -p dist
 
@@ -66,17 +77,20 @@ jobs:
               ./tools/install-defaults/publish.sh "${TARGET_TAG}"
 
             printf '%s\n' "curated-build" > dist/install-defaults.promote.mode
-            printf '%s\n' "checkout@${GITHUB_SHA}" > dist/install-defaults.promote.source.ref
+            printf '%s\n' "refs/tags/${SOURCE_TAG}" > dist/install-defaults.promote.source.ref
             printf '%s\n' "$(cat dist/install-defaults.ref)" > dist/install-defaults.promote.digest.ref
             printf '%s\n' "${REF_BASE}:${TARGET_TAG}" > dist/install-defaults.promote.target.ref
 
-            echo "Published curated ${REF_BASE}:${TARGET_TAG} with pinned OS_DEFAULT_REF overrides."
+            echo "Published curated ${REF_BASE}:${TARGET_TAG} from release tag ${SOURCE_TAG}."
             exit 0
           fi
 
           SOURCE_REF="${REF_BASE}:${SOURCE_TAG}"
-          DIGEST="$(oras resolve "${SOURCE_REF}")"
-          [[ -n "${DIGEST}" ]] || { echo "Failed to resolve digest for ${SOURCE_REF}" >&2; exit 1; }
+          DIGEST="$(wait_for_digest "${SOURCE_REF}" || true)"
+          [[ "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "Timed out waiting for ${SOURCE_REF} to be published" >&2
+            exit 1
+          }
 
           SOURCE_PINNED="${REF_BASE}@${DIGEST}"
           oras tag "${SOURCE_PINNED}" "${TARGET_TAG}"
@@ -92,7 +106,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: install-defaults-promote-${{ github.run_id }}
+          name: install-defaults-promote-${{ github.event.release.tag_name || github.run_id }}
           path: |
             dist/install-defaults.promote.mode
             dist/install-defaults.promote.source.ref

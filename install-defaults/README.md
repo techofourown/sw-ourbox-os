@@ -51,8 +51,14 @@ Recommended pattern:
 CI publishing strategy:
 - `install-defaults:edge` updates on `main`
 - version tags can be published from release/tag events
-- `install-defaults:stable` is intended to be curated via the `Install Defaults Promote` workflow
-  and may be rebuilt with pinned `OS_DEFAULT_REF` inputs for Matchbox/Woodbox/Tinderbox
+- `install-defaults:stable` is promoted by `.github/workflows/install-defaults-promote.yml`
+  on GitHub Release `published`
+- `release/install-defaults-stable.env` carries the optional curated pinned
+  `OS_DEFAULT_REF` values used for that promotion
+- if every override in `release/install-defaults-stable.env` is empty, the
+  workflow re-tags the already-published versioned bundle into `stable`
+- if any override is non-empty, the workflow rebuilds `install-defaults:stable`
+  from the checked-out release tag with those curated pinned defaults
 
 Baked installer defaults and boot-media overrides remain fallback/override controls.
 
