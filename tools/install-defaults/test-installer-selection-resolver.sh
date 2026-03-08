@@ -188,11 +188,11 @@ test_catalog_resolution_uses_newest_valid_created_timestamp() {
 
   mkdir -p "${catalog_src}"
   cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
-channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref
-stable	v0.5.0-x86	2026-03-07T07:34:04Z	v0.5.0	prod	x86	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-woodbox-os@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-stable	v0.5.9-x86	2026-03-07T23:59:59Z	v0.5.9	prod	x86	TOO	def	sha256:2	v1	sha256:b	sha256:b	ghcr.io/techofourown/ourbox-woodbox-os:stable
-nightly	nightly-x86	2026-03-08T00:00:01Z	nightly	prod	x86	TOO	ghi	sha256:3	v1	sha256:c	sha256:c	ghcr.io/techofourown/ourbox-woodbox-os@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-stable	v0.5.3-x86	2026-03-07T23:08:54Z	v0.5.3	prod	x86	TOO	jkl	sha256:4	v1	sha256:d	sha256:d	ghcr.io/techofourown/ourbox-woodbox-os@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+stable	v0.5.0-x86	2026-03-07T07:34:04Z	v0.5.0	prod	x86	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-woodbox-os@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	old-good
+stable	v0.5.9-x86	2026-03-07T23:59:59Z	v0.5.9	prod	x86	TOO	def	sha256:2	v1	sha256:b	sha256:b	ghcr.io/techofourown/ourbox-woodbox-os:stable	not-digest-pinned
+nightly	nightly-x86	2026-03-08T00:00:01Z	nightly	prod	x86	TOO	ghi	sha256:3	v1	sha256:c	sha256:c	ghcr.io/techofourown/ourbox-woodbox-os@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc	nightly-row
+stable	v0.5.3-x86	2026-03-07T23:08:54Z	v0.5.3	prod	x86	TOO	jkl	sha256:4	v1	sha256:d	sha256:d	ghcr.io/techofourown/ourbox-woodbox-os@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb	newest-valid
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -216,6 +216,30 @@ EOF_CATALOG
   assert_eq "${OURBOX_INSTALL_SELECTION_SOURCE}" "catalog" "valid catalog row should be selected"
   assert_eq "${OURBOX_RELEASE_CHANNEL}" "stable" "catalog resolution should preserve release channel"
   assert_eq "${OURBOX_SELECTED_REF}" "${expected}" "catalog resolution should choose newest valid digest-pinned row by created"
+
+  rm -rf "${tmp}"
+}
+
+test_missing_channel_tags_fall_back_to_target_defaults() {
+  local tmp
+  tmp="$(mktemp -d)"
+
+  # shellcheck disable=SC1090
+  source "${RESOLVER}"
+
+  OS_REPO="ghcr.io/techofourown/ourbox-woodbox-os"
+  OS_TARGET="x86"
+  OS_CHANNEL="stable"
+  OS_CATALOG_ENABLED="0"
+  OS_REF=""
+  OS_DEFAULT_REF=""
+  unset CHANNEL_STABLE_TAG CHANNEL_BETA_TAG CHANNEL_NIGHTLY_TAG CHANNEL_EXP_LABS_TAG
+
+  ourbox_selection_reset_state
+  ourbox_selection_determine_default_ref "${tmp}/catalog"
+
+  assert_eq "${OURBOX_INSTALL_SELECTION_SOURCE}" "channel-tag" "missing channel vars should fall back to OS_TARGET-derived tag"
+  assert_eq "${OURBOX_SELECTED_REF}" "ghcr.io/techofourown/ourbox-woodbox-os:x86-stable" "stable fallback tag should be derived from target"
 
   rm -rf "${tmp}"
 }
@@ -283,6 +307,29 @@ test_finalize_registry_ref_resolves_digest() {
   rm -rf "${tmp}"
 }
 
+test_finalize_registry_ref_handles_registry_ports_without_tags() {
+  local tmp fake_oras_dir digest
+  tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  digest="sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+  export FAKE_ORAS_RESOLVE_REF="localhost:5000/custom/ourbox-matchbox-os"
+  export FAKE_ORAS_RESOLVE_DIGEST="${digest}"
+
+  # shellcheck disable=SC1090
+  source "${RESOLVER}"
+
+  ourbox_selection_reset_state
+  ourbox_selection_finalize_registry_ref "localhost:5000/custom/ourbox-matchbox-os"
+
+  assert_eq "${OURBOX_OS_ARTIFACT_DIGEST}" "${digest}" "resolved digest should be recorded"
+  assert_eq "${OURBOX_PULL_REF}" "localhost:5000/custom/ourbox-matchbox-os@${digest}" "registry port should be preserved when building digest pull ref"
+
+  rm -rf "${tmp}"
+}
+
 test_finalize_registry_ref_dev_override_marks_unresolved() {
   local tmp fake_oras_dir
   tmp="$(mktemp -d)"
@@ -329,8 +376,10 @@ main() {
   test_remote_defaults_bundle_shape
   test_precedence_prefers_os_ref_then_os_default_ref
   test_catalog_resolution_uses_newest_valid_created_timestamp
+  test_missing_channel_tags_fall_back_to_target_defaults
   test_catalog_falls_back_to_channel_tag_without_valid_digest_row
   test_finalize_registry_ref_resolves_digest
+  test_finalize_registry_ref_handles_registry_ports_without_tags
   test_finalize_registry_ref_dev_override_marks_unresolved
   test_finalize_registry_ref_fails_closed_without_dev_override
   printf 'installer-selection resolver tests: PASS\n'
