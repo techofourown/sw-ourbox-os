@@ -59,6 +59,10 @@ apply_profile_override "matchbox" "${MATCHBOX_OS_DEFAULT_REF_OVERRIDE:-}"
 apply_profile_override "woodbox" "${WOODBOX_OS_DEFAULT_REF_OVERRIDE:-}"
 apply_profile_override "tinderbox" "${TINDERBOX_OS_DEFAULT_REF_OVERRIDE:-}"
 
+bash "${ROOT}/tools/install-defaults/validate-assignment-only.sh" \
+  "${BUILD_DIR}/install-defaults/schema.env" \
+  "${BUILD_DIR}/install-defaults/defaults/"*.env
+
 for profile in "${BUILD_DIR}/install-defaults/defaults/"*.env; do
   [[ -f "${profile}" ]] || die "No profile files found in defaults/"
   grep -q '^INSTALLER_ID=' "${profile}" || die "Profile missing INSTALLER_ID: ${profile}"
