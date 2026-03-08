@@ -28,7 +28,7 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 | `edge-arm64` / `edge-amd64` | Airgap platform | Push to `main` (source-filtered) from the immutable candidate digest |
 | `v*` | Platform contract, install-defaults | `release` event (published) |
 | `v*-arm64` / `v*-amd64` | Airgap platform | Promotion after both candidate completion and matching GitHub Release `published` authorization are true; whichever arrives second wakes the retag |
-| `stable` | Install defaults | `release` event (published); promote versioned bundle or rebuild from the release tag with curated pinned defaults |
+| `stable` | Install defaults | Promotion after the successful `Install Defaults` release publish for the matching published GitHub Release tag; uses that publish run's artifact outputs instead of racing a sibling release workflow |
 
 ---
 
@@ -65,7 +65,7 @@ All build logic lives in this repository. Official and compatible builds use the
 | Airgap Platform Promote Release | `.github/workflows/airgap-platform-promote.yml` | `ubuntu-latest` | Candidate completion or release publication; promotes only when both candidate success and matching GitHub Release `published` authorization are present |
 | Platform Contract | `.github/workflows/platform-contract.yml` | `ubuntu-latest` | Push to `main` (source-filtered) + release |
 | Install Defaults | `.github/workflows/install-defaults.yml` | `ubuntu-latest` | Push to `main` (source-filtered) + release |
-| Install Defaults Promote Stable | `.github/workflows/install-defaults-promote.yml` | `ubuntu-latest` | GitHub Release `published` |
+| Install Defaults Promote Stable | `.github/workflows/install-defaults-promote.yml` | `ubuntu-latest` | `workflow_run` after successful `Install Defaults` release publication for a matching non-prerelease `v*` tag |
 
 `airgap-platform.yml` runs on organization-controlled build infrastructure in the
 `official-heavy-artifacts` runner group and publishes one immutable candidate digest per
@@ -75,11 +75,13 @@ candidate run and a matching GitHub Release exist; whichever arrives second wake
 `install-defaults.yml` run on GitHub-hosted runners (they are lightweight and do not require
 dedicated hardware).
 
-`install-defaults-promote.yml` is also lightweight. It reads optional curated
-`OS_DEFAULT_REF` values from `release/install-defaults-stable.env` in the
-checked-out release tag. If that file leaves all overrides empty, the workflow
-promotes the already-published versioned bundle into `install-defaults:stable`
-by digest.
+`install-defaults-promote.yml` is also lightweight. It follows the successful
+`Install Defaults` release publish workflow for the same release tag so it does
+not race sibling release publication. It reads optional curated `OS_DEFAULT_REF`
+values from `release/install-defaults-stable.env` in the checked-out release tag.
+If that file leaves all overrides empty, the workflow promotes the already-published
+versioned bundle into `install-defaults:stable` by digest using the publish run's
+artifact outputs.
 
 ---
 
@@ -129,6 +131,8 @@ does not materially affect a specific artifact. This is intentional: `paths-igno
 Release-event triggers are not filtered for the lightweight workflows that still use them.
 Airgap version promotion no longer dispatches a second heavy release build; it waits for the
 push-triggered candidate build to finish and then checks for matching release authorization.
+`install-defaults:stable` promotion likewise follows the successful release-publish workflow
+instead of racing it in parallel from the same release event.
 
 ### Forcing an official republish without source changes
 

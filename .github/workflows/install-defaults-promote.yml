@@ -1,65 +1,93 @@
 name: Install Defaults Promote Stable
 
 on:
-  release:
-    types: [published]
+  workflow_run:
+    workflows: ["Install Defaults"]
+    types: [completed]
 
 permissions:
+  actions: read
   contents: read
   packages: write
 
 concurrency:
-  group: install-defaults-promote-stable-${{ github.event.release.tag_name || github.run_id }}
+  group: install-defaults-promote-stable-${{ github.event.workflow_run.id || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   promote:
-    if: startsWith(github.event.release.tag_name, 'v') && !github.event.release.draft && !github.event.release.prerelease
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'release'
     runs-on: ubuntu-latest
     steps:
+      - name: Resolve release context
+        id: context
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          RELEASE_TAG="${{ github.event.workflow_run.display_title }}"
+          if [[ "${RELEASE_TAG}" != v* ]]; then
+            echo "Workflow run title '${RELEASE_TAG}' is not a version tag; skipping."
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          json="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json tagName,isDraft,isPrerelease)" \
+            || {
+              echo "Unable to resolve GitHub Release ${RELEASE_TAG}" >&2
+              exit 1
+            }
+
+          read -r resolved_tag is_draft is_prerelease < <(
+            python3 -c 'import json,sys; data=json.load(sys.stdin); print(data["tagName"], str(data["isDraft"]).lower(), str(data["isPrerelease"]).lower())' \
+              <<<"${json}"
+          )
+
+          if [[ "${is_draft}" == "true" || "${is_prerelease}" == "true" ]]; then
+            echo "Release ${resolved_tag} is not a published stable authorization; skipping."
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "skip=false" >> "${GITHUB_OUTPUT}"
+          echo "release_tag=${resolved_tag}" >> "${GITHUB_OUTPUT}"
+          echo "publish_run_id=${{ github.event.workflow_run.id }}" >> "${GITHUB_OUTPUT}"
+
       - name: Checkout
+        if: steps.context.outputs.skip != 'true'
         uses: actions/checkout@v4
         with:
-          ref: refs/tags/${{ github.event.release.tag_name }}
+          ref: refs/tags/${{ steps.context.outputs.release_tag }}
           fetch-depth: 0
           fetch-tags: true
 
       - name: Install ORAS
+        if: steps.context.outputs.skip != 'true'
         uses: oras-project/setup-oras@v1
 
       - name: Login to GHCR
+        if: steps.context.outputs.skip != 'true'
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      - name: Download publish outputs
+        if: steps.context.outputs.skip != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: install-defaults-${{ steps.context.outputs.publish_run_id }}
+          path: dist/publish-outputs
+          run-id: ${{ steps.context.outputs.publish_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Promote tag
+        if: steps.context.outputs.skip != 'true'
         run: |
           set -euo pipefail
 
           REF_BASE="ghcr.io/techofourown/sw-ourbox-os/install-defaults"
-          SOURCE_TAG="${{ github.event.release.tag_name }}"
+          SOURCE_TAG="${{ steps.context.outputs.release_tag }}"
           TARGET_TAG="stable"
-
-          wait_for_digest() {
-            local source_ref="$1"
-            local timeout="${PROMOTE_WAIT_TIMEOUT_SECONDS:-1800}"
-            local interval="${PROMOTE_WAIT_INTERVAL_SECONDS:-15}"
-            local elapsed=0
-            local digest=""
-
-            while (( elapsed <= timeout )); do
-              digest="$(oras resolve "${source_ref}" 2>/dev/null || true)"
-              if [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]]; then
-                printf '%s\n' "${digest}"
-                return 0
-              fi
-              if (( elapsed == 0 )); then
-                echo "Waiting for publish workflow to make ${source_ref} available..."
-              fi
-              sleep "${interval}"
-              elapsed=$((elapsed + interval))
-            done
-
-            return 1
-          }
 
           # shellcheck disable=SC1091
           source ./release/install-defaults-stable.env
@@ -86,13 +114,23 @@ jobs:
           fi
 
           SOURCE_REF="${REF_BASE}:${SOURCE_TAG}"
-          DIGEST="$(wait_for_digest "${SOURCE_REF}" || true)"
+          SOURCE_REF_FILE="$(find dist/publish-outputs -type f -name 'install-defaults.ref' | head -n1 || true)"
+          [[ -f "${SOURCE_REF_FILE}" ]] || {
+            echo "Missing install-defaults.ref in Install Defaults publish outputs" >&2
+            exit 1
+          }
+          SOURCE_PINNED="$(cat "${SOURCE_REF_FILE}")"
+          SOURCE_REPO="${SOURCE_PINNED%@*}"
+          DIGEST="${SOURCE_PINNED##*@}"
+          [[ "${SOURCE_REPO}" == "${REF_BASE}" ]] || {
+            echo "Unexpected install-defaults source repo in ${SOURCE_REF_FILE}: ${SOURCE_PINNED}" >&2
+            exit 1
+          }
           [[ "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
-            echo "Timed out waiting for ${SOURCE_REF} to be published" >&2
+            echo "Install Defaults publish output is not digest-pinned: ${SOURCE_PINNED}" >&2
             exit 1
           }
 
-          SOURCE_PINNED="${REF_BASE}@${DIGEST}"
           oras tag "${SOURCE_PINNED}" "${TARGET_TAG}"
 
           printf '%s\n' "retag" > dist/install-defaults.promote.mode
@@ -104,9 +142,9 @@ jobs:
 
       - name: Upload promote outputs
         uses: actions/upload-artifact@v4
-        if: always()
+        if: steps.context.outputs.skip != 'true' && always()
         with:
-          name: install-defaults-promote-${{ github.event.release.tag_name || github.run_id }}
+          name: install-defaults-promote-${{ steps.context.outputs.release_tag || github.run_id }}
           path: |
             dist/install-defaults.promote.mode
             dist/install-defaults.promote.source.ref

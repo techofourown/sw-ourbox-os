@@ -52,7 +52,7 @@ CI publishing strategy:
 - `install-defaults:edge` updates on `main`
 - version tags can be published from release/tag events
 - `install-defaults:stable` is promoted by `.github/workflows/install-defaults-promote.yml`
-  on GitHub Release `published`
+  after the successful `Install Defaults` release publish for the same published release tag
 - `release/install-defaults-stable.env` carries the optional curated pinned
   `OS_DEFAULT_REF` values used for that promotion
 - if every override in `release/install-defaults-stable.env` is empty, the
