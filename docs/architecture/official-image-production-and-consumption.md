@@ -376,9 +376,9 @@ Per org policy, official heavy-artifact release capability should remain possibl
 The recommended official model for heavy image repos is:
 
 - `beta`: latest official mainline build from pinned upstream refs (`push` to protected `main`)
-- `stable`: promotion of an already-published `beta` digest after candidate completion confirms a matching GitHub Release `published`
+- `stable`: promotion of an already-published `beta` digest once both candidate success and matching GitHub Release `published` authorization are present
 - `nightly`: scheduled integration build from floating upstream `edge` refs
-- `exp-labs`: prerelease / experimental promotion of an already-published digest after candidate completion confirms a matching GitHub Release `prereleased`
+- `exp-labs`: prerelease / experimental promotion of an already-published digest once both candidate success and matching GitHub Release `prereleased` authorization are present
 
 This separates two axes that should not be conflated:
 

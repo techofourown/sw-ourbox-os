@@ -27,7 +27,7 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 | `edge` | Platform contract, install-defaults | Push to `main` (source-filtered) |
 | `edge-arm64` / `edge-amd64` | Airgap platform | Push to `main` (source-filtered) from the immutable candidate digest |
 | `v*` | Platform contract, install-defaults | `release` event (published) |
-| `v*-arm64` / `v*-amd64` | Airgap platform | Candidate-completion promotion after a matching GitHub Release `published` authorization |
+| `v*-arm64` / `v*-amd64` | Airgap platform | Promotion after both candidate completion and matching GitHub Release `published` authorization are true; whichever arrives second wakes the retag |
 | `stable` | Install defaults | `release` event (published); promote versioned bundle or rebuild from the release tag with curated pinned defaults |
 
 ---
@@ -35,7 +35,7 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 ## Trusted release contexts
 
 - Push to `main` branch (edge / nightly)
-- Candidate completion on `main` plus GitHub Release event with `published` type (versioned promotion)
+- Candidate completion on `main` plus GitHub Release event with `published` type (versioned promotion); either event may wake promotion when the other condition is already satisfied
 
 `workflow_dispatch` is intentionally absent from all official publish workflows.
 
@@ -62,7 +62,7 @@ All build logic lives in this repository. Official and compatible builds use the
 | Workflow | File | Runner | Trigger |
 |---|---|---|---|
 | Airgap Platform | `.github/workflows/airgap-platform.yml` | `[self-hosted, official-heavy, airgap-builder]` | Push to `main` (source-filtered) |
-| Airgap Platform Promote Release | `.github/workflows/airgap-platform-promote.yml` | `ubuntu-latest` | Candidate completion; promotes only when a matching GitHub Release `published` exists |
+| Airgap Platform Promote Release | `.github/workflows/airgap-platform-promote.yml` | `ubuntu-latest` | Candidate completion or release publication; promotes only when both candidate success and matching GitHub Release `published` authorization are present |
 | Platform Contract | `.github/workflows/platform-contract.yml` | `ubuntu-latest` | Push to `main` (source-filtered) + release |
 | Install Defaults | `.github/workflows/install-defaults.yml` | `ubuntu-latest` | Push to `main` (source-filtered) + release |
 | Install Defaults Promote Stable | `.github/workflows/install-defaults-promote.yml` | `ubuntu-latest` | GitHub Release `published` |
@@ -70,8 +70,8 @@ All build logic lives in this repository. Official and compatible builds use the
 `airgap-platform.yml` runs on organization-controlled build infrastructure in the
 `official-heavy-artifacts` runner group and publishes one immutable candidate digest per
 source revision, then tags `edge-<arch>` from that digest. `airgap-platform-promote.yml`
-is lightweight and promotes the exact candidate digest into `v*-<arch>` only after the
-candidate run completes and a matching GitHub Release exists. `platform-contract.yml` and
+is lightweight and promotes the exact candidate digest into `v*-<arch>` only after both the
+candidate run and a matching GitHub Release exist; whichever arrives second wakes promotion. `platform-contract.yml` and
 `install-defaults.yml` run on GitHub-hosted runners (they are lightweight and do not require
 dedicated hardware).
 
@@ -176,9 +176,9 @@ oras resolve ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-arm64
 The recommended downstream heavy-artifact model is now promote-first:
 
 - push to protected `main` publishes a promotable `beta` artifact from pinned upstream refs
-- candidate completion plus matching GitHub Release `published` authorization promotes that digest into `stable`
+- matching GitHub Release `published` authorization plus candidate success promotes that digest into `stable`, with whichever condition arrives second waking the retag
 - scheduled integration nightly builds resolve floating upstream `edge` refs and publish `nightly`
-- candidate completion plus matching GitHub Release `prereleased` authorization can promote the same digest into `exp-labs`
+- matching GitHub Release `prereleased` authorization plus candidate success can promote the same digest into `exp-labs`, with whichever condition arrives second waking the retag
 
 This keeps heavy rebuilds attached to meaningful input-policy changes rather than rebuilding the
 same curated input set a second time just to stamp a release channel.
