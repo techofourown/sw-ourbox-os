@@ -27,6 +27,7 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 | `edge` | Platform contract, install-defaults | Push to `main` (source-filtered) |
 | `edge-arm64` / `edge-amd64` | Airgap platform | Push to `main` (source-filtered) |
 | `v*` | All artifacts | `release` event (published) |
+| `stable` | Install defaults | `release` event (published); promote versioned bundle or rebuild from the release tag with curated pinned defaults |
 
 ---
 
@@ -62,10 +63,17 @@ All build logic lives in this repository. Official and compatible builds use the
 | Airgap Platform | `.github/workflows/airgap-platform.yml` | `[self-hosted, official-heavy, airgap-builder]` | Push to `main` (source-filtered) + release |
 | Platform Contract | `.github/workflows/platform-contract.yml` | `ubuntu-latest` | Push to `main` (source-filtered) + release |
 | Install Defaults | `.github/workflows/install-defaults.yml` | `ubuntu-latest` | Push to `main` (source-filtered) + release |
+| Install Defaults Promote Stable | `.github/workflows/install-defaults-promote.yml` | `ubuntu-latest` | GitHub Release `published` |
 
 `airgap-platform.yml` runs on organization-controlled build infrastructure in the
 `official-heavy-artifacts` runner group. `platform-contract.yml` and `install-defaults.yml`
 run on GitHub-hosted runners (they are lightweight and do not require dedicated hardware).
+
+`install-defaults-promote.yml` is also lightweight. It reads optional curated
+`OS_DEFAULT_REF` values from `release/install-defaults-stable.env` in the
+checked-out release tag. If that file leaves all overrides empty, the workflow
+promotes the already-published versioned bundle into `install-defaults:stable`
+by digest.
 
 ---
 
@@ -157,6 +165,16 @@ oras resolve ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-arm64
 
 # Update release/official-inputs.env in the consuming repo with new digests, open a PR
 ```
+
+The recommended downstream heavy-artifact model is now promote-first:
+
+- push to protected `main` publishes a promotable `beta` artifact from pinned upstream refs
+- GitHub Release `published` promotes that digest into `stable`
+- scheduled integration nightly builds resolve floating upstream `edge` refs and publish `nightly`
+- GitHub Release `prereleased` can promote the same digest into `exp-labs`
+
+This keeps heavy rebuilds attached to meaningful input-policy changes rather than rebuilding the
+same curated input set a second time just to stamp a release channel.
 
 ---
 

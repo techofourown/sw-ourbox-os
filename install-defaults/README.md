@@ -42,14 +42,23 @@ Channel tags must follow the same published target lanes:
 
 Recommended pattern:
 
-1. Keep `OS_DEFAULT_REF` empty while validating new payloads.
-2. When promoting a known-good build, set `OS_DEFAULT_REF` to a digest-pinned ref.
-3. Keep channel tags available for interactive installer choices.
+1. Use `OS_DEFAULT_REF` for the casual-user default when promoting a known-good stable artifact.
+2. Keep `CHANNEL_STABLE_TAG` available as the human-readable stable lane.
+3. Publish `beta` as the latest official mainline build from pinned inputs.
+4. Reserve `nightly` for true integration previews built from floating upstream `edge` inputs.
+5. Keep `exp-labs` available for explicit experimental/promoted artifacts.
 
 CI publishing strategy:
 - `install-defaults:edge` updates on `main`
 - version tags can be published from release/tag events
-- `install-defaults:stable` is intended to be curated via the `Install Defaults Promote` workflow
+- `install-defaults:stable` is promoted by `.github/workflows/install-defaults-promote.yml`
+  on GitHub Release `published`
+- `release/install-defaults-stable.env` carries the optional curated pinned
+  `OS_DEFAULT_REF` values used for that promotion
+- if every override in `release/install-defaults-stable.env` is empty, the
+  workflow re-tags the already-published versioned bundle into `stable`
+- if any override is non-empty, the workflow rebuilds `install-defaults:stable`
+  from the checked-out release tag with those curated pinned defaults
 
 Baked installer defaults and boot-media overrides remain fallback/override controls.
 

@@ -111,35 +111,53 @@ Jobs will be picked up within ~15 seconds of reconnect.
 
 ## 2. Workflow architecture
 
-Every `img-*` repo uses the same six-workflow pattern (adapt from `img-ourbox-woodbox`):
+Every `img-*` repo uses the same eight-workflow pattern (adapt from `img-ourbox-woodbox`):
 
 | Workflow | Trigger | Runner | Publishes? |
 |---|---|---|---|
 | `ci.yml` | PR + push to main | `ubuntu-latest` | No |
 | `release.yml` | Push to main | `ubuntu-latest` | No (semantic-release tags only) |
-| `official-nightly.yml` | Push to main | `[self-hosted, official-heavy, <target>-image]` | Yes (nightly channel) |
-| `official-release.yml` | GitHub Release `published` | `[self-hosted, official-heavy, <target>-image]` | Yes (stable channel) |
+| `official-candidate.yml` | Push to main | `[self-hosted, official-heavy, <target>-image]` | Yes (`beta`, heavy build) |
+| `official-promote-stable.yml` | GitHub Release `published` | `ubuntu-latest` | Yes (`stable`, promotion only) |
+| `integration-nightly.yml` | Daily cron | `[self-hosted, official-heavy, <target>-image]` | Yes (`nightly`, heavy build) |
+| `official-exp-labs.yml` | GitHub Release `prereleased` | `ubuntu-latest` | Yes (`exp-labs`, promotion only) |
 | `build-publish-os-self-hosted.yml` | `workflow_dispatch` | `[self-hosted, official-heavy, <target>-image]` | No |
 | `revalidate-<target>-build.yml` | `workflow_dispatch` + weekly cron | `[self-hosted, official-heavy, <target>-image]` | No |
 
-### Step order within official workflows
+### Step order within heavy official build workflows
 
 Order matters. Bootstrap must run before GHCR login because bootstrap installs `oras`.
 
 ```
 1. Fix workspace ownership (sudo chown — pi-gen / other root-owned artifacts)
 2. Checkout (fetch-depth: 0)
-3. Set nightly/release version (→ GITHUB_ENV)
+3. Set build identity (for example `main-<sha12>` or `nightly-<sha12>`) via `GITHUB_ENV`
 4. Bootstrap host dependencies (installs oras, xorriso, etc.)
 5. GHCR login (oras login — requires oras from step 4)
 6. Clean stale workspace artifacts (rm -rf deploy/ artifacts/ ...)
 7. Preflight build host
-8. Fetch pinned upstream inputs
+8. Fetch upstream inputs
+   - candidate: pinned `release/official-inputs.env`
+   - nightly: floating upstream `edge` digests resolved at workflow time
 9. Build OS artifact
 10. Build installer artifact
 11. Publish OS artifact (official only)
 12. Publish installer artifact (official only)
 13. Upload provenance files (always: true)
+```
+
+### Step order within promotion workflows
+
+Promotion workflows are intentionally lightweight because they re-tag an already-published digest.
+
+```
+1. Checkout the release tag (fetch tags/history)
+2. Install ORAS
+3. GHCR login
+4. Resolve the promotable source digest (usually from the `main-<sha12>` immutable tag)
+5. Tag that digest into `stable` or `exp-labs`
+6. Update catalog rows / provenance outputs
+7. Upload promotion provenance files
 ```
 
 ### Workflow safety rules
@@ -151,30 +169,31 @@ Any workflow with `runs-on: [...self-hosted...]` must NOT trigger on
 `pull_request` or `pull_request_target`. Prevents untrusted PR code on
 privileged builders.
 
-**Rule 2 — Official publish workflows must not expose workflow_dispatch**
-Any workflow that calls `publish-*-artifact-official.sh` must NOT have a
-`workflow_dispatch:` trigger. Official publication only flows from push-to-main
-(nightly) or GitHub Release `published` event (release).
+**Rule 2 — Official publish/promote workflows must not expose workflow_dispatch**
+Any workflow that calls `publish-*-artifact-official.sh` or
+`promote-*-artifact-official.sh` must NOT have a `workflow_dispatch:` trigger.
+Official publication only flows from push-to-main, scheduled nightly, or
+constrained GitHub Release events.
 
 Consequence: smoke build workflows (`build-publish-os-self-hosted.yml`) are safe
 to use `workflow_dispatch` precisely because they do NOT invoke the official
 publish scripts.
 
-**Rule 3 — Nightly workflows must declare a path filter**
-Branch-push workflows (nightly) must have `paths:` or `paths-ignore:` to avoid
-rebuilding on doc-only commits. Release workflows do not need this.
+**Rule 3 — Push-triggered official workflows must declare a path filter**
+Branch-push workflows (candidate) must have `paths:` or `paths-ignore:` to avoid
+rebuilding on doc-only commits. Scheduled and release-driven workflows do not need this.
 
-**Rule 4 — Official publish workflows using `release:` must constrain to `types: [published]`**
-A `release:` trigger without `types: [published]` would fire on draft creation,
-pre-release edits, and deletions. Official publication must only occur on a
-fully published, non-draft release.
+**Rule 4 — Official release-driven workflows must constrain `release:` to exactly one trusted type**
+Stable promotion uses `types: [published]`. Exp-labs promotion uses
+`types: [prereleased]`. Mixed or broad release triggers are not permitted.
 
-### Why `release: types: [published]` and not `push: tags: ['v*']`
+### Why release events and not `push: tags: ['v*']`
 
 `push: tags` does **not** fire when semantic-release pushes the version tag via
 a GitHub App token, because the release commit message contains `[skip ci]`.
-The `release: types: [published]` event fires when `@semantic-release/github`
-publishes the GitHub Release object — that step is unaffected by `[skip ci]`.
+The release events (`types: [published]` for stable and `types: [prereleased]`
+for exp-labs) fire when `@semantic-release/github` publishes the GitHub Release
+object — that step is unaffected by `[skip ci]`.
 
 This is the same pattern used by `sw-ourbox-os`'s own publish workflows
 (`platform-contract.yml`, `airgap-platform.yml`) and is the proven working trigger.
@@ -203,9 +222,11 @@ OURBOX_VERSION="dev"
 : "${OURBOX_VERSION:=dev}"
 ```
 
-This matters because official-nightly.yml sets `OURBOX_VERSION=nightly-${GITHUB_SHA:0:12}`
-via `$GITHUB_ENV` before the build steps run. If `config.env` uses bare assignment,
-sourcing it overwrites the workflow-provided value and artifacts end up stamped `dev`.
+This matters because the heavy official build workflows set `OURBOX_VERSION`
+(for example `main-${GITHUB_SHA:0:12}` in `official-candidate.yml` or
+`nightly-${GITHUB_SHA:0:12}` in `integration-nightly.yml`) via `$GITHUB_ENV`
+before the build steps run. If `config.env` uses bare assignment, sourcing it
+overwrites the workflow-provided value and artifacts end up stamped `dev`.
 The `:=` form respects already-set variables.
 
 All variables in `config.env` must use `:=`.
@@ -237,12 +258,16 @@ be overridden by workflow inputs.
 ```bash
 OFFICIAL_OS_REPO=ghcr.io/techofourown/ourbox-<device>-os
 OFFICIAL_OS_CATALOG_TAG=<target>-catalog
+OFFICIAL_OS_BETA_CHANNELS="<target>-beta"
+OFFICIAL_OS_STABLE_CHANNELS="<target>-stable"
 OFFICIAL_OS_NIGHTLY_CHANNELS="<target>-nightly"
-OFFICIAL_OS_RELEASE_CHANNELS="<target>-stable"
+OFFICIAL_OS_EXP_LABS_CHANNELS="<target>-exp-labs"
 
 OFFICIAL_INSTALLER_REPO=ghcr.io/techofourown/ourbox-<device>-installer
+OFFICIAL_INSTALLER_BETA_CHANNELS="<target>-installer-beta"
+OFFICIAL_INSTALLER_STABLE_CHANNELS="<target>-installer-stable"
 OFFICIAL_INSTALLER_NIGHTLY_CHANNELS="<target>-installer-nightly"
-OFFICIAL_INSTALLER_RELEASE_CHANNELS="<target>-installer-stable"
+OFFICIAL_INSTALLER_EXP_LABS_CHANNELS="<target>-installer-exp-labs"
 ```
 
 ---
