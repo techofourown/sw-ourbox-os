@@ -11,6 +11,18 @@ on:
         description: Target tag to write (for example stable)
         required: true
         default: stable
+      matchbox_os_default_ref:
+        description: Optional pinned Matchbox OS default ref for curated stable defaults
+        required: false
+        default: ''
+      woodbox_os_default_ref:
+        description: Optional pinned Woodbox OS default ref for curated stable defaults
+        required: false
+        default: ''
+      tinderbox_os_default_ref:
+        description: Optional pinned Tinderbox OS default ref for curated stable defaults
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -24,6 +36,9 @@ jobs:
   promote:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
 
@@ -37,6 +52,27 @@ jobs:
           REF_BASE="ghcr.io/techofourown/sw-ourbox-os/install-defaults"
           SOURCE_TAG="${{ github.event.inputs.source_tag }}"
           TARGET_TAG="${{ github.event.inputs.target_tag }}"
+          MATCHBOX_REF="${{ github.event.inputs.matchbox_os_default_ref }}"
+          WOODBOX_REF="${{ github.event.inputs.woodbox_os_default_ref }}"
+          TINDERBOX_REF="${{ github.event.inputs.tinderbox_os_default_ref }}"
+
+          mkdir -p dist
+
+          if [[ -n "${MATCHBOX_REF}" || -n "${WOODBOX_REF}" || -n "${TINDERBOX_REF}" ]]; then
+            TAG="${TARGET_TAG}" \
+            MATCHBOX_OS_DEFAULT_REF_OVERRIDE="${MATCHBOX_REF}" \
+            WOODBOX_OS_DEFAULT_REF_OVERRIDE="${WOODBOX_REF}" \
+            TINDERBOX_OS_DEFAULT_REF_OVERRIDE="${TINDERBOX_REF}" \
+              ./tools/install-defaults/publish.sh "${TARGET_TAG}"
+
+            printf '%s\n' "curated-build" > dist/install-defaults.promote.mode
+            printf '%s\n' "checkout@${GITHUB_SHA}" > dist/install-defaults.promote.source.ref
+            printf '%s\n' "$(cat dist/install-defaults.ref)" > dist/install-defaults.promote.digest.ref
+            printf '%s\n' "${REF_BASE}:${TARGET_TAG}" > dist/install-defaults.promote.target.ref
+
+            echo "Published curated ${REF_BASE}:${TARGET_TAG} with pinned OS_DEFAULT_REF overrides."
+            exit 0
+          fi
 
           SOURCE_REF="${REF_BASE}:${SOURCE_TAG}"
           DIGEST="$(oras resolve "${SOURCE_REF}")"
@@ -45,7 +81,7 @@ jobs:
           SOURCE_PINNED="${REF_BASE}@${DIGEST}"
           oras tag "${SOURCE_PINNED}" "${TARGET_TAG}"
 
-          mkdir -p dist
+          printf '%s\n' "retag" > dist/install-defaults.promote.mode
           printf '%s\n' "${SOURCE_REF}" > dist/install-defaults.promote.source.ref
           printf '%s\n' "${SOURCE_PINNED}" > dist/install-defaults.promote.digest.ref
           printf '%s\n' "${REF_BASE}:${TARGET_TAG}" > dist/install-defaults.promote.target.ref
@@ -58,6 +94,7 @@ jobs:
         with:
           name: install-defaults-promote-${{ github.run_id }}
           path: |
+            dist/install-defaults.promote.mode
             dist/install-defaults.promote.source.ref
             dist/install-defaults.promote.digest.ref
             dist/install-defaults.promote.target.ref

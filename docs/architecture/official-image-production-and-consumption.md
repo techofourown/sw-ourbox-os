@@ -365,11 +365,29 @@ The image repo produces:
 The image repo's release path publishes:
 
 - immutable payload references
-- optional moving channel tags such as stable/beta/nightly
+- optional moving channel tags such as stable/beta/nightly/exp-labs
 - catalog updates mapping those channels to immutable references
 - official installer media where applicable
 
 Per org policy, official heavy-artifact release capability should remain possible on organization-controlled build infrastructure, even if third-party hosted CI is also used.
+
+### Step 5a: promote-first channel roles
+
+The recommended official model for heavy image repos is:
+
+- `beta`: latest official mainline build from pinned upstream refs (`push` to protected `main`)
+- `stable`: promotion of an already-published `beta` digest (`release: published`)
+- `nightly`: scheduled integration build from floating upstream `edge` refs
+- `exp-labs`: prerelease / experimental promotion of an already-published digest
+
+This separates two axes that should not be conflated:
+
+- which source context TOOO trusts (`main` head, prerelease tag, published release)
+- which upstream input policy the build used (pinned curated digests versus floating upstream `edge`)
+
+Stable promotion should normally re-tag an existing digest rather than rebuilding it, unless the
+stable artifact is intentionally meant to differ in inputs or packaging from the published `beta`
+candidate.
 
 ### Step 6: installers and devices consume the published artifacts
 

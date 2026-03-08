@@ -158,6 +158,16 @@ oras resolve ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-arm64
 # Update release/official-inputs.env in the consuming repo with new digests, open a PR
 ```
 
+The recommended downstream heavy-artifact model is now promote-first:
+
+- push to protected `main` publishes a promotable `beta` artifact from pinned upstream refs
+- GitHub Release `published` promotes that digest into `stable`
+- scheduled integration nightly builds resolve floating upstream `edge` refs and publish `nightly`
+- GitHub Release `prereleased` can promote the same digest into `exp-labs`
+
+This keeps heavy rebuilds attached to meaningful input-policy changes rather than rebuilding the
+same curated input set a second time just to stamp a release channel.
+
 ---
 
 ## References
