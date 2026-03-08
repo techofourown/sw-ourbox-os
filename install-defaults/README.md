@@ -26,6 +26,9 @@ Each `defaults/<installer-id>.env` file can define:
 - `OS_DEFAULT_REF` (optional digest-pinned default)
 - `CHANNEL_STABLE_TAG`, `CHANNEL_BETA_TAG`, `CHANNEL_NIGHTLY_TAG`, `CHANNEL_EXP_LABS_TAG`
 
+Profile files are intentionally data-only. They must remain simple assignment-only
+`KEY=VALUE` content with comments/blank lines only; shell constructs are not allowed.
+
 Each profile must keep `OS_CATALOG_TAG` aligned with the actually published catalog lane for that
 target. Current official examples:
 

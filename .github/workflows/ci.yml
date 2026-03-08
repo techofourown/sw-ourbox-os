@@ -51,6 +51,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate install-defaults source data
+        run: bash tools/install-defaults/validate-assignment-only.sh
+
       - name: Run installer-selection resolver tests
         run: bash tools/install-defaults/test-installer-selection-resolver.sh
 

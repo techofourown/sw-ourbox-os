@@ -17,6 +17,18 @@ assert_eq() {
   fi
 }
 
+assert_contains() {
+  local haystack="$1"
+  local needle="$2"
+  local message="$3"
+  if [[ "${haystack}" != *"${needle}"* ]]; then
+    printf 'ASSERTION FAILED: %s\n' "${message}" >&2
+    printf '  expected to contain: %s\n' "${needle}" >&2
+    printf '  actual: %s\n' "${haystack}" >&2
+    exit 1
+  fi
+}
+
 make_fake_oras() {
   local bin_dir="$1"
   mkdir -p "${bin_dir}"
@@ -284,6 +296,44 @@ EOF_CATALOG
   rm -rf "${tmp}"
 }
 
+test_matchbox_style_command_substitution_keeps_stdout_clean_on_catalog_fallback() {
+  local tmp fake_oras_dir stderr_file captured
+  tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  stderr_file="${tmp}/stderr.log"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+  export FAKE_ORAS_CATALOG_DIR="${tmp}/missing-catalog"
+
+  # shellcheck disable=SC1090
+  source "${RESOLVER}"
+
+  OS_REPO="ghcr.io/techofourown/ourbox-matchbox-os"
+  OS_TARGET="rpi"
+  OS_CHANNEL="stable"
+  OS_CATALOG_ENABLED="1"
+  OS_CATALOG_TAG="rpi-catalog"
+  OS_REF=""
+  OS_DEFAULT_REF=""
+  CHANNEL_STABLE_TAG="rpi-stable"
+  CHANNEL_BETA_TAG="rpi-beta"
+  CHANNEL_NIGHTLY_TAG="rpi-nightly"
+  CHANNEL_EXP_LABS_TAG="rpi-exp-labs"
+
+  matchbox_style_default_payload_ref() {
+    ourbox_selection_determine_default_ref "${tmp}/catalog"
+    printf '%s\n' "${OURBOX_SELECTED_REF}"
+  }
+
+  captured="$(matchbox_style_default_payload_ref 2>"${stderr_file}")"
+
+  assert_eq "${captured}" "ghcr.io/techofourown/ourbox-matchbox-os:rpi-stable" "catalog fallback should leave stdout machine-readable for Matchbox-style command substitution"
+  assert_contains "$(cat "${stderr_file}")" "Catalog unavailable; falling back to channel tag." "catalog fallback log should be routed to stderr"
+
+  rm -rf "${tmp}"
+}
+
 test_finalize_registry_ref_resolves_digest() {
   local tmp fake_oras_dir
   tmp="$(mktemp -d)"
@@ -378,6 +428,7 @@ main() {
   test_catalog_resolution_uses_newest_valid_created_timestamp
   test_missing_channel_tags_fall_back_to_target_defaults
   test_catalog_falls_back_to_channel_tag_without_valid_digest_row
+  test_matchbox_style_command_substitution_keeps_stdout_clean_on_catalog_fallback
   test_finalize_registry_ref_resolves_digest
   test_finalize_registry_ref_handles_registry_ports_without_tags
   test_finalize_registry_ref_dev_override_marks_unresolved
