@@ -1,6 +1,23 @@
 # Install Defaults Profiles
 
-These profiles are bundled into the `install-defaults` OCI artifact and consumed by installer runtimes.
+These profiles are bundled into the `install-defaults` OCI artifact and consumed by installer
+runtimes.
+
+The shared installer-selection contract for consuming these profiles is defined in:
+
+- `docs/reference/installer-selection-contract.md`
+
+The upstream shell reference resolver that implements that contract lives at:
+
+- `tools/install-defaults/installer-selection-resolver.sh`
+
+Artifact shape:
+
+- OCI pull output contains `dist/install-defaults.tar.gz`
+- the tarball expands to:
+  - `install-defaults/schema.env`
+  - `install-defaults/manifest.env`
+  - `install-defaults/defaults/<installer-id>.env`
 
 Each `defaults/<installer-id>.env` file can define:
 
@@ -8,6 +25,9 @@ Each `defaults/<installer-id>.env` file can define:
 - `OS_CATALOG_TAG`
 - `OS_DEFAULT_REF` (optional digest-pinned default)
 - `CHANNEL_STABLE_TAG`, `CHANNEL_BETA_TAG`, `CHANNEL_NIGHTLY_TAG`, `CHANNEL_EXP_LABS_TAG`
+
+Profile files are intentionally data-only. They must remain simple assignment-only
+`KEY=VALUE` content with comments/blank lines only; shell constructs are not allowed.
 
 Each profile must keep `OS_CATALOG_TAG` aligned with the actually published catalog lane for that
 target. Current official examples:
@@ -32,3 +52,6 @@ CI publishing strategy:
 - `install-defaults:stable` is intended to be curated via the `Install Defaults Promote` workflow
 
 Baked installer defaults and boot-media overrides remain fallback/override controls.
+
+A baked non-empty `OS_DEFAULT_REF` remains authoritative unless the remote profile explicitly
+replaces it with another non-empty `OS_DEFAULT_REF`.

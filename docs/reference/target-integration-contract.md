@@ -127,6 +127,11 @@ Recommended additional fields:
 - `OURBOX_OS_ARTIFACT_DIGEST`
 - `OURBOX_OS_IMAGE_SHA256` (for file-shaped payloads)
 - `OURBOX_INSTALLER_ID`
+- `OURBOX_INSTALLER_VERSION`
+- `OURBOX_INSTALLER_GIT_HASH`
+- `OURBOX_INSTALL_DEFAULTS_SOURCE`
+- `OURBOX_INSTALL_DEFAULTS_REF`
+- `OURBOX_INSTALL_SELECTION_SOURCE`
 - `OURBOX_RELEASE_CHANNEL`
 - `OURBOX_BUILD_TS`
 
@@ -210,6 +215,12 @@ A target SHOULD preserve the link between:
 
 This does not require every target to use identical installation transport. It does require that the
 result be legible and reproducible.
+
+When a target installs OS payloads through install-defaults/catalog logic, it SHOULD realize the
+shared installer-selection contract defined in
+`docs/reference/installer-selection-contract.md`. The hardware target may keep its own local
+prompts, flashing transport, and payload-shape verification, but the selection policy above that
+boundary should remain comparable across targets.
 
 ## 6. Intentionally divergent surfaces
 

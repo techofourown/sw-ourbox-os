@@ -10,7 +10,9 @@
 - [`docs/decisions/ADR-0008-deployment-baseline-as-the-platform-integration-contract.md`](../decisions/ADR-0008-deployment-baseline-as-the-platform-integration-contract.md)
 - [`docs/decisions/ADR-0009-package-the-platform-contract-as-an-oci-artifact.md`](../decisions/ADR-0009-package-the-platform-contract-as-an-oci-artifact.md)
 - [`docs/decisions/ADR-0011-separate-hardware-enablement-from-the-platform-contract.md`](../decisions/ADR-0011-separate-hardware-enablement-from-the-platform-contract.md)
+- [`docs/decisions/ADR-0012-centralize-installer-selection-contract-above-the-hardware-seam.md`](../decisions/ADR-0012-centralize-installer-selection-contract-above-the-hardware-seam.md)
 - [`docs/reference/target-integration-contract.md`](../reference/target-integration-contract.md)
+- [`docs/reference/installer-selection-contract.md`](../reference/installer-selection-contract.md)
 - `org-techofourown/docs/decisions/ADR-0007-adopt-oci-artifacts-for-app-distribution.md`
 - `org-techofourown/docs/rfcs/RFC-0001-oci-artifacts-trust-and-attestations.md`
 - `org-techofourown/docs/decisions/ADR-0008-adopt-organization-controlled-build-infrastructure-for-heavy-artifacts.md`
@@ -453,6 +455,15 @@ Local fallback must remain sufficient.
 Failure to refresh remote defaults should not make the installer unable to function if it has a valid local fallback.
 
 This is the intended public model even if specific targets may realize parts of it incrementally.
+
+The normative contract for this resolver behavior now lives in
+`docs/reference/installer-selection-contract.md`, including:
+
+- the remote install-defaults bundle shape,
+- the rule that baked pinned defaults stay authoritative unless explicitly replaced,
+- row-order-independent catalog resolution by `created`,
+- fail-closed digest resolution,
+- and the standard provenance vocabulary recorded on installed systems.
 
 ### 8.4 Why catalogs exist
 

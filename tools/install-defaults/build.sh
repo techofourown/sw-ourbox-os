@@ -13,6 +13,8 @@ DIST_DIR="${ROOT}/dist"
 
 mkdir -p "${DIST_DIR}"
 
+"${ROOT}/tools/install-defaults/validate-assignment-only.sh"
+
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 VERSION="dev"
