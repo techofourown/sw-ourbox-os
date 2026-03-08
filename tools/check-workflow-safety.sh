@@ -4,9 +4,9 @@
 # Rules:
 #   1. No workflow that runs on a self-hosted runner may be triggered by
 #      pull_request or pull_request_target (untrusted code on privileged builder).
-#   2. No official publish workflow may expose a broad workflow_dispatch trigger
-#      (official publication must only flow from push-to-main or constrained
-#      release events).
+#   2. No official publish/promote workflow may expose a broad workflow_dispatch
+#      trigger (official publication must only flow from push-to-main,
+#      candidate-completion handoff, or constrained release events).
 #   3. Official publish workflows triggered by branch push must declare a path
 #      filter (paths-ignore or paths) to avoid rebuilding on docs-only changes.
 #
@@ -49,18 +49,18 @@ while IFS= read -r wf; do
 done < <(find "${WORKFLOW_DIR}" -maxdepth 1 -name '*.yml' -o -name '*.yaml')
 
 # ---------------------------------------------------------------------------
-# Rule 2: official publish workflows must not expose workflow_dispatch
+# Rule 2: official publish/promote workflows must not expose workflow_dispatch
 # ---------------------------------------------------------------------------
 while IFS= read -r wf; do
   name="$(basename "${wf}")"
 
-  # Is this an official publish workflow? Detect by use of tools/*/publish.sh scripts.
-  if ! grep -qE 'tools/[^/]+/publish\.sh' "${wf}"; then
+  # Is this an official publish/promote workflow?
+  if ! grep -qE 'tools/[^/]+/(publish|promote)\.sh|tools/airgap-platform/(publish|promote)\.sh' "${wf}"; then
     continue
   fi
 
   if grep -qE '^  workflow_dispatch:' "${wf}"; then
-    fail "${name}: official publish workflow exposes workflow_dispatch — official publication must only trigger from push-to-main or constrained release events"
+    fail "${name}: official publish/promote workflow exposes workflow_dispatch — official publication must only trigger from push-to-main, candidate-completion handoff, or constrained release events"
   else
     PASS=$((PASS + 1))
   fi
@@ -73,7 +73,7 @@ while IFS= read -r wf; do
   name="$(basename "${wf}")"
 
   # Is this an official publish workflow?
-  if ! grep -qE 'tools/[^/]+/publish\.sh' "${wf}"; then
+  if ! grep -qE 'tools/[^/]+/publish\.sh|tools/airgap-platform/publish\.sh' "${wf}"; then
     continue
   fi
 

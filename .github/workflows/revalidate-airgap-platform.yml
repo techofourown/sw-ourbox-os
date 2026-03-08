@@ -15,8 +15,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: revalidate-airgap-platform-${{ github.run_id }}
-  cancel-in-progress: false
+  group: revalidate-airgap-platform
+  cancel-in-progress: true
 
 jobs:
   revalidate:

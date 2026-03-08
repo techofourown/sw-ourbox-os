@@ -118,9 +118,9 @@ Every `img-*` repo uses the same eight-workflow pattern (adapt from `img-ourbox-
 | `ci.yml` | PR + push to main | `ubuntu-latest` | No |
 | `release.yml` | Push to main | `ubuntu-latest` | No (semantic-release tags only) |
 | `official-candidate.yml` | Push to main | `[self-hosted, official-heavy, <target>-image]` | Yes (`beta`, heavy build) |
-| `official-promote-stable.yml` | GitHub Release `published` | `ubuntu-latest` | Yes (`stable`, promotion only) |
+| `official-promote-stable.yml` | `workflow_run` after candidate completion | `ubuntu-latest` | Yes (`stable`, promotion only) |
 | `integration-nightly.yml` | Daily cron | `[self-hosted, official-heavy, <target>-image]` | Yes (`nightly`, heavy build) |
-| `official-exp-labs.yml` | GitHub Release `prereleased` | `ubuntu-latest` | Yes (`exp-labs`, promotion only) |
+| `official-exp-labs.yml` | `workflow_run` after candidate completion | `ubuntu-latest` | Yes (`exp-labs`, promotion only) |
 | `build-publish-os-self-hosted.yml` | `workflow_dispatch` | `[self-hosted, official-heavy, <target>-image]` | No |
 | `revalidate-<target>-build.yml` | `workflow_dispatch` + weekly cron | `[self-hosted, official-heavy, <target>-image]` | No |
 
@@ -151,13 +151,14 @@ Order matters. Bootstrap must run before GHCR login because bootstrap installs `
 Promotion workflows are intentionally lightweight because they re-tag an already-published digest.
 
 ```
-1. Checkout the release tag (fetch tags/history)
+1. Checkout the candidate revision and fetch tags/history
 2. Install ORAS
 3. GHCR login
-4. Resolve the promotable source digest (usually from the `main-<sha12>` immutable tag)
-5. Tag that digest into `stable` or `exp-labs`
-6. Update catalog rows / provenance outputs
-7. Upload promotion provenance files
+4. Resolve whether a matching GitHub Release authorization exists for that source commit
+5. Download the candidate provenance artifact from the completed heavy run
+6. Promote the exact pinned refs from candidate provenance into `stable` or `exp-labs`
+7. Update catalog rows / provenance outputs
+8. Upload promotion provenance files
 ```
 
 ### Workflow safety rules
@@ -172,8 +173,8 @@ privileged builders.
 **Rule 2 — Official publish/promote workflows must not expose workflow_dispatch**
 Any workflow that calls `publish-*-artifact-official.sh` or
 `promote-*-artifact-official.sh` must NOT have a `workflow_dispatch:` trigger.
-Official publication only flows from push-to-main, scheduled nightly, or
-constrained GitHub Release events.
+Official publication only flows from push-to-main, scheduled nightly, or the
+candidate-completion promotion handoff that verifies GitHub Release authorization.
 
 Consequence: smoke build workflows (`build-publish-os-self-hosted.yml`) are safe
 to use `workflow_dispatch` precisely because they do NOT invoke the official
@@ -183,20 +184,27 @@ publish scripts.
 Branch-push workflows (candidate) must have `paths:` or `paths-ignore:` to avoid
 rebuilding on doc-only commits. Scheduled and release-driven workflows do not need this.
 
-**Rule 4 — Official release-driven workflows must constrain `release:` to exactly one trusted type**
-Stable promotion uses `types: [published]`. Exp-labs promotion uses
-`types: [prereleased]`. Mixed or broad release triggers are not permitted.
+**Rule 4 — Official promote workflows should use candidate-completion handoff, not release publication as the execution clock**
+Heavy candidates can queue for hours on a one-host pool while GitHub Releases publish immediately.
+Promote workflows should therefore trigger from `workflow_run` completion of the official
+candidate workflow, then verify the matching GitHub Release authorization before retagging.
 
-### Why release events and not `push: tags: ['v*']`
+### Why candidate completion, not release publication, is the promotion clock
 
 `push: tags` does **not** fire when semantic-release pushes the version tag via
 a GitHub App token, because the release commit message contains `[skip ci]`.
-The release events (`types: [published]` for stable and `types: [prereleased]`
-for exp-labs) fire when `@semantic-release/github` publishes the GitHub Release
-object — that step is unaffected by `[skip ci]`.
 
-This is the same pattern used by `sw-ourbox-os`'s own publish workflows
-(`platform-contract.yml`, `airgap-platform.yml`) and is the proven working trigger.
+GitHub Releases still matter, but as the **authorization surface**, not the execution clock.
+On a small heavy-runner pool, a release object can exist long before the candidate digest is
+actually built and published. The safe model is:
+
+1. heavy candidate build completes and uploads exact provenance
+2. lightweight promote workflow runs from `workflow_run`
+3. promote workflow checks for a matching GitHub Release object
+4. if authorized, it re-tags the exact candidate digest
+
+This avoids long-lived waiting promotions and prevents release publication from racing ahead of
+candidate artifact availability.
 
 ```yaml
 # Standard path filter for nightly:
