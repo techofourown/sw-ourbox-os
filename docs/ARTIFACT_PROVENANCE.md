@@ -83,6 +83,13 @@ If that file leaves all overrides empty, the workflow promotes the already-publi
 versioned bundle into `install-defaults:stable` by digest using the publish run's
 artifact outputs.
 
+This repo also carries the canonical shared downstream release-control module in
+`tools/release-control/`. Downstream image repos vendor that directory at a pinned
+upstream revision, CI diff-checks the vendored copy, candidate workflows emit a
+single authoritative `candidate-provenance.json`, and stable / exp-labs promotion
+consumes that provenance bundle only. Promotion does not inspect artifact-carried
+`.env` sidecars, and shared catalog updates flow through the same vendored module.
+
 ---
 
 ## Provenance metadata
@@ -198,6 +205,12 @@ The recommended downstream heavy-artifact model is now promote-first:
 
 This keeps heavy rebuilds attached to meaningful input-policy changes rather than rebuilding the
 same curated input set a second time just to stamp a release channel.
+
+The canonical downstream release-control plane lives in `tools/release-control/`
+in this repo. It defines the shared release authorization lookup, candidate-run
+lookup, candidate provenance schema, metadata serialization, catalog rendering,
+and digest-only promotion behavior that downstream image repos vendor and pin by
+commit SHA.
 
 ---
 

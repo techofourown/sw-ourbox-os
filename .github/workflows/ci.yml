@@ -70,6 +70,21 @@ jobs:
       - name: Run installer-selection resolver tests
         run: bash tools/install-defaults/test-installer-selection-resolver.sh
 
+  release-control:
+    name: Release-control module tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Run release-control tests
+        run: python3 -m unittest discover -s tools/release-control/tests -p 'test_*.py'
+
   graphmd:
     runs-on: ubuntu-latest
     permissions:
