@@ -161,6 +161,13 @@ Examples include repos like:
 
 This document treats them generically because the common public artifact model should hold across all of them.
 
+The heavy build factories in those repos remain target-specific. Matchbox keeps its
+Pi-image factory, Woodbox keeps its x86 payload / installer factory, and other targets
+can keep their own hardware-specific build entrypoints. What is shared is the release
+control plane: `sw-ourbox-os/tools/release-control/` is the canonical upstream module
+that downstream repos vendor at a pinned revision. Candidate provenance is the
+authoritative handoff between the heavy build and the lightweight promotion path.
+
 ### 4.3 OS payload repos
 
 An OS payload repo is the public distribution location for installable OS payload artifacts.

@@ -156,11 +156,30 @@ Promotion workflows are intentionally lightweight because they re-tag an already
 3. GHCR login
 4. Resolve the source commit and determine which side of the handshake fired
 5. Verify the other required condition is already satisfied
-6. Download the candidate provenance artifact from the completed heavy run
-7. Promote the exact pinned refs from candidate provenance into `stable` or `exp-labs`
-8. Update catalog rows / provenance outputs
-9. Upload promotion provenance files
+6. Download `candidate-provenance.json` from the completed heavy run
+7. Validate `candidate-provenance.json`
+8. Promote the exact pinned refs from candidate provenance into `stable` or `exp-labs`
+9. Update catalog rows / provenance outputs through the shared release-control module
+10. Upload promotion provenance files
 ```
+
+Promotion uses candidate provenance only. It does not pull a source artifact merely to
+inspect `os.meta.env` or `installer.meta.env`, and it does not treat artifact-carried
+sidecars as promotion control-plane inputs.
+
+### Shared release-control vendoring
+
+The canonical downstream release-control module lives in `sw-ourbox-os/tools/release-control/`.
+Each downstream image repo vendors that directory at a pinned upstream commit and adds:
+
+```
+tools/release-control.upstream.env
+tools/check-vendored-release-control.sh
+```
+
+Downstream CI must diff-check the vendored files against that pinned upstream revision.
+Candidate workflows must emit `candidate-provenance.json`, and stable / exp-labs promotion
+must download, validate, and consume that provenance file only.
 
 ### Workflow safety rules
 

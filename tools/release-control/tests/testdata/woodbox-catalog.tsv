@@ -1,0 +1,2 @@
+channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref
+stable	main-92b5a1ffcd0a-x86	2026-03-09T07:00:00Z	main-92b5a1ffcd0a	prod	x86	TOO-OBX-WBX-BASE-JU3XK8	92b5a1ffcd0a	sha256:5555555555555555555555555555555555555555555555555555555555555555	v1.35.0+k3s1	cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc	sha256:4444444444444444444444444444444444444444444444444444444444444444	ghcr.io/techofourown/ourbox-woodbox-os@sha256:4444444444444444444444444444444444444444444444444444444444444444
