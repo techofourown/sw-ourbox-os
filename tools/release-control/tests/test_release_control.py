@@ -70,7 +70,12 @@ class ReleaseControlTests(unittest.TestCase):
                       exit 91
                     fi
                     if [[ "${ref}" == *":rpi-catalog" || "${ref}" == *":x86-catalog" ]]; then
+                      if [[ -n "${STUB_CATALOG_PULL_ERROR:-}" ]]; then
+                        echo "${STUB_CATALOG_PULL_ERROR}" >&2
+                        exit 17
+                      fi
                       if [[ "${STUB_MISSING_CATALOG:-1}" == "1" ]]; then
+                        echo "manifest not found" >&2
                         exit 1
                       fi
                       out=""
@@ -144,6 +149,24 @@ class ReleaseControlTests(unittest.TestCase):
                 ],
                 check=True,
             )
+
+    def test_write_metadata_rejects_non_shell_identifier_keys(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="release-control-test-") as tmpdir:
+            tmp = Path(tmpdir)
+            bad_input = tmp / "bad-meta.json"
+            bad_input.write_text(json.dumps({"BUILD-TS": "2026-03-09T05:27:45Z"}) + "\n", encoding="utf-8")
+            with self.assertRaises(SystemExit):
+                self.run_main(
+                    [
+                        "write-metadata",
+                        "--input-json",
+                        str(bad_input),
+                        "--env-output",
+                        str(tmp / "meta.env"),
+                        "--json-output",
+                        str(tmp / "meta.json"),
+                    ]
+                )
 
     def test_build_candidate_provenance_rejects_invalid_inputs(self) -> None:
         base = json.loads((TESTDATA / "candidate-provenance-matchbox.json").read_text(encoding="utf-8"))
@@ -292,6 +315,50 @@ class ReleaseControlTests(unittest.TestCase):
                     (capture_dir / "catalog.tsv").read_text(encoding="utf-8"),
                     expected_tsv.read_text(encoding="utf-8"),
                 )
+
+    def test_update_catalog_fails_on_non_not_found_pull_error(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="release-control-test-") as tmpdir:
+            tmp = Path(tmpdir)
+            stub_dir = tmp / "bin"
+            capture_dir = tmp / "capture"
+            log_path = tmp / "oras.log"
+            stub_dir.mkdir()
+            capture_dir.mkdir()
+            self.write_stub_oras(stub_dir)
+            artifact_record = json.loads((TESTDATA / "candidate-provenance-matchbox.json").read_text(encoding="utf-8"))[
+                "artifacts"
+            ]["os"]
+            artifact_record_path = tmp / "artifact-record.json"
+            artifact_record_path.write_text(json.dumps(artifact_record, indent=2) + "\n", encoding="utf-8")
+            env = {
+                "PATH": f"{stub_dir}:{os.environ['PATH']}",
+                "STUB_ORAS_LOG": str(log_path),
+                "STUB_CAPTURE_DIR": str(capture_dir),
+                "STUB_CATALOG_PULL_ERROR": "unauthorized: authentication required",
+            }
+            with EnvOverride(**env), self.assertRaises(SystemExit):
+                self.run_main(
+                    [
+                        "update-catalog",
+                        "--artifact-record",
+                        str(artifact_record_path),
+                        "--artifact-repo",
+                        "ghcr.io/techofourown/ourbox-matchbox-os",
+                        "--catalog-tag",
+                        "rpi-catalog",
+                        "--catalog-artifact-type",
+                        "application/vnd.techofourown.ourbox.matchbox.os-catalog.v1",
+                        "--channel-tag",
+                        "rpi-stable",
+                        "--channel-mode",
+                        "target-qualified",
+                        "--sha-column",
+                        "img_sha256",
+                        "--timestamp",
+                        "2026-03-09T07:00:00Z",
+                    ]
+                )
+            self.assertFalse((capture_dir / "catalog.tsv").exists())
 
     def test_promote_reconstructs_metadata_without_source_artifact_pull(self) -> None:
         cases = [
