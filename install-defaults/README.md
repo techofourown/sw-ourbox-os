@@ -26,6 +26,15 @@ Each `defaults/<installer-id>.env` file can define:
 - `OS_DEFAULT_REF` (optional digest-pinned default)
 - `CHANNEL_STABLE_TAG`, `CHANNEL_BETA_TAG`, `CHANNEL_NIGHTLY_TAG`, `CHANNEL_EXP_LABS_TAG`
 
+Out of scope:
+
+- any `OURBOX_INSTALLER_SSH_*` key
+- SSH auth material
+- installer access policy
+
+`install-defaults` must not carry installer SSH behavior or auth inputs. Installer SSH is governed
+by the separate installer SSH contract and vendored helper, not by a remote profile artifact.
+
 Profile files are intentionally data-only. They must remain simple assignment-only
 `KEY=VALUE` content with comments/blank lines only; shell constructs are not allowed.
 

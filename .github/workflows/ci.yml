@@ -70,6 +70,22 @@ jobs:
       - name: Run installer-selection resolver tests
         run: bash tools/install-defaults/test-installer-selection-resolver.sh
 
+  installer-ssh:
+    name: Installer SSH helper tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate installer SSH helper shell syntax
+        run: bash -n tools/installer-ssh-helper.sh tools/test-installer-ssh-helper.sh
+
+      - name: Shellcheck installer SSH helper
+        run: shellcheck tools/installer-ssh-helper.sh tools/test-installer-ssh-helper.sh
+
+      - name: Run installer SSH helper tests
+        run: bash tools/test-installer-ssh-helper.sh
+
   release-control:
     name: Release-control module tests
     runs-on: ubuntu-latest
