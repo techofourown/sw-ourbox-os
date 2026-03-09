@@ -27,11 +27,16 @@ def resolve_digest(ref: str) -> str:
 
 
 def ensure_digest_pair(name: str, versioned_ref: str, pinned_ref: str, expected_digest: str) -> None:
-    resolved = resolve_digest(versioned_ref)
+    resolved_versioned = resolve_digest(versioned_ref)
+    resolved_pinned = resolve_digest(pinned_ref)
     actual_pinned = pinned_ref.rsplit("@", 1)[-1]
-    if resolved != expected_digest:
+    if resolved_versioned != expected_digest:
         raise SystemExit(
-            f"{name} versioned ref {versioned_ref} resolved to {resolved}, expected {expected_digest}"
+            f"{name} versioned ref {versioned_ref} resolved to {resolved_versioned}, expected {expected_digest}"
+        )
+    if resolved_pinned != expected_digest:
+        raise SystemExit(
+            f"{name} pinned ref {pinned_ref} resolved to {resolved_pinned}, expected {expected_digest}"
         )
     if actual_pinned != expected_digest:
         raise SystemExit(

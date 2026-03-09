@@ -35,8 +35,12 @@ jobs:
       matrix:
         include:
           - target: matchbox
+            repo_owner: techofourown
+            repo_name: img-ourbox-matchbox
             repo: techofourown/img-ourbox-matchbox
           - target: woodbox
+            repo_owner: techofourown
+            repo_name: img-ourbox-woodbox
             repo: techofourown/img-ourbox-woodbox
 
     steps:
@@ -49,6 +53,8 @@ jobs:
         with:
           app-id: ${{ secrets.SEMREL_APP_ID }}
           private-key: ${{ secrets.SEMREL_APP_PRIVATE_KEY }}
+          owner: ${{ matrix.repo_owner }}
+          repositories: ${{ matrix.repo_name }}
 
       - name: Checkout downstream repo
         uses: actions/checkout@v4
