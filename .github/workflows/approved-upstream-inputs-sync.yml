@@ -1,0 +1,104 @@
+name: Sync Approved Upstream Inputs
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "release/approved-upstream-inputs.json"
+      - "tools/approved-upstream-inputs/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: approved-upstream-inputs-sync-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Validate approved snapshot
+        run: python3 tools/approved-upstream-inputs/validate.py --approved-inputs release/approved-upstream-inputs.json
+
+  open-downstream-prs:
+    needs: validate
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: matchbox
+            repo: techofourown/img-ourbox-matchbox
+          - target: woodbox
+            repo: techofourown/img-ourbox-woodbox
+
+    steps:
+      - name: Checkout sw-ourbox-os
+        uses: actions/checkout@v4
+
+      - name: Mint org-bot token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.SEMREL_APP_ID }}
+          private-key: ${{ secrets.SEMREL_APP_PRIVATE_KEY }}
+
+      - name: Checkout downstream repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ matrix.repo }}
+          ref: main
+          token: ${{ steps.app-token.outputs.token }}
+          path: downstream
+
+      - name: Sync downstream official-inputs.env
+        run: |
+          set -euo pipefail
+          python3 tools/approved-upstream-inputs/sync_downstream_official_inputs.py \
+            --approved-inputs release/approved-upstream-inputs.json \
+            --target "${{ matrix.target }}" \
+            --file "downstream/release/official-inputs.env"
+
+      - name: Open downstream PR when inputs changed
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TARGET_REPO: ${{ matrix.repo }}
+          TARGET_NAME: ${{ matrix.target }}
+        run: |
+          set -euo pipefail
+
+          if git -C downstream diff --quiet -- release/official-inputs.env; then
+            echo "No downstream lockfile change for ${TARGET_REPO}."
+            exit 0
+          fi
+
+          RELEASE_TAG="$(python3 -c 'import json; print(json.load(open("release/approved-upstream-inputs.json", "r", encoding="utf-8"))["approved_release_tag"])')"
+          BRANCH="ci/approved-upstream-inputs-${TARGET_NAME}-${GITHUB_SHA::8}"
+
+          git -C downstream checkout -b "${BRANCH}"
+          git -C downstream config user.name "semantic-release-bot"
+          git -C downstream config user.email "semantic-release-bot@martynus.net"
+          git -C downstream add release/official-inputs.env
+          git -C downstream commit -m "chore(release): sync approved upstream inputs from ${RELEASE_TAG}"
+          git -C downstream push --force-with-lease origin "${BRANCH}"
+
+          EXISTING_PR="$(gh pr list --repo "${TARGET_REPO}" --state open --head "${BRANCH}" --json url --jq '.[0].url')"
+          if [[ -n "${EXISTING_PR}" ]]; then
+            echo "Existing PR: ${EXISTING_PR}"
+            exit 0
+          fi
+
+          gh pr create \
+            --repo "${TARGET_REPO}" \
+            --base main \
+            --head "${BRANCH}" \
+            --title "chore(release): sync approved upstream inputs from ${RELEASE_TAG}" \
+            --body "$(printf 'Sync release/official-inputs.env from techofourown/sw-ourbox-os release/approved-upstream-inputs.json (%s).\n\nThis PR was opened automatically after the approved upstream snapshot changed on %s.' "${RELEASE_TAG}" "${GITHUB_SHA:0:12}")"

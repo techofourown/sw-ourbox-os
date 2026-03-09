@@ -44,6 +44,19 @@ jobs:
       - name: Validate rendered platform contract
         run: bash tools/platform-contract/validate.sh
 
+  approved-upstream-inputs:
+    name: Approved upstream input snapshot
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Validate approved upstream inputs
+        run: python3 tools/approved-upstream-inputs/validate.py --approved-inputs release/approved-upstream-inputs.json
+
   installer-selection:
     name: Installer selection resolver tests
     runs-on: ubuntu-latest

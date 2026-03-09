@@ -166,16 +166,28 @@ When signatures or attestations are adopted, they will be documented here.
 
 ## Downstream consumption
 
-Image build repos (`img-ourbox-matchbox`, etc.) consume these artifacts via digest-pinned refs
-in their `release/official-inputs.env`. To update when this repo ships a new bundle:
+Image build repos (`img-ourbox-matchbox`, `img-ourbox-woodbox`) consume these artifacts via
+digest-pinned refs in their `release/official-inputs.env`, but those lockfiles are no longer the
+source of truth.
 
-```bash
-# Re-resolve current digests
-oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
-oras resolve ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-arm64
+The single approved upstream snapshot now lives in
+`release/approved-upstream-inputs.json` in this repo. It records:
 
-# Update release/official-inputs.env in the consuming repo with new digests, open a PR
-```
+- the approved versioned `platform-contract` ref and digest
+- the approved versioned `airgap-platform` refs and digests for `arm64` and `amd64`
+- the launcher marker that must remain present in the approved platform contract
+
+`tools/approved-upstream-inputs/validate.py` is the approval gate for that snapshot. It verifies:
+
+- each approved versioned ref resolves to the recorded digest
+- each pinned ref embeds the same digest
+- the approved platform contract still contains the launcher marker
+- the rendered `verification/http-routes.tsv` inside the published contract still advertises that launcher marker for `landing-root`
+
+When the approved snapshot changes on `main`, `.github/workflows/approved-upstream-inputs-sync.yml`
+automatically opens downstream PRs that refresh `release/official-inputs.env` in the image repos.
+That keeps official builds digest-pinned while eliminating duplicate hand-maintained approval ledgers
+across the downstream repos.
 
 The recommended downstream heavy-artifact model is now promote-first:
 
@@ -196,3 +208,4 @@ same curated input set a second time just to stamp a release channel.
 - [ADR-0009: Package Platform Contract as OCI Artifact](./decisions/ADR-0009-package-the-platform-contract-as-an-oci-artifact.md)
 - [Artifact Distribution and Integration Contract](./architecture/artifact-distribution-and-integration.md)
 - `release/REVALIDATION_TRIGGER` — documented republish escape hatch
+- `release/approved-upstream-inputs.json` — single approved upstream snapshot for downstream image repos

@@ -137,7 +137,7 @@ Order matters. Bootstrap must run before GHCR login because bootstrap installs `
 6. Clean stale workspace artifacts (rm -rf deploy/ artifacts/ ...)
 7. Preflight build host
 8. Fetch upstream inputs
-   - candidate: pinned `release/official-inputs.env`
+   - candidate: pinned `release/official-inputs.env` generated from `sw-ourbox-os/release/approved-upstream-inputs.json`
    - nightly: floating upstream `edge` digests resolved at workflow time
 9. Build OS artifact
 10. Build installer artifact
@@ -241,7 +241,19 @@ The `:=` form respects already-set variables.
 
 All variables in `config.env` must use `:=`.
 
-### `release/official-inputs.env` — digest-pinned upstream refs
+### `release/approved-upstream-inputs.json` — central approved upstream snapshot
+
+Keep the approval point in `sw-ourbox-os`, not in each downstream image repo.
+
+The approved snapshot should contain:
+
+- the approved versioned `platform-contract` ref plus digest
+- the approved versioned `airgap-platform` refs plus digests for each published arch
+- the route/launcher marker that must remain present in the approved contract
+
+That file is the single source of truth for official upstream input approval.
+
+### `release/official-inputs.env` — generated digest-pinned downstream lockfile
 
 Pin upstream OCI artifacts by digest, not floating tag:
 ```bash
@@ -258,7 +270,12 @@ oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
 oras resolve ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-<arch>
 ```
 
-Update `official-inputs.env` via PR whenever sw-ourbox-os ships a new bundle.
+Do not hand-edit downstream approval pins after every upstream release.
+Instead:
+
+1. update `sw-ourbox-os/release/approved-upstream-inputs.json`
+2. validate it with `tools/approved-upstream-inputs/validate.py`
+3. let `.github/workflows/approved-upstream-inputs-sync.yml` open the downstream lockfile PRs
 
 ### `release/official-artifacts.env` — publication targets
 
@@ -396,7 +413,7 @@ All other tracked files (including docs) are scanned without exception.
 
 ### Repository setup
 - [ ] `tools/config.env` — all variables use `:=` conditional assignment
-- [ ] `release/official-inputs.env` — upstream OCI refs digest-pinned
+- [ ] `release/official-inputs.env` — upstream OCI refs digest-pinned and generated from `sw-ourbox-os/release/approved-upstream-inputs.json`
 - [ ] `release/official-artifacts.env` — publication namespaces and channel tags set
 - [ ] `tools/check-workflow-safety.sh` — copied from Woodbox (no target-specific changes needed)
 - [ ] `tools/check-public-sanitization.sh` — copied; add any target-specific banned legacy names
