@@ -13,6 +13,35 @@ DIST_DIR="${ROOT}/dist"
 
 mkdir -p "${DIST_DIR}"
 
+bash "${ROOT}/tools/install-defaults/validate-assignment-only.sh"
+set_profile_var() {
+  local file="$1" key="$2" value="$3"
+  awk -F= -v key="${key}" -v value="${value}" '
+    BEGIN { done = 0 }
+    $1 == key {
+      printf "%s=%s\n", key, value
+      done = 1
+      next
+    }
+    { print }
+    END {
+      if (!done) {
+        printf "%s=%s\n", key, value
+      }
+    }
+  ' "${file}" > "${file}.tmp"
+  mv "${file}.tmp" "${file}"
+}
+
+apply_profile_override() {
+  local installer_id="$1" override_value="$2"
+  local profile="${BUILD_DIR}/install-defaults/defaults/${installer_id}.env"
+  [[ -n "${override_value}" ]] || return 0
+  [[ -f "${profile}" ]] || die "Missing profile for override: ${profile}"
+  set_profile_var "${profile}" "OS_DEFAULT_REF" "${override_value}"
+  log "Applied curated OS_DEFAULT_REF for ${installer_id}"
+}
+
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 VERSION="dev"
@@ -26,9 +55,20 @@ trap 'rm -rf "${BUILD_DIR}"' EXIT
 mkdir -p "${BUILD_DIR}/install-defaults"
 cp -a "${SRC_DIR}/." "${BUILD_DIR}/install-defaults/"
 
+apply_profile_override "matchbox" "${MATCHBOX_OS_DEFAULT_REF_OVERRIDE:-}"
+apply_profile_override "woodbox" "${WOODBOX_OS_DEFAULT_REF_OVERRIDE:-}"
+apply_profile_override "tinderbox" "${TINDERBOX_OS_DEFAULT_REF_OVERRIDE:-}"
+
+bash "${ROOT}/tools/install-defaults/validate-assignment-only.sh" \
+  "${BUILD_DIR}/install-defaults/schema.env" \
+  "${BUILD_DIR}/install-defaults/defaults/"*.env
+
 for profile in "${BUILD_DIR}/install-defaults/defaults/"*.env; do
   [[ -f "${profile}" ]] || die "No profile files found in defaults/"
   grep -q '^INSTALLER_ID=' "${profile}" || die "Profile missing INSTALLER_ID: ${profile}"
+  grep -q '^OS_REPO=' "${profile}" || die "Profile missing OS_REPO: ${profile}"
+  grep -q '^OS_CATALOG_TAG=' "${profile}" || die "Profile missing OS_CATALOG_TAG: ${profile}"
+  grep -q '^CHANNEL_STABLE_TAG=' "${profile}" || die "Profile missing CHANNEL_STABLE_TAG: ${profile}"
 done
 
 cat > "${BUILD_DIR}/install-defaults/manifest.env" <<EOF_MANIFEST

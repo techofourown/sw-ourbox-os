@@ -25,15 +25,17 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 | Channel tag | Artifact | Trigger |
 |---|---|---|
 | `edge` | Platform contract, install-defaults | Push to `main` (source-filtered) |
-| `edge-arm64` / `edge-amd64` | Airgap platform | Push to `main` (source-filtered) |
-| `v*` | All artifacts | `release` event (published) |
+| `edge-arm64` / `edge-amd64` | Airgap platform | Push to `main` (source-filtered) from the immutable candidate digest |
+| `v*` | Platform contract, install-defaults | `release` event (published) |
+| `v*-arm64` / `v*-amd64` | Airgap platform | Promotion after both candidate completion and matching GitHub Release `published` authorization are true; whichever arrives second wakes the retag |
+| `stable` | Install defaults | Promotion after the successful `Install Defaults` release publish for the matching published GitHub Release tag; uses that publish run's artifact outputs instead of racing a sibling release workflow |
 
 ---
 
 ## Trusted release contexts
 
 - Push to `main` branch (edge / nightly)
-- GitHub Release event with `published` type (versioned)
+- Candidate completion on `main` plus GitHub Release event with `published` type (versioned promotion); either event may wake promotion when the other condition is already satisfied
 
 `workflow_dispatch` is intentionally absent from all official publish workflows.
 
@@ -59,13 +61,27 @@ All build logic lives in this repository. Official and compatible builds use the
 
 | Workflow | File | Runner | Trigger |
 |---|---|---|---|
-| Airgap Platform | `.github/workflows/airgap-platform.yml` | `[self-hosted, official-heavy, airgap-builder]` | Push to `main` (source-filtered) + release |
+| Airgap Platform | `.github/workflows/airgap-platform.yml` | `[self-hosted, official-heavy, airgap-builder]` | Push to `main` (source-filtered) |
+| Airgap Platform Promote Release | `.github/workflows/airgap-platform-promote.yml` | `ubuntu-latest` | Candidate completion or release publication; promotes only when both candidate success and matching GitHub Release `published` authorization are present |
 | Platform Contract | `.github/workflows/platform-contract.yml` | `ubuntu-latest` | Push to `main` (source-filtered) + release |
 | Install Defaults | `.github/workflows/install-defaults.yml` | `ubuntu-latest` | Push to `main` (source-filtered) + release |
+| Install Defaults Promote Stable | `.github/workflows/install-defaults-promote.yml` | `ubuntu-latest` | `workflow_run` after successful `Install Defaults` release publication for a matching non-prerelease `v*` tag |
 
 `airgap-platform.yml` runs on organization-controlled build infrastructure in the
-`official-heavy-artifacts` runner group. `platform-contract.yml` and `install-defaults.yml`
-run on GitHub-hosted runners (they are lightweight and do not require dedicated hardware).
+`official-heavy-artifacts` runner group and publishes one immutable candidate digest per
+source revision, then tags `edge-<arch>` from that digest. `airgap-platform-promote.yml`
+is lightweight and promotes the exact candidate digest into `v*-<arch>` only after both the
+candidate run and a matching GitHub Release exist; whichever arrives second wakes promotion. `platform-contract.yml` and
+`install-defaults.yml` run on GitHub-hosted runners (they are lightweight and do not require
+dedicated hardware).
+
+`install-defaults-promote.yml` is also lightweight. It follows the successful
+`Install Defaults` release publish workflow for the same release tag so it does
+not race sibling release publication. It reads optional curated `OS_DEFAULT_REF`
+values from `release/install-defaults-stable.env` in the checked-out release tag.
+If that file leaves all overrides empty, the workflow promotes the already-published
+versioned bundle into `install-defaults:stable` by digest using the publish run's
+artifact outputs.
 
 ---
 
@@ -112,8 +128,11 @@ If a source change lands outside these ignored paths, it will trigger publicatio
 does not materially affect a specific artifact. This is intentional: `paths-ignore` fails open
 (over-builds) rather than risking silent skips.
 
-Release-event triggers are not filtered — a GitHub Release always triggers all publish workflows
-unconditionally.
+Release-event triggers are not filtered for the lightweight workflows that still use them.
+Airgap version promotion no longer dispatches a second heavy release build; it waits for the
+push-triggered candidate build to finish and then checks for matching release authorization.
+`install-defaults:stable` promotion likewise follows the successful release-publish workflow
+instead of racing it in parallel from the same release event.
 
 ### Forcing an official republish without source changes
 
@@ -147,16 +166,38 @@ When signatures or attestations are adopted, they will be documented here.
 
 ## Downstream consumption
 
-Image build repos (`img-ourbox-matchbox`, etc.) consume these artifacts via digest-pinned refs
-in their `release/official-inputs.env`. To update when this repo ships a new bundle:
+Image build repos (`img-ourbox-matchbox`, `img-ourbox-woodbox`) consume these artifacts via
+digest-pinned refs in their `release/official-inputs.env`, but those lockfiles are no longer the
+source of truth.
 
-```bash
-# Re-resolve current digests
-oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
-oras resolve ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-arm64
+The single approved upstream snapshot now lives in
+`release/approved-upstream-inputs.json` in this repo. It records:
 
-# Update release/official-inputs.env in the consuming repo with new digests, open a PR
-```
+- the approved versioned `platform-contract` ref and digest
+- the approved versioned `airgap-platform` refs and digests for `arm64` and `amd64`
+- the launcher marker that must remain present in the approved platform contract
+
+`tools/approved-upstream-inputs/validate.py` is the approval gate for that snapshot. It verifies:
+
+- each approved versioned ref resolves to the recorded digest
+- each pinned ref embeds the same digest
+- the approved platform contract still contains the launcher marker
+- the rendered `verification/http-routes.tsv` inside the published contract still advertises that launcher marker for `landing-root`
+
+When the approved snapshot changes on `main`, `.github/workflows/approved-upstream-inputs-sync.yml`
+automatically opens downstream PRs that refresh `release/official-inputs.env` in the image repos.
+That keeps official builds digest-pinned while eliminating duplicate hand-maintained approval ledgers
+across the downstream repos.
+
+The recommended downstream heavy-artifact model is now promote-first:
+
+- push to protected `main` publishes a promotable `beta` artifact from pinned upstream refs
+- matching GitHub Release `published` authorization plus candidate success promotes that digest into `stable`, with whichever condition arrives second waking the retag
+- scheduled integration nightly builds resolve floating upstream `edge` refs and publish `nightly`
+- matching GitHub Release `prereleased` authorization plus candidate success can promote the same digest into `exp-labs`, with whichever condition arrives second waking the retag
+
+This keeps heavy rebuilds attached to meaningful input-policy changes rather than rebuilding the
+same curated input set a second time just to stamp a release channel.
 
 ---
 
@@ -167,3 +208,4 @@ oras resolve ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-arm64
 - [ADR-0009: Package Platform Contract as OCI Artifact](./decisions/ADR-0009-package-the-platform-contract-as-an-oci-artifact.md)
 - [Artifact Distribution and Integration Contract](./architecture/artifact-distribution-and-integration.md)
 - `release/REVALIDATION_TRIGGER` — documented republish escape hatch
+- `release/approved-upstream-inputs.json` — single approved upstream snapshot for downstream image repos

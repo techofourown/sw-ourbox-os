@@ -3,7 +3,7 @@ on:
   push:
     branches: ["main"]
 
-# Default token stays minimal; release writes happen via the Release App token.
+# Default token stays minimal; release tag/GitHub Release writes happen via the Release App token.
 permissions:
   contents: read
 
@@ -36,10 +36,8 @@ jobs:
         uses: cycjimmy/semantic-release-action@v4
         with:
           extra_plugins: |
-            @semantic-release/changelog
-            @semantic-release/git
             @semantic-release/github
         env:
-          # semantic-release + plugins use these for GitHub API calls AND tag/release creation
+          # semantic-release uses these for GitHub API calls and tag/release creation.
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}

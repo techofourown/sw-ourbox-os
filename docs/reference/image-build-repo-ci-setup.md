@@ -111,35 +111,55 @@ Jobs will be picked up within ~15 seconds of reconnect.
 
 ## 2. Workflow architecture
 
-Every `img-*` repo uses the same six-workflow pattern (adapt from `img-ourbox-woodbox`):
+Every `img-*` repo uses the same eight-workflow pattern (adapt from `img-ourbox-woodbox`):
 
 | Workflow | Trigger | Runner | Publishes? |
 |---|---|---|---|
 | `ci.yml` | PR + push to main | `ubuntu-latest` | No |
 | `release.yml` | Push to main | `ubuntu-latest` | No (semantic-release tags only) |
-| `official-nightly.yml` | Push to main | `[self-hosted, official-heavy, <target>-image]` | Yes (nightly channel) |
-| `official-release.yml` | GitHub Release `published` | `[self-hosted, official-heavy, <target>-image]` | Yes (stable channel) |
+| `official-candidate.yml` | Push to main | `[self-hosted, official-heavy, <target>-image]` | Yes (`beta`, heavy build) |
+| `official-promote-stable.yml` | `workflow_run` after candidate completion + constrained `release` backstop | `ubuntu-latest` | Yes (`stable`, promotion only) |
+| `integration-nightly.yml` | Daily cron | `[self-hosted, official-heavy, <target>-image]` | Yes (`nightly`, heavy build) |
+| `official-exp-labs.yml` | `workflow_run` after candidate completion + constrained `release` backstop | `ubuntu-latest` | Yes (`exp-labs`, promotion only) |
 | `build-publish-os-self-hosted.yml` | `workflow_dispatch` | `[self-hosted, official-heavy, <target>-image]` | No |
 | `revalidate-<target>-build.yml` | `workflow_dispatch` + weekly cron | `[self-hosted, official-heavy, <target>-image]` | No |
 
-### Step order within official workflows
+### Step order within heavy official build workflows
 
 Order matters. Bootstrap must run before GHCR login because bootstrap installs `oras`.
 
 ```
 1. Fix workspace ownership (sudo chown — pi-gen / other root-owned artifacts)
 2. Checkout (fetch-depth: 0)
-3. Set nightly/release version (→ GITHUB_ENV)
+3. Set build identity (for example `main-<sha12>` or `nightly-<sha12>`) via `GITHUB_ENV`
 4. Bootstrap host dependencies (installs oras, xorriso, etc.)
 5. GHCR login (oras login — requires oras from step 4)
 6. Clean stale workspace artifacts (rm -rf deploy/ artifacts/ ...)
 7. Preflight build host
-8. Fetch pinned upstream inputs
+8. Fetch upstream inputs
+   - candidate: pinned `release/official-inputs.env` generated from `sw-ourbox-os/release/approved-upstream-inputs.json`
+   - nightly: floating upstream `edge` digests resolved at workflow time
 9. Build OS artifact
 10. Build installer artifact
 11. Publish OS artifact (official only)
 12. Publish installer artifact (official only)
 13. Upload provenance files (always: true)
+```
+
+### Step order within promotion workflows
+
+Promotion workflows are intentionally lightweight because they re-tag an already-published digest.
+
+```
+1. Checkout the candidate revision or release tag and fetch tags/history
+2. Install ORAS
+3. GHCR login
+4. Resolve the source commit and determine which side of the handshake fired
+5. Verify the other required condition is already satisfied
+6. Download the candidate provenance artifact from the completed heavy run
+7. Promote the exact pinned refs from candidate provenance into `stable` or `exp-labs`
+8. Update catalog rows / provenance outputs
+9. Upload promotion provenance files
 ```
 
 ### Workflow safety rules
@@ -151,33 +171,42 @@ Any workflow with `runs-on: [...self-hosted...]` must NOT trigger on
 `pull_request` or `pull_request_target`. Prevents untrusted PR code on
 privileged builders.
 
-**Rule 2 — Official publish workflows must not expose workflow_dispatch**
-Any workflow that calls `publish-*-artifact-official.sh` must NOT have a
-`workflow_dispatch:` trigger. Official publication only flows from push-to-main
-(nightly) or GitHub Release `published` event (release).
+**Rule 2 — Official publish/promote workflows must not expose workflow_dispatch**
+Any workflow that calls `publish-*-artifact-official.sh` or
+`promote-*-artifact-official.sh` must NOT have a `workflow_dispatch:` trigger.
+Official publication only flows from push-to-main, scheduled nightly, or the
+dual-condition promotion handoff that requires both candidate success and GitHub Release authorization.
 
 Consequence: smoke build workflows (`build-publish-os-self-hosted.yml`) are safe
 to use `workflow_dispatch` precisely because they do NOT invoke the official
 publish scripts.
 
-**Rule 3 — Nightly workflows must declare a path filter**
-Branch-push workflows (nightly) must have `paths:` or `paths-ignore:` to avoid
-rebuilding on doc-only commits. Release workflows do not need this.
+**Rule 3 — Push-triggered official workflows must declare a path filter**
+Branch-push workflows (candidate) must have `paths:` or `paths-ignore:` to avoid
+rebuilding on doc-only commits. Scheduled and release-driven workflows do not need this.
 
-**Rule 4 — Official publish workflows using `release:` must constrain to `types: [published]`**
-A `release:` trigger without `types: [published]` would fire on draft creation,
-pre-release edits, and deletions. Official publication must only occur on a
-fully published, non-draft release.
+**Rule 4 — Official promote workflows should use candidate completion as the primary clock, with a constrained release backstop**
+Heavy candidates can queue for hours on a one-host pool while GitHub Releases publish immediately.
+Promote workflows should therefore trigger from `workflow_run` completion of the official
+candidate workflow, but also keep a constrained `release` backstop so late authorizations still
+wake promotion after the candidate is already done.
 
-### Why `release: types: [published]` and not `push: tags: ['v*']`
+### Why candidate completion is the primary clock, with release publication as backstop
 
 `push: tags` does **not** fire when semantic-release pushes the version tag via
 a GitHub App token, because the release commit message contains `[skip ci]`.
-The `release: types: [published]` event fires when `@semantic-release/github`
-publishes the GitHub Release object — that step is unaffected by `[skip ci]`.
 
-This is the same pattern used by `sw-ourbox-os`'s own publish workflows
-(`platform-contract.yml`, `airgap-platform.yml`) and is the proven working trigger.
+GitHub Releases still matter as the **authorization surface**. On a small heavy-runner pool, a
+release object can exist long before the candidate digest is actually built and published. The safe
+model is:
+
+1. heavy candidate build completes and uploads exact provenance
+2. lightweight promote workflow wakes from `workflow_run` and promotes if release authorization already exists
+3. if release authorization arrives later, the constrained `release` trigger wakes the same promotion path
+4. whichever condition becomes true second performs the retag using exact candidate provenance
+
+This avoids long-lived waiting promotions, prevents release publication from racing ahead of
+candidate artifact availability, and avoids silently losing a late release authorization.
 
 ```yaml
 # Standard path filter for nightly:
@@ -203,14 +232,28 @@ OURBOX_VERSION="dev"
 : "${OURBOX_VERSION:=dev}"
 ```
 
-This matters because official-nightly.yml sets `OURBOX_VERSION=nightly-${GITHUB_SHA:0:12}`
-via `$GITHUB_ENV` before the build steps run. If `config.env` uses bare assignment,
-sourcing it overwrites the workflow-provided value and artifacts end up stamped `dev`.
+This matters because the heavy official build workflows set `OURBOX_VERSION`
+(for example `main-${GITHUB_SHA:0:12}` in `official-candidate.yml` or
+`nightly-${GITHUB_SHA:0:12}` in `integration-nightly.yml`) via `$GITHUB_ENV`
+before the build steps run. If `config.env` uses bare assignment, sourcing it
+overwrites the workflow-provided value and artifacts end up stamped `dev`.
 The `:=` form respects already-set variables.
 
 All variables in `config.env` must use `:=`.
 
-### `release/official-inputs.env` — digest-pinned upstream refs
+### `release/approved-upstream-inputs.json` — central approved upstream snapshot
+
+Keep the approval point in `sw-ourbox-os`, not in each downstream image repo.
+
+The approved snapshot should contain:
+
+- the approved versioned `platform-contract` ref plus digest
+- the approved versioned `airgap-platform` refs plus digests for each published arch
+- the route/launcher marker that must remain present in the approved contract
+
+That file is the single source of truth for official upstream input approval.
+
+### `release/official-inputs.env` — generated digest-pinned downstream lockfile
 
 Pin upstream OCI artifacts by digest, not floating tag:
 ```bash
@@ -227,7 +270,12 @@ oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
 oras resolve ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-<arch>
 ```
 
-Update `official-inputs.env` via PR whenever sw-ourbox-os ships a new bundle.
+Do not hand-edit downstream approval pins after every upstream release.
+Instead:
+
+1. update `sw-ourbox-os/release/approved-upstream-inputs.json`
+2. validate it with `tools/approved-upstream-inputs/validate.py`
+3. let `.github/workflows/approved-upstream-inputs-sync.yml` open the downstream lockfile PRs
 
 ### `release/official-artifacts.env` — publication targets
 
@@ -237,12 +285,16 @@ be overridden by workflow inputs.
 ```bash
 OFFICIAL_OS_REPO=ghcr.io/techofourown/ourbox-<device>-os
 OFFICIAL_OS_CATALOG_TAG=<target>-catalog
+OFFICIAL_OS_BETA_CHANNELS="<target>-beta"
+OFFICIAL_OS_STABLE_CHANNELS="<target>-stable"
 OFFICIAL_OS_NIGHTLY_CHANNELS="<target>-nightly"
-OFFICIAL_OS_RELEASE_CHANNELS="<target>-stable"
+OFFICIAL_OS_EXP_LABS_CHANNELS="<target>-exp-labs"
 
 OFFICIAL_INSTALLER_REPO=ghcr.io/techofourown/ourbox-<device>-installer
+OFFICIAL_INSTALLER_BETA_CHANNELS="<target>-installer-beta"
+OFFICIAL_INSTALLER_STABLE_CHANNELS="<target>-installer-stable"
 OFFICIAL_INSTALLER_NIGHTLY_CHANNELS="<target>-installer-nightly"
-OFFICIAL_INSTALLER_RELEASE_CHANNELS="<target>-installer-stable"
+OFFICIAL_INSTALLER_EXP_LABS_CHANNELS="<target>-installer-exp-labs"
 ```
 
 ---
@@ -361,7 +413,7 @@ All other tracked files (including docs) are scanned without exception.
 
 ### Repository setup
 - [ ] `tools/config.env` — all variables use `:=` conditional assignment
-- [ ] `release/official-inputs.env` — upstream OCI refs digest-pinned
+- [ ] `release/official-inputs.env` — upstream OCI refs digest-pinned and generated from `sw-ourbox-os/release/approved-upstream-inputs.json`
 - [ ] `release/official-artifacts.env` — publication namespaces and channel tags set
 - [ ] `tools/check-workflow-safety.sh` — copied from Woodbox (no target-specific changes needed)
 - [ ] `tools/check-public-sanitization.sh` — copied; add any target-specific banned legacy names

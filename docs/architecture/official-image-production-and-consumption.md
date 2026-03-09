@@ -10,7 +10,9 @@
 - [`docs/decisions/ADR-0008-deployment-baseline-as-the-platform-integration-contract.md`](../decisions/ADR-0008-deployment-baseline-as-the-platform-integration-contract.md)
 - [`docs/decisions/ADR-0009-package-the-platform-contract-as-an-oci-artifact.md`](../decisions/ADR-0009-package-the-platform-contract-as-an-oci-artifact.md)
 - [`docs/decisions/ADR-0011-separate-hardware-enablement-from-the-platform-contract.md`](../decisions/ADR-0011-separate-hardware-enablement-from-the-platform-contract.md)
+- [`docs/decisions/ADR-0012-centralize-installer-selection-contract-above-the-hardware-seam.md`](../decisions/ADR-0012-centralize-installer-selection-contract-above-the-hardware-seam.md)
 - [`docs/reference/target-integration-contract.md`](../reference/target-integration-contract.md)
+- [`docs/reference/installer-selection-contract.md`](../reference/installer-selection-contract.md)
 - `org-techofourown/docs/decisions/ADR-0007-adopt-oci-artifacts-for-app-distribution.md`
 - `org-techofourown/docs/rfcs/RFC-0001-oci-artifacts-trust-and-attestations.md`
 - `org-techofourown/docs/decisions/ADR-0008-adopt-organization-controlled-build-infrastructure-for-heavy-artifacts.md`
@@ -341,11 +343,15 @@ This gives downstream image repos a stable upstream integration contract.
 
 This acts as the upstream control plane for "where should this installer look by default?"
 
-### Step 3: an `img-*` repo consumes the platform contract
+### Step 3: an `img-*` repo consumes the approved upstream snapshot
 
 A hardware-specific `img-*` repo consumes the chosen platform contract and combines it with hardware-specific integration, boot/runtime behavior, and install mechanics.
 
-In the official lane, upstream artifact refs are pinned by digest in the repo (for example in a `release/official-inputs.env` file). Updating the pinned upstream ref is a normal PR change. This makes upstream consumption explicit, traceable, and change-controlled, rather than floating on a tag.
+In the official lane, upstream artifact refs are still pinned by digest in the image repo, but the
+approval point now lives upstream in `sw-ourbox-os/release/approved-upstream-inputs.json`.
+Downstream `release/official-inputs.env` files are generated lockfiles derived from that approved
+snapshot, not independent human-maintained approval ledgers. This keeps official consumption
+explicit, traceable, and change-controlled without duplicating approval state across repos.
 
 The repo satisfies the target integration contract while still allowing the target substrate to be
 hardware-appropriate.
@@ -363,11 +369,29 @@ The image repo produces:
 The image repo's release path publishes:
 
 - immutable payload references
-- optional moving channel tags such as stable/beta/nightly
+- optional moving channel tags such as stable/beta/nightly/exp-labs
 - catalog updates mapping those channels to immutable references
 - official installer media where applicable
 
 Per org policy, official heavy-artifact release capability should remain possible on organization-controlled build infrastructure, even if third-party hosted CI is also used.
+
+### Step 5a: promote-first channel roles
+
+The recommended official model for heavy image repos is:
+
+- `beta`: latest official mainline build from pinned upstream refs (`push` to protected `main`)
+- `stable`: promotion of an already-published `beta` digest once both candidate success and matching GitHub Release `published` authorization are present
+- `nightly`: scheduled integration build from floating upstream `edge` refs
+- `exp-labs`: prerelease / experimental promotion of an already-published digest once both candidate success and matching GitHub Release `prereleased` authorization are present
+
+This separates two axes that should not be conflated:
+
+- which source context TOOO trusts (`main` head, prerelease tag, published release)
+- which upstream input policy the build used (pinned curated digests versus floating upstream `edge`)
+
+Stable promotion should normally re-tag an existing digest rather than rebuilding it, unless the
+stable artifact is intentionally meant to differ in inputs or packaging from the published `beta`
+candidate.
 
 ### Step 6: installers and devices consume the published artifacts
 
@@ -453,6 +477,15 @@ Local fallback must remain sufficient.
 Failure to refresh remote defaults should not make the installer unable to function if it has a valid local fallback.
 
 This is the intended public model even if specific targets may realize parts of it incrementally.
+
+The normative contract for this resolver behavior now lives in
+`docs/reference/installer-selection-contract.md`, including:
+
+- the remote install-defaults bundle shape,
+- the rule that baked pinned defaults stay authoritative unless explicitly replaced,
+- row-order-independent catalog resolution by `created`,
+- fail-closed digest resolution,
+- and the standard provenance vocabulary recorded on installed systems.
 
 ### 8.4 Why catalogs exist
 

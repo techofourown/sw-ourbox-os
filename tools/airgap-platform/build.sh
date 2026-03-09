@@ -7,6 +7,8 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST_DIR="${ROOT}/dist"
 VERSIONS_FILE="${ROOT}/tools/airgap-platform/versions.env"
+RENDER_SCRIPT="${ROOT}/tools/platform-contract/render-contract.py"
+LINT_SCRIPT="${ROOT}/tools/platform-contract/lint-rendered-contract.py"
 
 command -v curl >/dev/null 2>&1 || die "curl is required"
 command -v git >/dev/null 2>&1 || die "git is required (to stamp revision)"
@@ -27,9 +29,6 @@ esac
 source "${VERSIONS_FILE}"
 
 : "${K3S_VERSION:?K3S_VERSION not set in versions.env}"
-: "${NGINX_IMAGE:?NGINX_IMAGE not set in versions.env}"
-: "${DUFS_IMAGE:?DUFS_IMAGE not set in versions.env}"
-: "${FLATNOTES_IMAGE:?FLATNOTES_IMAGE not set in versions.env}"
 
 # Select container CLI
 pick_cli() {
@@ -54,6 +53,44 @@ build_dir="$(mktemp -d)"
 trap 'rm -rf "${build_dir}"' EXIT
 
 mkdir -p "${build_dir}/k3s" "${build_dir}/platform/images"
+
+REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
+CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+VERSION="dev"
+if git -C "${ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
+  VERSION="$(git -C "${ROOT}" describe --tags --exact-match)"
+fi
+
+render_dir="${build_dir}/rendered-platform-contract"
+OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
+OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
+OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os \
+OURBOX_PLATFORM_CONTRACT_REVISION="${REVISION}" \
+OURBOX_PLATFORM_CONTRACT_VERSION="${VERSION}" \
+OURBOX_PLATFORM_CONTRACT_CREATED="${CREATED}" \
+python3 "${RENDER_SCRIPT}" \
+  --contract-root "${ROOT}/platform-contract" \
+  --output-dir "${render_dir}" \
+  --profile demo-apps \
+  --box-host "airgap.ourbox.local" \
+  --tls-mode "lan-http" \
+  --ingress-class "traefik" \
+  --storage-class "local-path"
+
+python3 "${LINT_SCRIPT}" \
+  --contract-root "${ROOT}/platform-contract" \
+  --render-dir "${render_dir}"
+
+mapfile -t IMAGES < <(python3 - <<'PY' "${render_dir}/images.lock.json"
+import json
+import sys
+with open(sys.argv[1], "r", encoding="utf-8") as handle:
+    data = json.load(handle)
+for entry in data["images"]:
+    print(entry["ref"])
+PY
+)
+IMAGES_LOCK_SHA256="$(sha256sum "${render_dir}/images.lock.json" | awk '{print $1}')"
 
 # k3s binaries + airgap images
 BIN_URL="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}/k3s"
@@ -81,7 +118,8 @@ image_tar_name() {
 pull_and_save_image() {
   local image="$1"
   local tar_path="$2"
-  local base="$(cli_base "${CLI}")"
+  local base
+  base="$(cli_base "${CLI}")"
 
   case "${base}" in
     docker|nerdctl)
@@ -102,8 +140,6 @@ pull_and_save_image() {
   esac
 }
 
-IMAGES=("${NGINX_IMAGE}" "${DUFS_IMAGE}" "${FLATNOTES_IMAGE}")
-
 for img in "${IMAGES[@]}"; do
   tar_name="$(image_tar_name "${img}")"
   out_path="${build_dir}/platform/images/${tar_name}"
@@ -114,22 +150,18 @@ for img in "${IMAGES[@]}"; do
   fi
 done
 
-REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
-CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-VERSION="dev"
-if git -C "${ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
-  VERSION="$(git -C "${ROOT}" describe --tags --exact-match)"
-fi
-
 cat > "${build_dir}/manifest.env" <<EOF_MANIFEST
 OURBOX_AIRGAP_PLATFORM_SCHEMA=1
 OURBOX_AIRGAP_PLATFORM_KIND=airgap-platform
 AIRGAP_PLATFORM_ARCH=${ARCH}
 K3S_VERSION=${K3S_VERSION}
-NGINX_IMAGE=${NGINX_IMAGE}
-DUFS_IMAGE=${DUFS_IMAGE}
-FLATNOTES_IMAGE=${FLATNOTES_IMAGE}
+OURBOX_PLATFORM_PROFILE=demo-apps
+OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
+OURBOX_PLATFORM_IMAGES_LOCK_SHA256=${IMAGES_LOCK_SHA256}
 EOF_MANIFEST
+
+cp -a "${render_dir}/images.lock.json" "${build_dir}/platform/images.lock.json"
+cp -a "${ROOT}/platform-contract/profiles/demo-apps/profile.env" "${build_dir}/platform/profile.env"
 
 cat > "${DIST_DIR}/airgap-platform.meta.env" <<EOF_META
 OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
