@@ -4,9 +4,11 @@
 - Audience: `sw-ourbox-os` maintainers, `img-*` maintainers, downstream builders
 - Related:
   - `../decisions/ADR-0012-centralize-installer-selection-contract-above-the-hardware-seam.md`
+  - `../decisions/ADR-0013-centralize-installer-ssh-contract-above-the-hardware-seam.md`
   - `../decisions/ADR-0011-separate-hardware-enablement-from-the-platform-contract.md`
   - `../architecture/official-image-production-and-consumption.md`
   - `../reference/target-integration-contract.md`
+  - `../reference/installer-ssh-contract.md`
 
 ## 1. Purpose
 

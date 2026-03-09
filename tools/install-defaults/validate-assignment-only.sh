@@ -11,6 +11,7 @@ validate_file() {
   local line_no=0
   local bad=0
   local line=""
+  local key=""
   local pattern='^[A-Z][A-Z0-9_]*=[A-Za-z0-9_./:@%+,=-]*$'
 
   [[ -f "${file}" ]] || die "Missing install-defaults file: ${file}"
@@ -18,6 +19,13 @@ validate_file() {
   while IFS= read -r line || [[ -n "${line}" ]]; do
     line_no=$((line_no + 1))
     if [[ "${line}" =~ ^[[:space:]]*$ ]] || [[ "${line}" =~ ^[[:space:]]*# ]]; then
+      continue
+    fi
+    key="${line%%=*}"
+    if [[ "${key}" == OURBOX_INSTALLER_SSH_* ]]; then
+      printf '%s:%d: installer SSH keys are out of scope for install-defaults: %s\n' \
+        "${file}" "${line_no}" "${line}" >&2
+      bad=1
       continue
     fi
     if [[ "${line}" =~ ${pattern} ]]; then

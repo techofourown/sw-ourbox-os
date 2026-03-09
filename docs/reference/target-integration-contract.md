@@ -6,6 +6,7 @@
   - `../decisions/ADR-0011-separate-hardware-enablement-from-the-platform-contract.md`
   - `../decisions/ADR-0008-deployment-baseline-as-the-platform-integration-contract.md`
   - `../decisions/ADR-0009-package-the-platform-contract-as-an-oci-artifact.md`
+  - `../decisions/ADR-0013-centralize-installer-ssh-contract-above-the-hardware-seam.md`
   - `../architecture/artifact-distribution-and-integration.md`
   - `../architecture/official-image-production-and-consumption.md`
 
@@ -174,7 +175,30 @@ The exact tooling may differ, but the phases SHOULD be legible:
 Repos MAY implement this with systemd, first-boot jobs, installer hooks, cloud-init, vendor
 mechanisms, or other target-appropriate tools.
 
-### 5.5 Airgap platform bundle behavior
+### 5.5 Installer diagnostics access (SSH)
+
+If a target exposes installer-time SSH for diagnostics or support, it SHOULD realize the shared
+installer SSH contract defined in `docs/reference/installer-ssh-contract.md`.
+
+The common seam above the hardware boundary is:
+
+- shared installer SSH policy vocabulary,
+- mode/user/root normalization,
+- auth-path validation,
+- and deterministic `sshd_config.d` rendering semantics.
+
+Targets remain free to differ in:
+
+- when installer SSH policy is applied,
+- how local password generation or disclosure works,
+- how host keys are managed,
+- how `sshd` is validated or restarted,
+- how readiness is checked,
+- and how status, monitor, or support UX surfaces are published.
+
+That lifecycle and UX behavior remains target-local below the hardware seam.
+
+### 5.6 Airgap platform bundle behavior
 
 If a target embeds the platform contract or a platform airgap bundle into the installed image, the
 bundle location SHOULD be stable and documented.
@@ -186,7 +210,7 @@ If the target does not embed such a bundle, the repo MUST document:
 - how the platform contract is acquired,
 - what the offline fallback is, if any.
 
-### 5.6 Status, health, and observability surfaces
+### 5.7 Status, health, and observability surfaces
 
 The target SHOULD provide enough operator-visible surfaces to answer basic health questions without
 source-diving.
@@ -205,7 +229,7 @@ Common implementation patterns may include:
 
 Exact commands may differ by target, but the inspection story should not be mysterious.
 
-### 5.7 Artifact identity and installation provenance
+### 5.8 Artifact identity and installation provenance
 
 A target SHOULD preserve the link between:
 - installer profile,
@@ -221,6 +245,10 @@ shared installer-selection contract defined in
 `docs/reference/installer-selection-contract.md`. The hardware target may keep its own local
 prompts, flashing transport, and payload-shape verification, but the selection policy above that
 boundary should remain comparable across targets.
+
+When a target exposes installer SSH, it SHOULD realize the shared installer SSH contract defined in
+`docs/reference/installer-ssh-contract.md`, while keeping lifecycle, disclosure, and support UX
+local to the target implementation.
 
 ## 6. Intentionally divergent surfaces
 
