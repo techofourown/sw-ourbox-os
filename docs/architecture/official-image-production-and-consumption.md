@@ -343,11 +343,15 @@ This gives downstream image repos a stable upstream integration contract.
 
 This acts as the upstream control plane for "where should this installer look by default?"
 
-### Step 3: an `img-*` repo consumes the platform contract
+### Step 3: an `img-*` repo consumes the approved upstream snapshot
 
 A hardware-specific `img-*` repo consumes the chosen platform contract and combines it with hardware-specific integration, boot/runtime behavior, and install mechanics.
 
-In the official lane, upstream artifact refs are pinned by digest in the repo (for example in a `release/official-inputs.env` file). Updating the pinned upstream ref is a normal PR change. This makes upstream consumption explicit, traceable, and change-controlled, rather than floating on a tag.
+In the official lane, upstream artifact refs are still pinned by digest in the image repo, but the
+approval point now lives upstream in `sw-ourbox-os/release/approved-upstream-inputs.json`.
+Downstream `release/official-inputs.env` files are generated lockfiles derived from that approved
+snapshot, not independent human-maintained approval ledgers. This keeps official consumption
+explicit, traceable, and change-controlled without duplicating approval state across repos.
 
 The repo satisfies the target integration contract while still allowing the target substrate to be
 hardware-appropriate.
