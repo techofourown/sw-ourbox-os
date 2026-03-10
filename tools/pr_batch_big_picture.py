@@ -783,12 +783,18 @@ def create_round_robin_comparisons(
         )
 
         combined_files = sorted(set(left_files) | set(right_files))
+        if not combined_files:
+            print(
+                f"Skipping round-robin comparison for PR #{left_number} vs PR #{right_number} "
+                "because there are no included files to compare"
+            )
+            continue
+
         files_arg = " ".join(shlex.quote(f) for f in combined_files)
         diff_cmd = (
             f"git diff {shlex.quote(left_branch)} {shlex.quote(right_branch)}"
         )
-        if files_arg:
-            diff_cmd += f" -- {files_arg}"
+        diff_cmd += f" -- {files_arg}"
 
         diff_output = run_command(diff_cmd)
 

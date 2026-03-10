@@ -183,6 +183,41 @@ class PrBatchBigPictureTests(unittest.TestCase):
         self.assertIn("# File: package-lock.json", text)
         self.assertIn("# Includes all changed paths from the selected PRs", text)
 
+    def test_create_round_robin_comparisons_skips_excluded_only_pairs(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            outputs = MODULE.create_round_robin_comparisons(
+                processed_prs=[
+                    {
+                        "info": {
+                            "number": 101,
+                            "title": "excluded-only left",
+                            "body": "",
+                            "author": "left-user",
+                            "url": "https://example.test/pr/101",
+                        },
+                        "local_branch": "left-branch",
+                        "files": [],
+                    },
+                    {
+                        "info": {
+                            "number": 102,
+                            "title": "excluded-only right",
+                            "body": "",
+                            "author": "right-user",
+                            "url": "https://example.test/pr/102",
+                        },
+                        "local_branch": "right-branch",
+                        "files": [],
+                    },
+                ],
+                output_dir=tmpdir,
+                selection_requested="101-102",
+                selection_canonical="101-102",
+                selected_prs=[101, 102],
+            )
+
+        self.assertEqual(outputs, [])
+
 
 if __name__ == "__main__":
     unittest.main()
