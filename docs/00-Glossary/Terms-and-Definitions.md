@@ -93,16 +93,51 @@ A single physical/logical OurBox device running OurBox OS.
 ### OurBox OS
 The operating system + platform services shipped on an OurBox instance.
 
+### full host
+The entire host portion of a URL before any port and before the path.
+
+Examples:
+- full host: `bob.local`
+- full host: `bob.box.example.com`
+
 ### box-host
-The base host name used to address an OurBox instance on a network.
+In **public custom-domain mode**, `box-host` is the base host suffix after the tenant label in a full host.
 
-Examples (informative):
-- local network name: `ourbox.local` (mDNS-style)
-- user-chosen home DNS name: `ourbox.home`
-- user-chosen public DNS name: `box.example.com`
+Pattern:
+- full host: `<tenant_id>.<box-host>`
 
-OurBox may be deployed on a LAN only or exposed via port forwarding / reverse proxy. This document
-does not mandate a deployment posture; it standardizes how names are used.
+Examples:
+- full host: `bob.bobsdomain.com`
+  - `tenant_id = bob`
+  - `box-host = bobsdomain.com`
+- full host: `alice.box.example.com`
+  - `tenant_id = alice`
+  - `box-host = box.example.com`
+
+In local-only mode, tenant hosts are `<tenant_id>.local`; there is no separate public `box-host` suffix in that local tenant-host grammar.
+
+### Local-only mode
+The zero-preparation joined-LAN mode for tenant app access.
+
+Pattern:
+- `http://<tenant_id>.local/<app_slug>`
+
+Characteristics (normative intent):
+- local-only mode is HTTP-only,
+- does not require public DNS registration,
+- does not require port forwarding,
+- and does not require local CA installation.
+
+### Public custom-domain mode
+The user-configured internet-facing mode for tenant app access.
+
+Pattern:
+- `https://<tenant_id>.<box-host>/<app_slug>`
+
+Characteristics (normative intent):
+- HTTPS/TLS mode,
+- user controls the public DNS base host,
+- and external routing is operator-managed.
 
 ### origin
 A web security boundary defined by `(scheme, host, port)`. Origins isolate:
@@ -141,9 +176,16 @@ Constraints (normative):
 Examples: `bob`, `alice`, `family`, `roommates-2026`
 
 ### Tenant origin
-A tenant-scoped browser origin derived from hostname:
+A tenant-scoped browser origin derived from hostname.
 
-- `https://<tenant_id>.<box-host>/...`
+Supported patterns by mode:
+- local-only mode: `http://<tenant_id>.local/...`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/...`
+
+Across both modes:
+- the full host carries tenant context,
+- `tenant_id` is derived from the leftmost DNS label of the full host,
+- and the path identifies app context.
 
 Tenant origins are distinct web origins and therefore isolate:
 - IndexedDB (PouchDB storage)
