@@ -162,12 +162,15 @@ const renderTodos = () => {
   if (filtered.length === 0) {
     const empty = document.createElement("li");
     empty.className = "todo-item";
-    empty.innerHTML = `
-      <div class="todo-content">
-        <p>No tasks here yet.</p>
-        <div class="todo-meta">Add something above to get started.</div>
-      </div>
-    `;
+    const content = document.createElement("div");
+    content.className = "todo-content";
+    const title = document.createElement("p");
+    title.textContent = "No tasks here yet.";
+    const meta = document.createElement("div");
+    meta.className = "todo-meta";
+    meta.textContent = "Add something above to get started.";
+    content.append(title, meta);
+    empty.appendChild(content);
     list.appendChild(empty);
     updateCounts();
     return;
@@ -180,25 +183,31 @@ const renderTodos = () => {
       item.classList.add("completed");
     }
 
-    item.innerHTML = `
-      <input type="checkbox" aria-label="Mark ${todo.text} as complete" ${
-        todo.completed ? "checked" : ""
-      } />
-      <div class="todo-content">
-        <p>${todo.text}</p>
-        <div class="todo-meta">Created ${formatDate(todo.createdAt)}</div>
-      </div>
-      <div class="todo-actions">
-        <button type="button" data-action="delete">Delete</button>
-      </div>
-    `;
-
-    const checkbox = item.querySelector("input[type=checkbox]");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = todo.completed;
+    checkbox.setAttribute("aria-label", `Mark ${todo.text} as complete`);
     checkbox.addEventListener("change", () => toggleTodo(todo.id, checkbox));
 
-    const deleteButton = item.querySelector("button[data-action=delete]");
-    deleteButton.addEventListener("click", () => removeTodo(todo.id));
+    const content = document.createElement("div");
+    content.className = "todo-content";
+    const title = document.createElement("p");
+    title.textContent = todo.text;
+    const meta = document.createElement("div");
+    meta.className = "todo-meta";
+    meta.textContent = `Created ${formatDate(todo.createdAt)}`;
+    content.append(title, meta);
 
+    const actions = document.createElement("div");
+    actions.className = "todo-actions";
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.dataset.action = "delete";
+    deleteButton.textContent = "Delete";
+    deleteButton.addEventListener("click", () => removeTodo(todo.id));
+    actions.appendChild(deleteButton);
+
+    item.append(checkbox, content, actions);
     list.appendChild(item);
   });
 
