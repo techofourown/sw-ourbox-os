@@ -80,23 +80,23 @@ replica database on that device.
 Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
 vocabulary defined for OurBox OS.
 
-### APP-007: Local-only mode SHALL be documented as HTTP-only with narrower browser guarantees
+### APP-007: Local-only mode SHALL be HTTP-only
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Local-only mode has transport and browser capability limits that differ from public mode.
+**Rationale:** Local-only mode uses tenant-local HTTP routing and does not rely on TLS posture.
 
-Local-only mode SHALL be documented as HTTP-only and SHALL NOT be documented as guaranteeing full installable-PWA or reopen-offline behavior equivalent to public custom-domain mode.
+Local-only mode SHALL use `http://<tenant_id>.local/...` and SHALL NOT require or imply HTTPS/TLS.
 
-### APP-008: Local-only and public tenant origins for the same tenant SHALL be treated as distinct local replicas
+### APP-008: Local-only mode documentation SHALL NOT promise public-mode-equivalent full PWA posture
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Origin boundaries isolate browser storage and local replica state.
+**Rationale:** Product documentation must accurately describe local-only limits relative to public custom-domain mode.
 
-For the same tenant on the same browser, `http://<tenant_id>.local` and `https://<tenant_id>.<box-host>` SHALL be treated as different origins and therefore different local tenant replicas.
+Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
 
 ## Data and Replication
 

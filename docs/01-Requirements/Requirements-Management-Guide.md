@@ -251,6 +251,17 @@ fields:
 Shipped OurBox apps SHALL ...
 ```
 
+### Step 2.5 — If the requirement is allocated downstream, update allocation include lists
+
+When you add a new allocated system requirement (for example `APP-*`, `GW-*`, `K8S-*`) that is intended to appear in downstream SRS allocation views, you MUST update the GraphMD source records that render those allocation sections.
+
+Operational checklist:
+- update the corresponding section `fields.includes` lists (or equivalent allocation source records) for each affected downstream SRS
+- run compilation (`npm test`)
+- verify each generated SRS allocation block actually renders the new requirement
+
+Do not hand-edit compiled outputs to "patch in" missing allocated requirements. Always fix GraphMD source records and rebuild.
+
 ### Step 3 — Write the requirement body correctly
 
 A good requirement body is:

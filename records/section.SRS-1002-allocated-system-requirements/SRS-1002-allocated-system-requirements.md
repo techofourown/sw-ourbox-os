@@ -1,7 +1,7 @@
 ---
 typeId: section
-recordId: SRS-1006-allocated-system-requirements
-parent: spec:SRS-1006
+recordId: SRS-1002-allocated-system-requirements
+parent: spec:SRS-1002
 fields:
   title: "Allocated System Requirements (from SyRS)"
   order: 41

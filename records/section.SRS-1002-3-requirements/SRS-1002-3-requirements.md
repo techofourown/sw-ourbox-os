@@ -7,9 +7,9 @@ fields:
   order: 3
   level: 1
 ---
-This section will be populated with RichNote software requirements.
+This section defines RichNote requirements, including allocated system requirements from `[[spec:SyRS-0001]]` and RichNote-specific requirements.
 
-Typical groupings (to be filled in later):
+Requirement groupings:
 - Allocated System Requirements (from SyRS)
 - Functional Requirements
 - Data Requirements
