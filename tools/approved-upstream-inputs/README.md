@@ -72,3 +72,9 @@ python3 tools/approved-upstream-inputs/sync_downstream_official_inputs.py \
 
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)
 - [image-build-repo-ci-setup.md](../../docs/reference/image-build-repo-ci-setup.md)
+
+
+The approved snapshot is defined by `schemas/approved-upstream-inputs.schema.json`.
+Validation is two-stage:
+1. schema validation (`npm run validate:schemas`),
+2. semantic/digest/content validation (`python3 tools/approved-upstream-inputs/validate.py --approved-inputs release/approved-upstream-inputs.json`).

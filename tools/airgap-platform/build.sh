@@ -171,6 +171,12 @@ OURBOX_AIRGAP_PLATFORM_CREATED=${CREATED}
 AIRGAP_PLATFORM_ARCH=${ARCH}
 EOF_META
 
+cat > "${DIST_DIR}/airgap-platform.build-inputs.env" <<EOF_INPUTS
+K3S_VERSION=${K3S_VERSION}
+OURBOX_PLATFORM_PROFILE=demo-apps
+OURBOX_PLATFORM_IMAGES_LOCK_SHA256=${IMAGES_LOCK_SHA256}
+EOF_INPUTS
+
 TARBALL="${DIST_DIR}/airgap-platform.tar.gz"
 tar -C "${build_dir}" -czf "${TARBALL}" k3s platform manifest.env
 log "Built ${TARBALL}"

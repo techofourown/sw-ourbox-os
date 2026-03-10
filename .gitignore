@@ -3,4 +3,6 @@ node_modules/
 npm-debug.log*
 .DS_Store
 # Generated requirements artifacts (built from GraphMD records)
+generated/requirements/*.md
+!generated/requirements/README.md
 .root/

@@ -59,4 +59,9 @@ REF_FILE="${DIST_DIR}/airgap-platform.${ARCH}.ref"
 printf '%s
 ' "${PINNED}" | tee "${REF_FILE}"
 
+# shellcheck disable=SC1090
+source "${DIST_DIR}/airgap-platform.build-inputs.env"
+
 log "Pinned ref: ${PINNED}"
+
+node "${ROOT}/tools/publish-records/write-publish-record.cjs"   --output "dist/airgap-platform.${ARCH}.publish-record.json"   --artifact-family "airgap-platform"   --artifact-type "${ARTIFACT_TYPE}"   --artifact-repo "${REF_BASE}"   --artifact-ref "${REF}"   --artifact-pinned-ref "${PINNED}"   --artifact-digest "${DIGEST}"   --source-repo "https://github.com/techofourown/sw-ourbox-os"   --source-commit "${OURBOX_AIRGAP_PLATFORM_REVISION}"   --source-version "${OURBOX_AIRGAP_PLATFORM_VERSION}"   --created "${OURBOX_AIRGAP_PLATFORM_CREATED}"   --artifact-metadata-json "$(printf '{"OURBOX_AIRGAP_PLATFORM_SOURCE":"%s","OURBOX_AIRGAP_PLATFORM_REVISION":"%s","OURBOX_AIRGAP_PLATFORM_VERSION":"%s","OURBOX_AIRGAP_PLATFORM_CREATED":"%s","AIRGAP_PLATFORM_ARCH":"%s"}' "${OURBOX_AIRGAP_PLATFORM_SOURCE}" "${OURBOX_AIRGAP_PLATFORM_REVISION}" "${OURBOX_AIRGAP_PLATFORM_VERSION}" "${OURBOX_AIRGAP_PLATFORM_CREATED}" "${AIRGAP_PLATFORM_ARCH}")"   --input-metadata-json "$(printf '{"K3S_VERSION":"%s","OURBOX_PLATFORM_PROFILE":"%s","OURBOX_PLATFORM_IMAGES_LOCK_SHA256":"%s"}' "${K3S_VERSION}" "${OURBOX_PLATFORM_PROFILE}" "${OURBOX_PLATFORM_IMAGES_LOCK_SHA256}")"   --dist-files-json "$(printf '{"payload":"dist/airgap-platform.tar.gz","meta_env":"dist/airgap-platform.meta.env","push_log":"dist/airgap-platform.%s.push.log","pinned_ref":"dist/airgap-platform.%s.ref"}' "${ARCH}" "${ARCH}")"

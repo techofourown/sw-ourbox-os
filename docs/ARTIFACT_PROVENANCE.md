@@ -120,9 +120,9 @@ The following paths do **not** trigger official publication when changed:
 docs/**
 records/**
 types/**
-SyRS-*.md
-SRS-*.md
-OurBox-OS-Requirements-Omnibus.md
+generated/requirements/SyRS-*.md
+generated/requirements/SRS-*.md
+generated/requirements/OurBox-OS-Requirements-Omnibus.md
 CHANGELOG.md
 README.md
 CLAUDE.md
@@ -222,3 +222,10 @@ commit SHA.
 - [Artifact Distribution and Integration Contract](./architecture/artifact-distribution-and-integration.md)
 - `release/REVALIDATION_TRIGGER` — documented republish escape hatch
 - `release/approved-upstream-inputs.json` — single approved upstream snapshot for downstream image repos
+
+
+Machine-readable publish records are emitted at:
+- `dist/platform-contract.publish-record.json`
+- `dist/install-defaults.publish-record.json`
+- `dist/airgap-platform.<arch>.publish-record.json`
+They conform to `schemas/artifact-publish-record.schema.json`.

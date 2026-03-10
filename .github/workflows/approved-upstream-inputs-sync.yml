@@ -24,6 +24,17 @@ jobs:
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
 
+      - name: Setup Node for schema validation
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps
+        run: npm ci
+
+      - name: Validate JSON schemas
+        run: npm run validate:schemas
+
       - name: Validate approved snapshot
         run: python3 tools/approved-upstream-inputs/validate.py --approved-inputs release/approved-upstream-inputs.json
 

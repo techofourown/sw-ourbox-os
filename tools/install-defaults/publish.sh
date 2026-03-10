@@ -51,3 +51,25 @@ REF_FILE="${DIST_DIR}/install-defaults.ref"
 printf '%s\n' "${PINNED}" | tee "${REF_FILE}"
 
 log "Pinned ref: ${PINNED}"
+
+node "${ROOT}/tools/publish-records/write-publish-record.cjs" \
+  --output "dist/install-defaults.publish-record.json" \
+  --artifact-family "install-defaults" \
+  --artifact-type "${ARTIFACT_TYPE}" \
+  --artifact-repo "${REF_BASE}" \
+  --artifact-ref "${REF}" \
+  --artifact-pinned-ref "${PINNED}" \
+  --artifact-digest "${DIGEST}" \
+  --source-repo "https://github.com/techofourown/sw-ourbox-os" \
+  --source-commit "${OURBOX_INSTALL_DEFAULTS_REVISION}" \
+  --source-version "${OURBOX_INSTALL_DEFAULTS_VERSION}" \
+  --created "${OURBOX_INSTALL_DEFAULTS_CREATED}" \
+  --artifact-metadata-json "$(printf '{"OURBOX_INSTALL_DEFAULTS_SOURCE":"%s","OURBOX_INSTALL_DEFAULTS_REVISION":"%s","OURBOX_INSTALL_DEFAULTS_VERSION":"%s","OURBOX_INSTALL_DEFAULTS_CREATED":"%s"}' "${OURBOX_INSTALL_DEFAULTS_SOURCE}" "${OURBOX_INSTALL_DEFAULTS_REVISION}" "${OURBOX_INSTALL_DEFAULTS_VERSION}" "${OURBOX_INSTALL_DEFAULTS_CREATED}")" \
+  --input-metadata-json "$(python3 - <<'PYP'
+import pathlib
+root = pathlib.Path('install-defaults/defaults')
+ids = sorted(p.stem for p in root.glob('*.env'))
+print('{\"PROFILE_COUNT\":\"%d\",\"PROFILE_IDS\":\"%s\"}' % (len(ids), ' '.join(ids)))
+PYP
+)" \
+  --dist-files-json '{"payload":"dist/install-defaults.tar.gz","meta_env":"dist/install-defaults.meta.env","push_log":"dist/install-defaults.push.log","pinned_ref":"dist/install-defaults.ref"}'

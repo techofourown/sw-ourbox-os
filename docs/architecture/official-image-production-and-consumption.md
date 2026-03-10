@@ -709,3 +709,8 @@ This keeps the system:
 - buildable by others
 - intelligible to operators
 - not dependent on a hidden internal story to make sense
+
+
+Reference contracts:
+- `docs/reference/downstream-consumer-surfaces.md`
+- `docs/reference/artifact-publish-record-contract.md`
