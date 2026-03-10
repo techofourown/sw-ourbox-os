@@ -29,7 +29,7 @@ ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 [tag]
 
 Workflow safety check:
 ```bash
-bash tools/check-workflow-safety.sh          # Run locally; also runs in CI on every PR/push
+bash tools/policy/check-workflow-safety.sh          # Run locally; also runs in CI on every PR/push
 ```
 
 ## Architecture
@@ -52,7 +52,7 @@ Image build repos (e.g., `img-ourbox-matchbox`) consume these artifacts via dige
 
 ### Workflow safety
 
-`tools/check-workflow-safety.sh` enforces:
+`tools/policy/check-workflow-safety.sh` enforces:
 1. No self-hosted workflow triggered by `pull_request`/`pull_request_target` — prevents untrusted PR code on privileged airgap builders
 2. No official publish workflow exposes `workflow_dispatch` — official publication flows only from push-to-main or tag push
 

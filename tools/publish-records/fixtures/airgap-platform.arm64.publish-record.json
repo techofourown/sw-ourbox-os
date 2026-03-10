@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "artifact_family": "airgap-platform",
+  "artifact_type": "application/vnd.techofourown.ourbox.airgap-platform.v1.tar+gzip",
+  "artifact_repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
+  "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-arm64",
+  "artifact_pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:fc445baf0258f73400e27a20f4f411ad267d8722171dff566c5aeb00f41b918c",
+  "artifact_digest": "sha256:fc445baf0258f73400e27a20f4f411ad267d8722171dff566c5aeb00f41b918c",
+  "source_repo": "https://github.com/techofourown/sw-ourbox-os",
+  "source_commit": "93e087a671428ee9e87688d039a8715abea735a7",
+  "source_version": "v0.10.1",
+  "created": "2026-03-08T14:20:00Z",
+  "artifact_metadata": {"OURBOX_AIRGAP_PLATFORM_SOURCE":"https://github.com/techofourown/sw-ourbox-os","OURBOX_AIRGAP_PLATFORM_REVISION":"93e087a671428ee9e87688d039a8715abea735a7","OURBOX_AIRGAP_PLATFORM_VERSION":"v0.10.1","OURBOX_AIRGAP_PLATFORM_CREATED":"2026-03-08T14:20:00Z","AIRGAP_PLATFORM_ARCH":"arm64"},
+  "input_metadata": {"K3S_VERSION":"v1.35.0+k3s1","OURBOX_PLATFORM_PROFILE":"demo-apps","OURBOX_PLATFORM_IMAGES_LOCK_SHA256":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"},
+  "dist_files": {"payload":"dist/airgap-platform.tar.gz","meta_env":"dist/airgap-platform.meta.env","push_log":"dist/airgap-platform.arm64.push.log","pinned_ref":"dist/airgap-platform.arm64.ref"}
+}

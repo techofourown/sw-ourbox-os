@@ -7,9 +7,9 @@ on:
       - 'docs/**'
       - 'records/**'
       - 'types/**'
-      - 'SyRS-*.md'
-      - 'SRS-*.md'
-      - 'OurBox-OS-Requirements-Omnibus.md'
+      - 'generated/requirements/SyRS-*.md'
+      - 'generated/requirements/SRS-*.md'
+      - 'generated/requirements/OurBox-OS-Requirements-Omnibus.md'
       - 'CHANGELOG.md'
       - 'README.md'
       - 'CLAUDE.md'
@@ -118,4 +118,5 @@ jobs:
           path: |
             dist/platform-contract.ref
             dist/platform-contract.push.log
+            dist/platform-contract.publish-record.json
           if-no-files-found: warn

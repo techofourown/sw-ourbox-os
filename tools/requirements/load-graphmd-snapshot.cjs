@@ -38,7 +38,7 @@ function collectDatasetFiles(rootDir, includeDirs = CANONICAL_DIRS) {
   return files;
 }
 
-function loadGraphmdSnapshot(rootDir = path.resolve(__dirname, ".."), includeDirs = CANONICAL_DIRS) {
+function loadGraphmdSnapshot(rootDir = path.resolve(__dirname, "..", ".."), includeDirs = CANONICAL_DIRS) {
   const files = collectDatasetFiles(rootDir, includeDirs);
   const snapshot = { files };
   const parsed = discoverGraphMDObjects(snapshot);

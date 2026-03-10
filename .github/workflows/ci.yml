@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check for forbidden content
-        run: bash tools/check-public-sanitization.sh
+        run: bash tools/policy/check-public-sanitization.sh
 
   workflow-safety:
     name: Workflow trust boundary check
@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check workflow trust boundaries
-        run: bash tools/check-workflow-safety.sh
+        run: bash tools/policy/check-workflow-safety.sh
 
   platform-contract:
     name: Platform contract render + lint
@@ -187,11 +187,24 @@ jobs:
       - name: Install deps (deterministic)
         run: npm ci
 
+      - name: Validate schemas
+        run: npm run validate:schemas
+
       - name: Validate dataset + build requirements artifacts
         run: npm test
 
       - name: Verify compiled spec outputs and omnibus index coverage
         run: npm run verify:spec-artifacts
+
+      - name: Fail if generated requirement outputs exist at repo root
+        run: |
+          set -euo pipefail
+          FOUND=$(find . -maxdepth 1 -type f \( -name "SRS-*.md" -o -name "SyRS-*.md" -o -name "OurBox-OS-Requirements-Omnibus.md" \) -print)
+          if [[ -n "${FOUND}" ]]; then
+            echo "Generated requirement artifacts must not exist at repo root:" >&2
+            echo "${FOUND}" >&2
+            exit 1
+          fi
 
       - name: Mint org-bot token
         id: app-token
@@ -208,7 +221,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          NEW_FILES=$(git ls-files --others --exclude-standard -- 'SRS-*.md' 'SyRS-*.md' 2>/dev/null || true)
+          NEW_FILES=$(git ls-files --others --exclude-standard -- 'generated/requirements/SRS-*.md' 'generated/requirements/SyRS-*.md' 2>/dev/null || true)
           if [ -z "$NEW_FILES" ]; then
             echo "No new compiled spec artifacts to commit."
             exit 0
@@ -220,7 +233,7 @@ jobs:
           git config user.name "semantic-release-bot"
           git config user.email "semantic-release-bot@martynus.net"
           echo "$NEW_FILES" | xargs git add --
-          git add OurBox-OS-Requirements-Omnibus.md
+          git add generated/requirements/OurBox-OS-Requirements-Omnibus.md
           git commit -m "$(printf 'chore: add compiled spec artifacts for new specs\n\nCommitted by CI for specs that did not previously exist in the\nrepository. Triggered by %s.' "${GITHUB_SHA::12}")"
           git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push origin "$BRANCH"
@@ -237,7 +250,7 @@ jobs:
         with:
           name: requirements-artifacts
           path: |
-            OurBox-OS-Requirements-Omnibus.md
+            generated/requirements/OurBox-OS-Requirements-Omnibus.md
             SyRS-*.md
             SRS-*.md
             docs/00-Glossary/Terms-and-Definitions.md

@@ -14,6 +14,8 @@ approved for official downstream image builds.
 
 The approved snapshot records:
 
+This snapshot is formally defined by `schemas/approved-upstream-inputs.schema.json`.
+
 - one approved versioned `platform-contract` ref plus digest
 - one approved versioned `airgap-platform` ref plus digest for `arm64`
 - one approved versioned `airgap-platform` ref plus digest for `amd64`
@@ -72,3 +74,8 @@ python3 tools/approved-upstream-inputs/sync_downstream_official_inputs.py \
 
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)
 - [image-build-repo-ci-setup.md](../../docs/reference/image-build-repo-ci-setup.md)
+
+
+Validation is two-stage:
+1. schema validation against `schemas/approved-upstream-inputs.schema.json`,
+2. semantic/digest/content validation in `validate.py` (digest resolution and platform marker checks).

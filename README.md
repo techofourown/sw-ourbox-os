@@ -12,6 +12,13 @@ It is called an "OS" because it behaves like a cohesive operating environment:
 
 ...but it is **not** an operating system distribution or kernel.
 
+## Repository quick map
+
+- [Downstream consumer surfaces](docs/reference/downstream-consumer-surfaces.md)
+- [Repository layout and authority](docs/reference/repository-layout-and-authority.md)
+- [Artifact publish record contract](docs/reference/artifact-publish-record-contract.md)
+- [Requirements management guide](docs/01-Requirements/Requirements-Management-Guide.md)
+
 ## Artifact distribution and trust
 
 OurBox OS uses OCI artifacts + digests as the distribution substrate for the platform contract and

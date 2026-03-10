@@ -77,3 +77,6 @@ bash ./tools/install-defaults/test-installer-selection-resolver.sh
 - [install-defaults/README.md](../../install-defaults/README.md)
 - [installer-selection-contract.md](../../docs/reference/installer-selection-contract.md)
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)
+
+
+`publish.sh` now also emits a canonical machine-readable publish record JSON in `dist/` (see `docs/reference/artifact-publish-record-contract.md`).

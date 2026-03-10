@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "artifact_family": "install-defaults",
+  "artifact_type": "application/vnd.techofourown.ourbox.install-defaults.v1.tar+gzip",
+  "artifact_repo": "ghcr.io/techofourown/sw-ourbox-os/install-defaults",
+  "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/install-defaults:edge",
+  "artifact_pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/install-defaults@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "artifact_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "source_repo": "https://github.com/techofourown/sw-ourbox-os",
+  "source_commit": "93e087a671428ee9e87688d039a8715abea735a7",
+  "source_version": "v0.10.1",
+  "created": "2026-03-08T14:10:00Z",
+  "artifact_metadata": {"OURBOX_INSTALL_DEFAULTS_SOURCE":"https://github.com/techofourown/sw-ourbox-os","OURBOX_INSTALL_DEFAULTS_REVISION":"93e087a671428ee9e87688d039a8715abea735a7","OURBOX_INSTALL_DEFAULTS_VERSION":"v0.10.1","OURBOX_INSTALL_DEFAULTS_CREATED":"2026-03-08T14:10:00Z"},
+  "input_metadata": {"PROFILE_COUNT":"3","PROFILE_IDS":"matchbox woodbox tinderbox"},
+  "dist_files": {"payload":"dist/install-defaults.tar.gz","meta_env":"dist/install-defaults.meta.env","push_log":"dist/install-defaults.push.log","pinned_ref":"dist/install-defaults.ref"}
+}

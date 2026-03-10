@@ -124,3 +124,6 @@ See also:
 
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)
 - [official-image-production-and-consumption.md](../../docs/architecture/official-image-production-and-consumption.md)
+
+
+`publish.sh` now also emits a canonical machine-readable publish record JSON in `dist/` (see `docs/reference/artifact-publish-record-contract.md`).

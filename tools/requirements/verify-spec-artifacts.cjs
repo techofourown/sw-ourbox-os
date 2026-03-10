@@ -6,7 +6,7 @@ const { loadGraphmdSnapshot, CANONICAL_DIRS } = require('./load-graphmd-snapshot
 
 function loadSnapshot() {
   const dataset = require('@graphmd/dataset');
-  const datasetRootDir = path.resolve(__dirname, '..');
+  const datasetRootDir = path.resolve(__dirname, '..', '..');
   const loadDatasetSnapshot =
     dataset.loadDatasetSnapshot ||
     dataset.loadDatasetSnapshotFromDir ||
@@ -73,7 +73,7 @@ function computeSpecFileName(specId, title) {
 }
 
 function main() {
-  const repoRoot = path.resolve(__dirname, '..');
+  const repoRoot = path.resolve(__dirname, '..', '..');
   const snapshot = loadSnapshot();
   const records = normalizeRecords(snapshot);
   const specRecords = records.filter((record) => record.typeId === 'spec');
@@ -82,7 +82,8 @@ function main() {
     throw new Error('No spec records found while verifying compiled artifacts.');
   }
 
-  const omnibusPath = path.resolve(repoRoot, 'OurBox-OS-Requirements-Omnibus.md');
+  const outputDir = path.resolve(repoRoot, 'generated', 'requirements');
+  const omnibusPath = path.resolve(outputDir, 'OurBox-OS-Requirements-Omnibus.md');
   if (!fs.existsSync(omnibusPath)) {
     throw new Error(`Missing omnibus output: ${omnibusPath}`);
   }
@@ -95,7 +96,7 @@ function main() {
     const specId = specRecord.recordId;
     const title = specRecord.fields?.title || specId;
     const fileName = computeSpecFileName(specId, title);
-    const outPath = path.resolve(repoRoot, fileName);
+    const outPath = path.resolve(outputDir, fileName);
 
     if (!fs.existsSync(outPath)) {
       missingFiles.push(fileName);
@@ -109,7 +110,7 @@ function main() {
 
   if (missingFiles.length > 0 || missingFromOmnibus.length > 0) {
     if (missingFiles.length > 0) {
-      console.error('Missing compiled spec files at repo root:');
+      console.error('Missing compiled spec files under generated/requirements:');
       for (const fileName of missingFiles) console.error(`- ${fileName}`);
     }
 

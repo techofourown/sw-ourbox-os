@@ -76,4 +76,5 @@ jobs:
           name: revalidation-airgap-${{ matrix.arch }}-${{ github.run_id }}
           path: |
             dist/airgap-platform.meta.env
+            dist/airgap-platform.${{ matrix.arch }}.publish-record.json
           if-no-files-found: warn

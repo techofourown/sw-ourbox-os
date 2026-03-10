@@ -50,4 +50,35 @@ PINNED="${REF_BASE}@${DIGEST}"
 REF_FILE="${DIST_DIR}/install-defaults.ref"
 printf '%s\n' "${PINNED}" | tee "${REF_FILE}"
 
+PROFILE_IDS="$(awk -F= '$1=="INSTALLER_ID" {print $2}' "${ROOT}/install-defaults/defaults/"*.env | tr '\n' ' ' | sed 's/ *$//')"
+PROFILE_COUNT="$(awk -F= '$1=="INSTALLER_ID" {count++} END {print count+0}' "${ROOT}/install-defaults/defaults/"*.env)"
+python3 "${ROOT}/tools/publish-records/write-publish-record.py" \
+  --output "dist/install-defaults.publish-record.json" \
+  --artifact-family "install-defaults" \
+  --artifact-type "${ARTIFACT_TYPE}" \
+  --artifact-repo "${REF_BASE}" \
+  --artifact-ref "${REF}" \
+  --artifact-pinned-ref "${PINNED}" \
+  --artifact-digest "${DIGEST}" \
+  --source-repo "https://github.com/techofourown/sw-ourbox-os" \
+  --source-commit "${OURBOX_INSTALL_DEFAULTS_REVISION}" \
+  --source-version "${OURBOX_INSTALL_DEFAULTS_VERSION}" \
+  --created "${OURBOX_INSTALL_DEFAULTS_CREATED}" \
+  --artifact-metadata-json "$(python3 - <<'META'
+import json, os
+print(json.dumps({
+  'OURBOX_INSTALL_DEFAULTS_SOURCE': os.environ['OURBOX_INSTALL_DEFAULTS_SOURCE'],
+  'OURBOX_INSTALL_DEFAULTS_REVISION': os.environ['OURBOX_INSTALL_DEFAULTS_REVISION'],
+  'OURBOX_INSTALL_DEFAULTS_VERSION': os.environ['OURBOX_INSTALL_DEFAULTS_VERSION'],
+  'OURBOX_INSTALL_DEFAULTS_CREATED': os.environ['OURBOX_INSTALL_DEFAULTS_CREATED'],
+}))
+META
+)" \
+  --input-metadata-json "$(python3 - <<META
+import json, os
+print(json.dumps({'PROFILE_COUNT': os.environ['PROFILE_COUNT'], 'PROFILE_IDS': os.environ['PROFILE_IDS']}))
+META
+)" \
+  --dist-files-json '{"payload":"dist/install-defaults.tar.gz","meta_env":"dist/install-defaults.meta.env","push_log":"dist/install-defaults.push.log","pinned_ref":"dist/install-defaults.ref"}'
+
 log "Pinned ref: ${PINNED}"

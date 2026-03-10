@@ -13,6 +13,8 @@
 - [`docs/decisions/ADR-0012-centralize-installer-selection-contract-above-the-hardware-seam.md`](../decisions/ADR-0012-centralize-installer-selection-contract-above-the-hardware-seam.md)
 - [`docs/reference/target-integration-contract.md`](../reference/target-integration-contract.md)
 - [`docs/reference/installer-selection-contract.md`](../reference/installer-selection-contract.md)
+- [`docs/reference/artifact-publish-record-contract.md`](../reference/artifact-publish-record-contract.md)
+- [`docs/reference/downstream-consumer-surfaces.md`](../reference/downstream-consumer-surfaces.md)
 - `org-techofourown/docs/decisions/ADR-0007-adopt-oci-artifacts-for-app-distribution.md`
 - `org-techofourown/docs/rfcs/RFC-0001-oci-artifacts-trust-and-attestations.md`
 - `org-techofourown/docs/decisions/ADR-0008-adopt-organization-controlled-build-infrastructure-for-heavy-artifacts.md`

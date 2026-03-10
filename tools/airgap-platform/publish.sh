@@ -59,4 +59,27 @@ REF_FILE="${DIST_DIR}/airgap-platform.${ARCH}.ref"
 printf '%s
 ' "${PINNED}" | tee "${REF_FILE}"
 
+# shellcheck disable=SC1090
+source "${ROOT}/tools/airgap-platform/versions.env"
+IMAGES_LOCK_SHA256="$(tar -xOf "${DIST_DIR}/airgap-platform.tar.gz" platform/images.lock.json | sha256sum | awk '{print $1}')"
+python3 "${ROOT}/tools/publish-records/write-publish-record.py"   --output "dist/airgap-platform.${ARCH}.publish-record.json"   --artifact-family "airgap-platform"   --artifact-type "${ARTIFACT_TYPE}"   --artifact-repo "${REF_BASE}"   --artifact-ref "${REF}"   --artifact-pinned-ref "${PINNED}"   --artifact-digest "${DIGEST}"   --source-repo "https://github.com/techofourown/sw-ourbox-os"   --source-commit "${OURBOX_AIRGAP_PLATFORM_REVISION}"   --source-version "${OURBOX_AIRGAP_PLATFORM_VERSION}"   --created "${OURBOX_AIRGAP_PLATFORM_CREATED}"   --artifact-metadata-json "$(python3 - <<'META'
+import json, os
+print(json.dumps({
+  'OURBOX_AIRGAP_PLATFORM_SOURCE': os.environ['OURBOX_AIRGAP_PLATFORM_SOURCE'],
+  'OURBOX_AIRGAP_PLATFORM_REVISION': os.environ['OURBOX_AIRGAP_PLATFORM_REVISION'],
+  'OURBOX_AIRGAP_PLATFORM_VERSION': os.environ['OURBOX_AIRGAP_PLATFORM_VERSION'],
+  'OURBOX_AIRGAP_PLATFORM_CREATED': os.environ['OURBOX_AIRGAP_PLATFORM_CREATED'],
+  'AIRGAP_PLATFORM_ARCH': os.environ['ARCH'],
+}))
+META
+)"   --input-metadata-json "$(python3 - <<META
+import json, os
+print(json.dumps({'K3S_VERSION': os.environ['K3S_VERSION'], 'OURBOX_PLATFORM_PROFILE': 'demo-apps', 'OURBOX_PLATFORM_IMAGES_LOCK_SHA256': os.environ['IMAGES_LOCK_SHA256']}))
+META
+)"   --dist-files-json "$(python3 - <<META
+import json, os
+print(json.dumps({'payload': 'dist/airgap-platform.tar.gz', 'meta_env': 'dist/airgap-platform.meta.env', 'push_log': f'dist/airgap-platform.{os.environ["ARCH"]}.push.log', 'pinned_ref': f'dist/airgap-platform.{os.environ["ARCH"]}.ref'}))
+META
+)"
+
 log "Pinned ref: ${PINNED}"

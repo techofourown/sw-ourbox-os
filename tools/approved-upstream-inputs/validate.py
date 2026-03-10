@@ -6,6 +6,11 @@ import subprocess
 import tarfile
 import tempfile
 from pathlib import Path
+import sys
+
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / 'tools' / 'policy'))
+from json_schema_validate import validate_instance
 
 
 def run(cmd: list[str], *, capture: bool = False) -> str:
@@ -106,8 +111,11 @@ def main() -> int:
     approved_inputs_path = Path(args.approved_inputs).resolve()
     snapshot = json.loads(approved_inputs_path.read_text(encoding="utf-8"))
 
-    if snapshot.get("schema") != 1:
-        raise SystemExit("approved-upstream-inputs.json schema must be 1")
+    schema_path = ROOT / "schemas" / "approved-upstream-inputs.schema.json"
+    schema = json.loads(schema_path.read_text(encoding="utf-8"))
+    schema_errors = validate_instance(snapshot, schema)
+    if schema_errors:
+        raise SystemExit("approved-upstream-inputs schema validation failed:\n" + "\n".join(f"- {e}" for e in schema_errors))
     if not str(snapshot.get("approved_release_tag", "")).startswith("v"):
         raise SystemExit("approved_release_tag must be a version tag such as v0.10.1")
 

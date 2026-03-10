@@ -122,7 +122,7 @@ records/**
 types/**
 SyRS-*.md
 SRS-*.md
-OurBox-OS-Requirements-Omnibus.md
+generated/requirements/OurBox-OS-Requirements-Omnibus.md
 CHANGELOG.md
 README.md
 CLAUDE.md
@@ -222,3 +222,6 @@ commit SHA.
 - [Artifact Distribution and Integration Contract](./architecture/artifact-distribution-and-integration.md)
 - `release/REVALIDATION_TRIGGER` — documented republish escape hatch
 - `release/approved-upstream-inputs.json` — single approved upstream snapshot for downstream image repos
+
+
+Each upstream publish flow also emits a canonical machine-readable JSON publish record in `dist/` (`platform-contract.publish-record.json`, `install-defaults.publish-record.json`, `airgap-platform.<arch>.publish-record.json`) alongside `.meta.env`, `.ref`, and `.push.log` compatibility files.

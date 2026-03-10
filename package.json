@@ -8,10 +8,12 @@
     "node": ">=20"
   },
   "scripts": {
-    "validate:dataset": "node tools/validate-dataset.cjs",
-    "build:specs": "node tools/compile-all-specs.cjs",
-    "test": "npm run validate:dataset && npm run build:specs",
-    "verify:spec-artifacts": "node tools/verify-spec-artifacts.cjs"
+    "validate:dataset": "node tools/requirements/validate-dataset.cjs",
+    "build:specs": "node tools/requirements/compile-all-specs.cjs",
+    "test": "npm run validate",
+    "verify:spec-artifacts": "node tools/requirements/verify-spec-artifacts.cjs",
+    "validate:schemas": "python3 tools/policy/validate-schemas.py",
+    "validate": "npm run validate:dataset && npm run validate:schemas && npm run build:specs && npm run verify:spec-artifacts"
   },
   "devDependencies": {
     "@graphmd/dataset": "<1.0.0",

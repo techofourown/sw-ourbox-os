@@ -2,5 +2,10 @@
 node_modules/
 npm-debug.log*
 .DS_Store
-# Generated requirements artifacts (built from GraphMD records)
+
+# Generated requirements artifacts
+
+# generated build outputs
+/dist/
+!.gitkeep
 .root/

@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "artifact_family": "platform-contract",
+  "artifact_type": "application/vnd.techofourown.ourbox.platform-contract.v1.tar+gzip",
+  "artifact_repo": "ghcr.io/techofourown/sw-ourbox-os/platform-contract",
+  "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge",
+  "artifact_pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157",
+  "artifact_digest": "sha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157",
+  "source_repo": "https://github.com/techofourown/sw-ourbox-os",
+  "source_commit": "93e087a671428ee9e87688d039a8715abea735a7",
+  "source_version": "v0.10.1",
+  "created": "2026-03-08T14:00:05Z",
+  "artifact_metadata": {"OURBOX_PLATFORM_CONTRACT_SOURCE":"https://github.com/techofourown/sw-ourbox-os","OURBOX_PLATFORM_CONTRACT_REVISION":"93e087a671428ee9e87688d039a8715abea735a7","OURBOX_PLATFORM_CONTRACT_VERSION":"v0.10.1","OURBOX_PLATFORM_CONTRACT_CREATED":"2026-03-08T14:00:05Z"},
+  "input_metadata": {"PROFILE_DEFAULT":"demo-apps"},
+  "dist_files": {"payload":"dist/platform-contract.tar.gz","meta_env":"dist/platform-contract.meta.env","push_log":"dist/platform-contract.push.log","pinned_ref":"dist/platform-contract.ref"}
+}

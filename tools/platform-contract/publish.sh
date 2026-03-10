@@ -52,6 +52,31 @@ fi
 PINNED="ghcr.io/techofourown/sw-ourbox-os/platform-contract@${DIGEST}"
 printf '%s\n' "${PINNED}" | tee "${DIST_DIR}/platform-contract.ref"
 
+python3 "${ROOT}/tools/publish-records/write-publish-record.py" \
+  --output "dist/platform-contract.publish-record.json" \
+  --artifact-family "platform-contract" \
+  --artifact-type "${ARTIFACT_TYPE}" \
+  --artifact-repo "ghcr.io/techofourown/sw-ourbox-os/platform-contract" \
+  --artifact-ref "${REF}" \
+  --artifact-pinned-ref "${PINNED}" \
+  --artifact-digest "${DIGEST}" \
+  --source-repo "https://github.com/techofourown/sw-ourbox-os" \
+  --source-commit "${OURBOX_PLATFORM_CONTRACT_REVISION}" \
+  --source-version "${OURBOX_PLATFORM_CONTRACT_VERSION}" \
+  --created "${OURBOX_PLATFORM_CONTRACT_CREATED}" \
+  --artifact-metadata-json "$(python3 - <<'PY'
+import json, os
+print(json.dumps({
+  'OURBOX_PLATFORM_CONTRACT_SOURCE': os.environ['OURBOX_PLATFORM_CONTRACT_SOURCE'],
+  'OURBOX_PLATFORM_CONTRACT_REVISION': os.environ['OURBOX_PLATFORM_CONTRACT_REVISION'],
+  'OURBOX_PLATFORM_CONTRACT_VERSION': os.environ['OURBOX_PLATFORM_CONTRACT_VERSION'],
+  'OURBOX_PLATFORM_CONTRACT_CREATED': os.environ['OURBOX_PLATFORM_CONTRACT_CREATED'],
+}))
+PY
+)" \
+  --input-metadata-json '{"PROFILE_DEFAULT":"demo-apps"}' \
+  --dist-files-json '{"payload":"dist/platform-contract.tar.gz","meta_env":"dist/platform-contract.meta.env","push_log":"dist/platform-contract.push.log","pinned_ref":"dist/platform-contract.ref"}'
+
 echo ""
 echo "Pinned ref:"
 echo "  ${PINNED}"
