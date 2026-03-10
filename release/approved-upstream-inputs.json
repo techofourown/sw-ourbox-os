@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "source_repo": "https://github.com/techofourown/sw-ourbox-os",
-  "approved_release_tag": "v0.10.1",
+  "approved_release_tag": "fixture-not-a-version-tag",
   "platform_contract": {
     "versioned_ref": "ghcr.io/techofourown/sw-ourbox-os/platform-contract:v0.10.1",
     "pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157",
