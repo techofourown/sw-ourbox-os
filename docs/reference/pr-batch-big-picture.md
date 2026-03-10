@@ -139,6 +139,7 @@ Example:
 
 Each per-PR file includes:
 
+- explicit PR number metadata
 - PR metadata
 - diff against the chosen base branch
 - status checks
@@ -163,6 +164,7 @@ Important behavior:
 
 - it uses the full changed-path set, not just included diff paths
 - deleted or excluded files still appear here if they exist on the base branch
+- each touched file records which PR numbers introduced it into the compilation
 
 ### 7.5 Round-robin comparisons
 

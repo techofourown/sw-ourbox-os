@@ -162,6 +162,7 @@ class PrBatchBigPictureTests(unittest.TestCase):
 
         self.assertIn("# Excluded file list: package-lock.json", text)
         self.assertIn("# All changed files for this PR were excluded from diff output.", text)
+        self.assertIn("# PR Number: 123", text)
         self.assertIn("(review, state=APPROVED)", text)
         self.assertIn("(no content)", text)
 
@@ -170,6 +171,7 @@ class PrBatchBigPictureTests(unittest.TestCase):
             output_file = str(Path(tmpdir) / "touched.txt")
             ok = MODULE.create_touched_files_compilation(
                 touched_files={"package-lock.json"},
+                touched_file_prs={"package-lock.json": {78}},
                 base_branch="HEAD",
                 selection_requested="78",
                 selection_canonical="78",
@@ -182,6 +184,7 @@ class PrBatchBigPictureTests(unittest.TestCase):
 
         self.assertIn("# File: package-lock.json", text)
         self.assertIn("# Includes all changed paths from the selected PRs", text)
+        self.assertIn("# Touched by PRs: 78", text)
 
     def test_create_round_robin_comparisons_skips_excluded_only_pairs(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
