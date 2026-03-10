@@ -170,13 +170,27 @@ Stable identifier for a tenant.
 
 Constraints (normative):
 - SHALL be lowercase.
-- SHALL be safe for use in DNS labels (tenant subdomains).
+- SHALL be safe for use in DNS labels.
+- SHALL be safe for use as the leftmost DNS label of a tenant host.
 - SHALL be safe for use in CouchDB database names.
 
 Examples: `bob`, `alice`, `family`, `roommates-2026`
 
+### tenant host
+The full host used to address a tenant.
+
+Supported tenant-host patterns:
+- local-only mode: `<tenant_id>.local`
+- public custom-domain mode: `<tenant_id>.<box-host>`
+
+### local landing host
+A reserved non-tenant local host used for setup/admin entry flows.
+
+Recommended example:
+- `ourbox.local`
+
 ### Tenant origin
-A tenant-scoped browser origin derived from hostname.
+A tenant-scoped browser origin derived from tenant host/full host.
 
 Supported patterns by mode:
 - local-only mode: `http://<tenant_id>.local/...`
@@ -414,9 +428,14 @@ An implementation-chosen filesystem directory or object-store prefix that serves
 A web application that can be installed and can provide offline capability using web platform features
 (e.g., service worker, Cache Storage, IndexedDB).
 
+In OurBox architecture, public custom-domain mode is the full installable-PWA posture.
+Local-only mode is HTTP-only and does not guarantee equivalent installability or reopen-offline behavior.
+
 ### service worker
 A background script registered by a web app that can intercept network requests and manage offline
 caches for an origin/scope.
+
+Service-worker-backed full PWA behavior is tied to public custom-domain mode.
 
 ### IndexedDB
 The browser storage API used by PouchDB for local persistence.
@@ -429,7 +448,7 @@ The browser storage API used by PouchDB for local persistence.
 The front door for HTTP(S) traffic to the box, responsible for:
 - routing (host + path)
 - authentication and authorization enforcement
-- deriving tenant context from hostname
+- deriving tenant context from the full host (leftmost DNS label = `tenant_id`)
 - presenting stable endpoints for apps and replication
 - injecting validated identity context to internal services
 

@@ -233,7 +233,7 @@ have identical:
 - installability,
 - or reopen-offline behavior.
 
-Those differences are explicitly analyzed in RFC-0002 and will later be reflected in architecture and requirements updates.
+Those differences are explicitly analyzed in RFC-0002 and are reflected across architecture, glossary, and requirements artifacts.
 
 ## Rationale
 
@@ -301,7 +301,7 @@ That simplicity is more important than solving the rare multi-box-per-link home-
 - Local-only mode may trigger browser insecure-transport UI indicators.
 - Local-only mode accepts local hostname collision risk.
 - Multiple OurBoxes on the same local link are not a supported zero-preparation local-only scenario in v0.
-- Existing architecture and requirements docs that assume only `https://<tenant_id>.<box-host>/...` will need revision.
+- Repository architecture and requirements artifacts use this mode-aware model as the documentation norm.
 
 ### Mitigation
 - Document the behavioral differences explicitly (RFC-0002).
@@ -310,7 +310,7 @@ That simplicity is more important than solving the rare multi-box-per-link home-
   - the leftmost DNS label identifies `tenant_id`
   - the path identifies app
 - Reserve a product local landing host (recommended: `ourbox.local`) for setup/admin entry flows.
-- Update AD-0001, ADR-0001, the Glossary, SyRS-0001, and Gateway/app requirements after the RFC is reviewed.
+- Keep AD-0001, ADRs, glossary, and requirements artifacts aligned to this mode-aware model.
 - Make local-name collisions a visible operational/UX concern rather than hiding them behind a vendor box identifier.
 - Be explicit in docs and UI that local-only mode is HTTP-only and not the same transport/security posture as public HTTPS mode.
 

@@ -36,15 +36,14 @@ Out of scope:
 
 Allocated requirements are included here for traceability; identity- and membership-specific requirements follow.
 
-### GW-001: Gateway SHALL derive tenant context from hostname
+### GW-001: Gateway SHALL derive tenant context from the full host
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
 **Rationale:** Tenant origins are the canonical boundary.
 
-The gateway SHALL derive `tenant_id` from the request hostname and treat it as the authoritative
-tenant context.
+The gateway SHALL derive `tenant_id` from the leftmost DNS label of the request full host and treat it as the authoritative tenant context.
 
 ### GW-002: Gateway SHALL enforce tenant membership
 
@@ -53,17 +52,17 @@ tenant context.
 **Area:** gateway  
 **Rationale:** Ensures user access is scoped to the tenant origin.
 
-The gateway SHALL enforce that authenticated users are members of the tenant implied by the hostname
+The gateway SHALL enforce that authenticated users are members of the tenant implied by the full host
 before allowing access to tenant-scoped services.
 
-### GW-009: Gateway SHALL treat hostname-derived tenant context as authoritative
+### GW-009: Gateway SHALL treat full-host-derived tenant context as authoritative
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
-**Rationale:** Prevent tenant confusion and parameter spoofing when hostname is present.
+**Rationale:** Prevent tenant confusion and parameter spoofing when full host is present.
 
-When hostname is present, `tenant_id` SHALL be derived from the request hostname and SHALL NOT be accepted from untrusted client parameters as the primary authority.
+When full host is present, `tenant_id` SHALL be derived from the leftmost DNS label of the request full host and SHALL NOT be accepted from untrusted client parameters as the primary authority.
 
 **Trace:** [[arch_doc:AD-0001]] §6.2
 
@@ -84,7 +83,7 @@ Within an OurBox instance, `user_id` SHALL be unique.
 
 **Trace:** `docs/00-Glossary/Terms-and-Definitions.md` (user_id)
 
-### ID-002: tenant_id SHALL satisfy hostname and CouchDB naming constraints
+### ID-002: tenant_id SHALL satisfy tenant-host DNS-label and CouchDB naming constraints
 
 **Status:** Draft  
 **Testable:** true  
@@ -93,7 +92,7 @@ Within an OurBox instance, `user_id` SHALL be unique.
 
 `tenant_id` SHALL be lowercase.
 
-`tenant_id` SHALL be safe for use in DNS labels (tenant subdomains).
+`tenant_id` SHALL be safe for use in DNS labels and as the leftmost DNS label of a tenant host.
 
 `tenant_id` SHALL be safe for use in CouchDB database names.
 
@@ -119,7 +118,7 @@ Within an OurBox instance, `user_id` SHALL be unique.
 
 Authorization SHALL consider:
 - authenticated user identity (`user_id`)
-- tenant derived from hostname (`tenant_id`)
+- tenant derived from the full host (`tenant_id` from leftmost DNS label)
 - membership and roles/capabilities within that tenant
 - any doc-kind-specific rules where applicable
 

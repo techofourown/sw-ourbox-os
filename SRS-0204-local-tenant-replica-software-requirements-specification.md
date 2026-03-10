@@ -17,7 +17,7 @@ This SRS defines requirements for the **local tenant replica** on client devices
 Key posture (already established in architecture):
 - many client devices may exist per tenant
 - connectivity may be intermittent; sync is opportunistic
-- storage isolation is by tenant origin (`https://<tenant_id>.<box-host>`)
+- storage isolation is by tenant origin (`http://<tenant_id>.local` or `https://<tenant_id>.<box-host>`)
 
 Out of scope:
 - on-box CouchDB service requirements (see `[[spec:SRS-0202]]`)
@@ -103,11 +103,11 @@ Within a tenant origin, the local tenant replica SHALL use the stable PouchDB da
 
 The local tenant replica interacts with:
 - browser storage via IndexedDB (through PouchDB)
-- replication endpoints on the tenant origin (presented by the Gateway)
+- same-origin replication endpoints presented by the gateway:
+  - `http://<tenant_id>.local/db`
+  - `https://<tenant_id>.<box-host>/db`
 
-Concrete replication configuration (credentials/session mechanics and any required request metadata) is defined by the deployed Gateway
-and identity implementation, and is verified by automated integration tests. This SRS specifies stable invariants (tenant origin,
-`tenant_local`, whole-DB replication posture) rather than wire-format details.
+For the same tenant on the same browser profile, local-only and public custom-domain origins are different origins and therefore different local tenant replicas.
 
 ## Verification
 

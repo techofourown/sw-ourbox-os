@@ -115,7 +115,18 @@ Suggested summary fields:
   - [ ] bootstrap status,
   - [ ] persistent data state.
 
-## 9. Commonality vs divergence
+## 9. Access modes
+
+- [ ] Local-only mode support documented.
+- [ ] Local-only mode host grammar documented (`<tenant_id>.local`).
+- [ ] Local-only mode HTTP-only posture documented.
+- [ ] Local landing host documented if present (`ourbox.local`).
+- [ ] Public custom-domain mode support documented.
+- [ ] Public custom-domain host grammar documented (`<tenant_id>.<box-host>`).
+- [ ] Public DNS/external routing prerequisites documented.
+- [ ] Target-specific access-mode limitations documented.
+
+## 10. Commonality vs divergence
 
 Fill this out explicitly.
 
@@ -147,14 +158,14 @@ For each divergence, answer:
 - what is the support implication?
 - what common seam remains unchanged above it?
 
-## 10. Support matrix and limits
+## 11. Support matrix and limits
 
 - [ ] Supported models / SKUs are named explicitly.
 - [ ] Unsupported variants are named explicitly.
 - [ ] Required host-side tooling or flashing prerequisites are documented.
 - [ ] The proposal avoids vague "maybe works" language for hardware support.
 
-## 11. Conformance and validation plan
+## 12. Conformance and validation plan
 
 - [ ] There is a plan to validate platform baseline application on the target.
 - [ ] There is a plan to validate persistent data behavior.
@@ -162,7 +173,7 @@ For each divergence, answer:
 - [ ] There is a plan to validate provenance recording.
 - [ ] The target's support claims match the actual validation plan.
 
-## 12. Required docs to create or update
+## 13. Required docs to create or update
 
 For a new target, the following docs should normally exist:
 
@@ -177,7 +188,7 @@ Central docs that may need updating:
 - [ ] install-defaults or artifact-distribution docs
 - [ ] glossary terms if new vocabulary was introduced
 
-## 13. Decision checkpoint
+## 14. Decision checkpoint
 
 Before green-lighting the target, reviewers should be able to answer:
 

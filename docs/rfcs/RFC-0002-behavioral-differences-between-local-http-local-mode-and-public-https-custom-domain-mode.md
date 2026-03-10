@@ -43,54 +43,23 @@ In particular, this RFC focuses on the difference between:
 - **local data continuity** via PouchDB/IndexedDB and same-origin app routing, and
 - **full service-worker-backed PWA/offline behavior**.
 
-This RFC is intentionally written **before** requirements changes so the project can decide how to talk about these modes honestly and consistently.
+This RFC is the behavioral reference for distinguishing the two permanent access modes in product, architecture, and requirements language.
 
 ---
 
 ## Why
 
-AD-0001 and ADR-0001 currently assume a shipped-app posture centered on:
+OurBox supports two first-class tenant access modes with shared routing semantics but different browser/runtime behavior:
 
-- HTTPS tenant origins,
-- service-worker-backed offline asset caching,
-- installable PWAs,
-- and offline usability after first successful load.
+- local-only mode (`http://<tenant_id>.local/...`) for zero-preparation LAN access,
+- public custom-domain mode (`https://<tenant_id>.<box-host>/...`) for HTTPS secure-context access.
 
-That posture remains correct for the public custom-domain mode.
+This RFC documents the practical behavior split so product, UI, requirements, and verification stay explicit about:
 
-However, the newly adopted local-only mode deliberately trades away some of that environment in exchange for zero-preparation LAN usability:
-
-- no domain registration,
-- no public DNS,
-- no router setup,
-- no port forwarding,
-- no local CA installation,
-- and no trusted internal-only HTTPS requirement.
-
-Local-only mode is intentionally **HTTP-only**.
-
-That means local-only mode is not just “the same thing on a private network.” It has real implications:
-
-- no TLS transport authentication,
-- no TLS transport confidentiality/integrity,
-- browser insecure-transport UI indicators may appear,
-- secure-context browser features are not automatically available,
-- and some auth/session designs that assume HTTPS may need mode-specific handling.
-
-Without documenting those differences, the project risks:
-
-1. claiming stronger local-mode offline behavior than browsers will actually provide,
-2. silently diverging from ADR-0001 and AD-0001,
-3. understating the transport/security difference between HTTP local mode and HTTPS public mode,
-4. and writing requirements that incorrectly assume local HTTP `.local` mode and public HTTPS mode behave the same.
-
-This RFC therefore separates:
-
-- what is **common** across the two modes,
-- what is **stronger** in public HTTPS mode,
-- and what is **weaker or different** in local HTTP `.local` mode.
-
----
+- HTTP-only transport implications in local-only mode,
+- HTTPS/TLS and secure-context posture in public custom-domain mode,
+- shared tenant-host/path routing invariants,
+- and mode-scoped offline/PWA expectations.
 
 ## How
 
@@ -611,20 +580,9 @@ The product should also avoid implying that HTTP local mode provides HTTPS-like 
 
 ## Next Steps
 
-1. Accept ADR-0014 as the access-mode decision.
-2. Review this RFC against current browser/platform behavior.
-3. Update architecture docs to distinguish:
-   - local-only mode, and
-   - public custom-domain mode.
-4. Update ADR-0001 and AD-0001 so they no longer imply one universal HTTPS-only access story for every mode.
-5. Add explicit requirements later for:
-   - local-only URL grammar,
-   - public custom-domain URL grammar,
-   - full-host / `box-host` terminology,
-   - same-origin `/db` behavior in both modes,
-   - HTTP-only local transport posture,
-   - browser/UI/security implications of local HTTP mode,
-   - and origin-change/migration expectations between the modes.
+1. Complete browser matrix validation for local-only mode behavior and UI indicators.
+2. Finalize local-mode auth/session posture decisions.
+3. Refine and allocate any remaining mode-specific requirements where verification scope is still open.
 
 ---
 

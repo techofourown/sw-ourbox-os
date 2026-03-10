@@ -10,5 +10,6 @@ fields:
     - "req:K8S-001"
     - "req:K8S-002"
     - "req:K8S-003"
+    - "req:K8S-010"
 ---
 Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; k3s-platform-specific requirements follow.

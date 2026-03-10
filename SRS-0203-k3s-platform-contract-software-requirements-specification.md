@@ -53,15 +53,14 @@ Allocated system requirements from `[[spec:SyRS-0001]]` are included here for tr
 Kubernetes namespaces SHALL be used for operational grouping and SHALL NOT be treated as the primary
 tenant isolation boundary.
 
-### K8S-002: Gateway ingress SHALL support wildcard tenant hosts
+### K8S-002: Gateway ingress SHALL support public custom-domain wildcard tenant hosts
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** k8s  
-**Rationale:** Tenant origins rely on hostname routing.
+**Rationale:** Public custom-domain tenant hosts rely on wildcard routing.
 
-Ingress configuration SHALL support wildcard host routing for `*.<box-host>` to enable tenant
-subdomains.
+Ingress configuration for public custom-domain mode SHALL support wildcard host routing for `*.<box-host>`.
 
 ### K8S-003: Shipped app workloads SHOULD use dedicated namespaces
 
@@ -72,6 +71,17 @@ subdomains.
 
 Shipped app workload bundles SHOULD run in their own Kubernetes namespaces to simplify operations
 and isolation from platform services.
+
+### K8S-010: Gateway routing SHALL support local-only tenant hosts over HTTP
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** k8s  
+**Rationale:** Local-only mode requires explicit HTTP host routing for tenant hosts.
+
+Gateway routing configuration SHALL support local-only tenant hosts `<tenant_id>.local` over HTTP.
+
+Gateway routing MAY also expose a reserved local landing host such as `ourbox.local`.
 
 ### K8S-004: OurBox OS SHALL use k3s as the Kubernetes distribution
 

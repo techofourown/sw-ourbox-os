@@ -1,6 +1,5 @@
 # OurBox OS Requirements Omnibus
 
-**Source:** cc0e25ad7ecc
 
 ## Included Specifications
 - SyRS-0001-ourbox-os-system-requirements-specification.md (source: spec:SyRS-0001)
@@ -114,16 +113,51 @@ A single physical/logical OurBox device running OurBox OS.
 ### OurBox OS
 The operating system + platform services shipped on an OurBox instance.
 
+### full host
+The entire host portion of a URL before any port and before the path.
+
+Examples:
+- full host: `bob.local`
+- full host: `bob.box.example.com`
+
 ### box-host
-The base host name used to address an OurBox instance on a network.
+In **public custom-domain mode**, `box-host` is the base host suffix after the tenant label in a full host.
 
-Examples (informative):
-- local network name: `ourbox.local` (mDNS-style)
-- user-chosen home DNS name: `ourbox.home`
-- user-chosen public DNS name: `box.example.com`
+Pattern:
+- full host: `<tenant_id>.<box-host>`
 
-OurBox may be deployed on a LAN only or exposed via port forwarding / reverse proxy. This document
-does not mandate a deployment posture; it standardizes how names are used.
+Examples:
+- full host: `bob.bobsdomain.com`
+  - `tenant_id = bob`
+  - `box-host = bobsdomain.com`
+- full host: `alice.box.example.com`
+  - `tenant_id = alice`
+  - `box-host = box.example.com`
+
+In local-only mode, tenant hosts are `<tenant_id>.local`; there is no separate public `box-host` suffix in that local tenant-host grammar.
+
+### Local-only mode
+The zero-preparation joined-LAN mode for tenant app access.
+
+Pattern:
+- `http://<tenant_id>.local/<app_slug>`
+
+Characteristics (normative intent):
+- local-only mode is HTTP-only,
+- does not require public DNS registration,
+- does not require port forwarding,
+- and does not require local CA installation.
+
+### Public custom-domain mode
+The user-configured internet-facing mode for tenant app access.
+
+Pattern:
+- `https://<tenant_id>.<box-host>/<app_slug>`
+
+Characteristics (normative intent):
+- HTTPS/TLS mode,
+- user controls the public DNS base host,
+- and external routing is operator-managed.
 
 ### origin
 A web security boundary defined by `(scheme, host, port)`. Origins isolate:
@@ -156,15 +190,36 @@ Stable identifier for a tenant.
 
 Constraints (normative):
 - SHALL be lowercase.
-- SHALL be safe for use in DNS labels (tenant subdomains).
+- SHALL be safe for use in DNS labels.
+- SHALL be safe for use as the leftmost DNS label of a tenant host.
 - SHALL be safe for use in CouchDB database names.
 
 Examples: `bob`, `alice`, `family`, `roommates-2026`
 
-### Tenant origin
-A tenant-scoped browser origin derived from hostname:
+### tenant host
+The full host used to address a tenant.
 
-- `https://<tenant_id>.<box-host>/...`
+Supported tenant-host patterns:
+- local-only mode: `<tenant_id>.local`
+- public custom-domain mode: `<tenant_id>.<box-host>`
+
+### local landing host
+A reserved non-tenant local host used for setup/admin entry flows.
+
+Recommended example:
+- `ourbox.local`
+
+### Tenant origin
+A tenant-scoped browser origin derived from tenant host/full host.
+
+Supported patterns by mode:
+- local-only mode: `http://<tenant_id>.local/...`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/...`
+
+Across both modes:
+- the full host carries tenant context,
+- `tenant_id` is derived from the leftmost DNS label of the full host,
+- and the path identifies app context.
 
 Tenant origins are distinct web origins and therefore isolate:
 - IndexedDB (PouchDB storage)
@@ -393,9 +448,14 @@ An implementation-chosen filesystem directory or object-store prefix that serves
 A web application that can be installed and can provide offline capability using web platform features
 (e.g., service worker, Cache Storage, IndexedDB).
 
+In OurBox architecture, public custom-domain mode is the full installable-PWA posture.
+Local-only mode is HTTP-only and does not guarantee equivalent installability or reopen-offline behavior.
+
 ### service worker
 A background script registered by a web app that can intercept network requests and manage offline
 caches for an origin/scope.
+
+Service-worker-backed full PWA behavior is tied to public custom-domain mode.
 
 ### IndexedDB
 The browser storage API used by PouchDB for local persistence.
@@ -408,7 +468,7 @@ The browser storage API used by PouchDB for local persistence.
 The front door for HTTP(S) traffic to the box, responsible for:
 - routing (host + path)
 - authentication and authorization enforcement
-- deriving tenant context from hostname
+- deriving tenant context from the full host (leftmost DNS label = `tenant_id`)
 - presenting stable endpoints for apps and replication
 - injecting validated identity context to internal services
 
@@ -661,6 +721,7 @@ Draft (normative unless explicitly marked "informative")
 - ADR-0007: Run CouchDB as a k3s Workload (Not a Host Service)
 - ADR-0008: Deployment Baseline as the Platform Integration Contract
 - ADR-0011: Separate Hardware Enablement from the Platform Contract
+- ADR-0014: Adopt Two Access Modes (Local-only HTTP and Public Custom-Domain HTTPS)
 
 ## Terminology
 - `docs/00-Glossary/Terms-and-Definitions.md` is normative for vocabulary.
@@ -692,7 +753,10 @@ hardware enablement mechanics below that boundary.
 It does not specify UI flows or user-facing terminology.
 
 ### 1.3 Architectural constraints (from ADRs)
-- Shipped apps SHALL be offline-first PWAs (ADR-0001).
+- Shipped apps SHALL be offline-first browser apps with mode-aware behavior promises (ADR-0001, ADR-0014).
+- Local-only mode tenant access SHALL be HTTP-only (`http://<tenant_id>.local/...`) and SHALL NOT be documented as equivalent to HTTPS/TLS mode (ADR-0014).
+- Public custom-domain mode tenant access SHALL be HTTPS/TLS (`https://<tenant_id>.<box-host>/...`) and carries the full secure-context/installable-PWA posture (ADR-0014).
+- Tenant origins SHALL be supported in both access modes; tenant context SHALL be derived from the full host and `tenant_id` from its leftmost DNS label (ADR-0003, ADR-0014).
 - CouchDB on the box and PouchDB in the browser SHALL be the primary data store stack for shipped apps (ADR-0002).
 - Tenant SHALL be the canonical top-level data boundary term (ADR-0003).
 - Kubernetes "namespace" is reserved for Kubernetes; it SHALL NOT be used as a synonym for tenant (ADR-0003).
@@ -733,26 +797,26 @@ product behavior correct and understandable.
 
 ### 3.2 Context diagram (informative)
 
-+----------------------+ HTTPS +-------------------------------+
-| Browser (PWA) | <----------------> | Gateway (Ingress/Auth/Router) |
-| - tenant origin | | - tenant routing by hostname |
-| - local tenant | | - membership enforcement |
-| replica (PouchDB) | | - stable endpoints |
-+----------+-----------+ +-----------+-------------------+
-| |
-| replication (tenant DB) | internal
-v v
-+----------------------+ +--------------------------+
-| CouchDB | | Platform Services |
-| - tenant DBs | | - APIs/workflows |
-| - partitioned DBs | | - authz, invariants |
-+----------------------+ +--------------------------+
-|
-v
++----------------------+ HTTP(S) +-------------------------------+
+| Browser (PWA/web)    | <----------------> | Gateway (Ingress/Auth/Router) |
+| - tenant origin      |                    | - tenant routing by full host |
+| - local tenant       |                    | - membership enforcement       |
+|   replica (PouchDB)  |                    | - stable endpoints             |
++----------+-----------+                    +-----------+-------------------+
+           |                                                |
+           | replication (tenant DB)                        | internal
+           v                                                v
++----------------------+                    +--------------------------+
+| CouchDB              |                    | Platform Services        |
+| - tenant DBs         |                    | - APIs/workflows         |
+| - partitioned DBs    |                    | - authz, invariants      |
++----------------------+                    +--------------------------+
+           |
+           v
 +----------------------+
-| Blob/File Store |
-| - CAS blobs outside |
-| CouchDB by default |
+| Blob/File Store      |
+| - CAS blobs outside  |
+|   CouchDB by default |
 +----------------------+
 
 ---
@@ -766,39 +830,36 @@ In web platform terms, an **origin** is the browser security boundary defined by
 
 - `origin = (scheme, host, port)`
 
-Browsers isolate storage by origin, including:
-- IndexedDB (used by PouchDB)
-- Cache Storage (used by service workers for offline assets)
-- service worker registrations
+Supported tenant-origin patterns are mode-specific:
+- local-only mode: `http://<tenant_id>.local/...`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/...`
 
-OurBox encodes `tenant_id` in the hostname so that each tenant is a distinct origin:
+Across both modes:
+- the **full host** carries tenant context,
+- `tenant_id` is derived from the **leftmost DNS label** of the full host,
+- the path identifies app context.
 
-- **Canonical pattern:** `https://<tenant_id>.<box-host>/...`
-
-We call this the **tenant origin**.
-
-Rationale:
-- Origin-level storage isolation is the web platform's native boundary.
-- Tenant-in-hostname ensures Bob and Alice do not share offline caches or local databases by accident, even on the same physical device.
+Tenant origins are distinct web origins and therefore isolate IndexedDB, Cache Storage, service-worker registration, and local tenant replicas.
 
 ### 4.2 Apps are addressed as paths under a tenant origin
-Apps SHALL live under a path on the tenant origin:
+Apps are addressed by path under the tenant origin in both access modes.
 
-- `https://<tenant_id>.<box-host>/<app_slug>`
+Patterns:
+- local-only mode: `http://<tenant_id>.local/<app_slug>`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/<app_slug>`
 
 Examples:
-- `https://bob.<box-host>/simplenote`
-- `https://bob.<box-host>/richnote`
-- `https://alice.<box-host>/tasks`
+- `http://bob.local/simplenote`
+- `https://bob.example.com/simplenote`
 
-Apps are not a data boundary; apps are experiences.
+Invariant: the full host identifies tenant; the path identifies app.
 
 ### 4.3 Tenant DBs are the replication unit
 Each tenant has exactly one tenant DB on the box:
 
 - CouchDB DB name: `tenant_<tenant_id>`
 
-Each tenant also has exactly one **tenant blob store** for blob payload bytes stored outside CouchDB. The blob store is resolved in tenant context (derived from hostname) and uses a tenant-scoped storage root.
+Each tenant also has exactly one **tenant blob store** for blob payload bytes stored outside CouchDB. The blob store is resolved in tenant context (derived from full host) and uses a tenant-scoped storage root.
 
 Within that tenant DB:
 - the DB is a **partitioned database**
@@ -810,70 +871,32 @@ Replication posture:
 - do not require selective replication by partition
 
 ### 4.4 Local data is per tenant origin and shared across apps
-On each **client device** (phone/tablet/laptop browser), within a given **tenant origin**
-(e.g., `https://bob.<box-host>`), the browser SHALL have exactly one PouchDB database that acts as
-the tenant's local working store on that device.
+Within a single tenant origin on a device/browser profile, shipped apps share a single local tenant replica (`tenant_local`).
 
-We call this database the **local tenant replica**:
+This applies in both access modes, with origin semantics preserved:
+- `http://bob.local` and `https://bob.<box-host>` are different origins.
+- Different origins do not share IndexedDB, Cache Storage, service-worker registration, or local tenant replica state.
 
-- it is local to that device (IndexedDB-backed via PouchDB)
-- it accepts reads/writes while offline
-- it replicates opportunistically with the tenant's CouchDB database on the box (`tenant_<tenant_id>`)
+Therefore the same tenant accessed through local-only mode and public custom-domain mode has distinct local replicas on the same browser.
 
-**Scope clarification:** "exactly one" is per *device + browser + tenant origin*.
-Bob will therefore have multiple local tenant replicas across his devices:
-- one on Bob's phone for `https://bob.<box-host>`
-- one on Bob's laptop for `https://bob.<box-host>`
-- etc.
+### 4.5 Replication surface is same-origin at `/db`
+The gateway exposes same-origin replication endpoints in both modes:
+- `http://<tenant_id>.local/db`
+- `https://<tenant_id>.<box-host>/db`
 
-**Shared-across-apps rule:** All shipped apps served under the same tenant origin SHALL use the same
-local tenant replica on that device.
+`/db` is a gateway surface mapped to the tenant database; raw CouchDB ports are not tenant-facing.
 
-Example (single device, Bob tenant origin):
-- `https://bob.<box-host>/simplenote` and `https://bob.<box-host>/richnote` must both read/write
-  through the same local tenant replica so they see the same `note:*` documents while offline.
+### 4.6 Gateway-mediated enforcement for tenant data access
+All tenant replication and app access traverse the gateway.
 
-- Because apps share a tenant origin and a single local tenant replica, app boundaries are not a hard isolation boundary in the browser; preventing cross-doc-kind writes is enforced by discipline and tests (ADR-0001).
-
-Rationale:
-- If each app maintained its own local PouchDB database, then apps would not see each other's changes offline,
-  breaking the "multiple apps share doc kinds" architecture and creating multiple local sources of truth.
-
-### 4.5 Gateway mediates tenant-scoped CouchDB access
-Normative posture:
-- Shipped apps and clients access CouchDB over HTTP using the standard CouchDB API and replication protocol.
-- CouchDB is exposed externally only through the tenant origin as a tenant-scoped surface (same-origin),
-  not as a raw CouchDB node endpoint.
-- The gateway/reverse proxy maps:
-  - `https://<tenant_id>.<box-host>/db` → CouchDB database `tenant_<tenant_id>`
-- The gateway SHALL NOT require clients to know CouchDB ports or internal database topology.
-
-Rationale:
-- Browser correctness: same-origin access avoids CORS/mixed-content/auth pitfalls for PWAs.
-- Tenant correctness: tenant context is derived from hostname and mapped to the correct tenant DB.
-- Surface-area control: we avoid exposing CouchDB node/admin surfaces to the LAN/WAN by default while still using CouchDB "the CouchDB way."
-
-Rationale:
-- tenant context is derived from hostname
-- membership/authorization is enforced at the gateway
-- stable endpoints reduce client coupling to internal topology
-
-### 4.6 Replication endpoint shape (normative)
-Replication SHALL be same-origin with the tenant and SHALL NOT require clients to know CouchDB database names.
-
-- Replication endpoint (recommended): `https://<tenant_id>.<box-host>/db`
-
-Gateway mapping:
-- `/db` on tenant origin maps to CouchDB database `tenant_<tenant_id>`
-
-Clients SHALL NOT select arbitrary CouchDB database names directly.
+The gateway derives `tenant_id` from the leftmost DNS label of the full host and applies tenant membership/authorization policy before mapping to tenant resources.
 
 ### 4.7 Users are actors; tenant membership gates access
 Requests are evaluated in both:
 - **actor context:** `user_id` (who)
 - **tenant context:** `tenant_id` (which tenant DB/origin)
 
-The gateway SHALL enforce that the authenticated user is a member of the tenant implied by the hostname,
+The gateway SHALL enforce that the authenticated user is a member of the tenant implied by the full host,
 and that their role/capabilities allow the requested action.
 
 ---
@@ -882,22 +905,19 @@ and that their role/capabilities allow the requested action.
 
 ### 5.1 Logical view (components and responsibilities)
 
-#### 5.1.1 Gateway (edge router + auth)
+#### 5.1.1 Gateway responsibilities
 Responsibilities:
-- terminate TLS
-- route by hostname (`<tenant_id>.<box-host>`) and path (`/<app_slug>`, `/db`, `/api/...`)
-- authenticate users and establish sessions/tokens
-- authorize access based on tenant membership and roles/capabilities
-- present stable, tenant-scoped endpoints for replication and APIs
-- inject/propagate validated identity context to internal services
+- serve HTTP routing for local-only mode tenant hosts (`<tenant_id>.local`),
+- terminate TLS for public custom-domain tenant hosts (`<tenant_id>.<box-host>`),
+- optionally expose a reserved local landing host (`ourbox.local`) for setup/admin entry,
+- route requests by full host and path (`/<app_slug>`, `/db`, `/api/...`) in both modes,
+- derive `tenant_id` from the leftmost DNS label of the full host,
+- enforce authentication and tenant membership policy.
 
-#### 5.1.2 Static app hosting (PWA assets)
-Responsibilities:
-- serve PWA bundles for apps under their paths
-- support installable offline-first behavior via service workers and cached assets
-
-Normative requirement:
-- Shipped apps SHALL be installable and capable of running from browser cache after first successful load (ADR-0001).
+#### 5.1.2 Static app hosting
+Mode-aware posture:
+- Public custom-domain mode: installable PWA posture, service-worker-backed asset caching, and reopen-offline behavior after first successful load.
+- Local-only mode: same-origin browser app delivery over HTTP with local data continuity and opportunistic sync while reachable; equivalent full installable-PWA posture is not guaranteed.
 
 #### 5.1.3 Platform services (optional but expected)
 Responsibilities:
@@ -934,7 +954,8 @@ Responsibilities:
 - Apps do not define data partitions.
 
 #### 5.2.2 Naming summary (normative)
-- Hostname: `<tenant_id>.<box-host>`
+- Tenant host (local-only mode): `<tenant_id>.local`
+- Tenant host (public custom-domain mode): `<tenant_id>.<box-host>`
 - App path: `/<app_slug>`
 - CouchDB tenant DB: `tenant_<tenant_id>`
 - Replication endpoint: `/db` on tenant origin
@@ -951,19 +972,22 @@ Responsibilities:
 
 ### 5.3 Runtime/process view (request and sync flows)
 
-#### 5.3.1 Typical app session (informative)
+#### 5.3.1 Typical app sessions (informative)
+Local-only mode session:
+1) User navigates to `http://family.local/tasks`
+2) Gateway routes HTTP request by full host and verifies membership in tenant `family`
+3) App loads over HTTP and uses local tenant replica (`tenant_local`)
+4) When connectivity allows, app replicates via `http://family.local/db`
+
+Public custom-domain mode session:
 1) User navigates to `https://family.<box-host>/tasks`
-2) Gateway authenticates user and verifies membership in tenant `family`
-3) PWA loads and uses service worker for offline asset caching
-4) App reads/writes local tenant replica first (`tenant_local`)
-5) When connectivity allows, app replicates with `https://family.<box-host>/db`
-6) Gateway maps to `tenant_family` and enforces authorization
+2) Gateway terminates TLS and verifies membership in tenant `family`
+3) App loads with secure-context posture and service-worker-backed caching
+4) App uses local tenant replica (`tenant_local`) for local continuity
+5) When connectivity allows, app replicates via `https://family.<box-host>/db`
 
 #### 5.3.2 Offline-first requirement (normative)
-Shipped apps SHALL:
-- be functional when the box is unreachable (after first successful load),
-- persist working data locally (PouchDB/IndexedDB),
-- attempt opportunistic, incremental replication when available (ADR-0001, ADR-0002).
+Shipped apps SHALL persist working data locally (PouchDB/IndexedDB) and attempt opportunistic, incremental replication when available. Public custom-domain mode carries full reopen-offline/installable-PWA behavior after first successful load; local-only mode carries local data continuity without equivalent full-PWA guarantees (ADR-0001, ADR-0002, ADR-0014).
 
 ### 5.4 Deployment view (k3s mapping)
 
@@ -981,8 +1005,15 @@ Recommended posture:
 - run each shipped app workload bundle in its own Kubernetes namespace (e.g., `app-simplenote`, `app-richnote`).
 
 #### 5.4.2 Ingress and routing requirements (normative)
+Public custom-domain mode requirements:
 - Ingress/gateway SHALL support wildcard host routing for `*.<box-host>`.
-- TLS SHALL be terminated at the gateway for tenant subdomains.
+- TLS SHALL be terminated at the gateway.
+
+Local-only mode requirements:
+- Gateway SHALL support HTTP host routing for tenant hosts `<tenant_id>.local`.
+- Gateway MAY expose a reserved local landing host such as `ourbox.local`.
+
+Across both modes:
 - Path routing SHALL support:
   - `/<app_slug>` for app assets
   - `/db` for replication endpoint
@@ -998,13 +1029,13 @@ Recommended posture:
 - CouchDB SHOULD be treated as internal infrastructure and not exposed directly.
 
 ### 6.2 Tenant context derivation
-- `tenant_id` SHALL be derived from the request hostname.
-- Services SHALL treat tenant context as required input and SHALL NOT accept `tenant_id` from untrusted client parameters as the primary authority when hostname is present.
+- `tenant_id` SHALL be derived from the request full host (leftmost DNS label).
+- Services SHALL treat tenant context as required input and SHALL NOT accept `tenant_id` from untrusted client parameters as the primary authority when full host is present.
 
 ### 6.3 Authorization
 Authorization SHALL consider:
 - authenticated user identity (`user_id`)
-- tenant derived from hostname (`tenant_id`)
+- tenant derived from full host (`tenant_id`)
 - membership and roles/capabilities within that tenant
 - any doc-kind-specific rules where applicable
 
@@ -1058,10 +1089,11 @@ A new doc kind introduction SHALL include:
 
 ## 10 Examples (informative)
 
-### 10.1 URLs
-- `https://bob.<box-host>/simplenote`
-- `https://bob.<box-host>/richnote`
-- `https://alice.<box-host>/calendar`
+### 10.1 App URLs
+- local-only mode: `http://bob.local/simplenote`
+- public custom-domain mode: `https://bob.<box-host>/simplenote`
+- local-only mode: `http://alice.local/calendar`
+- public custom-domain mode: `https://alice.<box-host>/calendar`
 
 ### 10.2 CouchDB tenant DBs
 - `tenant_bob`
@@ -1069,8 +1101,10 @@ A new doc kind introduction SHALL include:
 - `tenant_family`
 
 ### 10.3 Replication endpoints
-- `https://bob.<box-host>/db`
-- `https://family.<box-host>/db`
+- local-only mode: `http://bob.local/db`
+- public custom-domain mode: `https://bob.<box-host>/db`
+- local-only mode: `http://family.local/db`
+- public custom-domain mode: `https://family.<box-host>/db`
 
 ---
 
@@ -1096,15 +1130,14 @@ requirements. When a requirement references a record, that record is part of the
 These requirements describe the baseline posture for shipped OurBox applications operating within a
 single tenant origin, including offline-first behavior and doc-kind handling.
 
-### APP-001: Shipped apps SHALL be offline-first PWAs
+### APP-001: Shipped apps SHALL provide full installable-PWA posture in public custom-domain mode
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Aligns shipped apps with ADR-0001 posture.
+**Rationale:** Aligns shipped-app installability guarantees with mode-specific browser behavior.
 
-Shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful
-online session.
+In public custom-domain mode, shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful online session.
 
 ### APP-002: Shipped apps SHALL persist working data locally
 
@@ -1124,15 +1157,18 @@ Shipped apps SHALL store working data locally in the tenant origin using PouchDB
 
 Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
 
-### APP-004: Apps SHALL operate within a tenant origin
+### APP-004: Apps SHALL operate within a mode-aware tenant origin
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Tenant origins define storage isolation and routing.
+**Rationale:** Tenant origins define storage isolation and routing in both access modes.
 
-Shipped apps SHALL be served under `https://<tenant_id>.<box-host>/<app_slug>` and derive tenant
-context from the hostname.
+Shipped apps SHALL be served under mode-aware tenant origins:
+- local-only mode: `http://<tenant_id>.local/<app_slug>`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/<app_slug>`
+
+Tenant context SHALL be derived from the full host; `tenant_id` is the leftmost DNS label.
 
 ### APP-005: Apps SHALL share one local tenant replica per origin
 
@@ -1153,6 +1189,24 @@ replica database on that device.
 
 Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
 vocabulary defined for OurBox OS.
+
+### APP-007: Local-only mode SHALL be documented as HTTP-only with narrower browser guarantees
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Local-only mode has transport and browser capability limits that differ from public mode.
+
+Local-only mode SHALL be documented as HTTP-only and SHALL NOT be documented as guaranteeing full installable-PWA or reopen-offline behavior equivalent to public custom-domain mode.
+
+### APP-008: Local-only and public tenant origins for the same tenant SHALL be treated as distinct local replicas
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Origin boundaries isolate browser storage and local replica state.
+
+For the same tenant on the same browser, `http://<tenant_id>.local` and `https://<tenant_id>.<box-host>` SHALL be treated as different origins and therefore different local tenant replicas.
 
 ## Data and Replication
 
@@ -1231,15 +1285,14 @@ Each tenant blob store SHALL use a tenant-scoped storage root (ADR-0006).
 These requirements define tenant routing, identity enforcement, and the gateway surface used by
 clients and shipped apps.
 
-### GW-001: Gateway SHALL derive tenant context from hostname
+### GW-001: Gateway SHALL derive tenant context from the full host
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
 **Rationale:** Tenant origins are the canonical boundary.
 
-The gateway SHALL derive `tenant_id` from the request hostname and treat it as the authoritative
-tenant context.
+The gateway SHALL derive `tenant_id` from the leftmost DNS label of the request full host and treat it as the authoritative tenant context.
 
 ### GW-002: Gateway SHALL enforce tenant membership
 
@@ -1248,18 +1301,21 @@ tenant context.
 **Area:** gateway  
 **Rationale:** Ensures user access is scoped to the tenant origin.
 
-The gateway SHALL enforce that authenticated users are members of the tenant implied by the hostname
+The gateway SHALL enforce that authenticated users are members of the tenant implied by the full host
 before allowing access to tenant-scoped services.
 
-### GW-003: Replication endpoints SHALL be same-origin
+### GW-003: Replication endpoints SHALL be same-origin and mode-aware
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
 **Rationale:** Browser clients must replicate without CORS or topology leakage.
 
-The gateway SHALL expose replication at `/db` on the tenant origin and SHALL NOT require clients to
-know internal CouchDB endpoints.
+The gateway SHALL expose same-origin replication at `/db` on tenant origins in both modes:
+- local-only mode: `http://<tenant_id>.local/db`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/db`
+
+Clients SHALL NOT be required to know internal CouchDB endpoints.
 
 ## Kubernetes and Deployment
 
@@ -1276,15 +1332,14 @@ apps while preserving tenant boundaries.
 Kubernetes namespaces SHALL be used for operational grouping and SHALL NOT be treated as the primary
 tenant isolation boundary.
 
-### K8S-002: Gateway ingress SHALL support wildcard tenant hosts
+### K8S-002: Gateway ingress SHALL support public custom-domain wildcard tenant hosts
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** k8s  
-**Rationale:** Tenant origins rely on hostname routing.
+**Rationale:** Public custom-domain tenant hosts rely on wildcard routing.
 
-Ingress configuration SHALL support wildcard host routing for `*.<box-host>` to enable tenant
-subdomains.
+Ingress configuration for public custom-domain mode SHALL support wildcard host routing for `*.<box-host>`.
 
 ### K8S-003: Shipped app workloads SHOULD use dedicated namespaces
 
@@ -1295,6 +1350,17 @@ subdomains.
 
 Shipped app workload bundles SHOULD run in their own Kubernetes namespaces to simplify operations
 and isolation from platform services.
+
+### K8S-010: Gateway routing SHALL support local-only tenant hosts over HTTP
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** k8s  
+**Rationale:** Local-only mode requires explicit HTTP host routing for tenant hosts.
+
+Gateway routing configuration SHALL support local-only tenant hosts `<tenant_id>.local` over HTTP.
+
+Gateway routing MAY also expose a reserved local landing host such as `ourbox.local`.
 
 ---
 
@@ -1335,15 +1401,14 @@ This SRS intentionally remains a minimal scaffold, but it includes the Gateway r
 
 Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; Gateway-specific requirements follow.
 
-### GW-001: Gateway SHALL derive tenant context from hostname
+### GW-001: Gateway SHALL derive tenant context from the full host
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
 **Rationale:** Tenant origins are the canonical boundary.
 
-The gateway SHALL derive `tenant_id` from the request hostname and treat it as the authoritative
-tenant context.
+The gateway SHALL derive `tenant_id` from the leftmost DNS label of the request full host and treat it as the authoritative tenant context.
 
 ### GW-002: Gateway SHALL enforce tenant membership
 
@@ -1352,37 +1417,61 @@ tenant context.
 **Area:** gateway  
 **Rationale:** Ensures user access is scoped to the tenant origin.
 
-The gateway SHALL enforce that authenticated users are members of the tenant implied by the hostname
+The gateway SHALL enforce that authenticated users are members of the tenant implied by the full host
 before allowing access to tenant-scoped services.
 
-### GW-003: Replication endpoints SHALL be same-origin
+### GW-003: Replication endpoints SHALL be same-origin and mode-aware
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
 **Rationale:** Browser clients must replicate without CORS or topology leakage.
 
-The gateway SHALL expose replication at `/db` on the tenant origin and SHALL NOT require clients to
-know internal CouchDB endpoints.
+The gateway SHALL expose same-origin replication at `/db` on tenant origins in both modes:
+- local-only mode: `http://<tenant_id>.local/db`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/db`
 
-### K8S-002: Gateway ingress SHALL support wildcard tenant hosts
+Clients SHALL NOT be required to know internal CouchDB endpoints.
+
+### K8S-002: Gateway ingress SHALL support public custom-domain wildcard tenant hosts
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** k8s  
-**Rationale:** Tenant origins rely on hostname routing.
+**Rationale:** Public custom-domain tenant hosts rely on wildcard routing.
 
-Ingress configuration SHALL support wildcard host routing for `*.<box-host>` to enable tenant
-subdomains.
+Ingress configuration for public custom-domain mode SHALL support wildcard host routing for `*.<box-host>`.
 
-### GW-005: TLS SHALL be terminated at the gateway for tenant subdomains
+### K8S-010: Gateway routing SHALL support local-only tenant hosts over HTTP
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** k8s  
+**Rationale:** Local-only mode requires explicit HTTP host routing for tenant hosts.
+
+Gateway routing configuration SHALL support local-only tenant hosts `<tenant_id>.local` over HTTP.
+
+Gateway routing MAY also expose a reserved local landing host such as `ourbox.local`.
+
+### GW-005: Gateway SHALL terminate TLS for public custom-domain tenant hosts
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
-**Rationale:** Tenant origins are HTTPS surfaces; clients should not depend on internal service TLS topologies.
+**Rationale:** Public custom-domain mode is HTTPS/TLS while local-only mode remains HTTP-only.
 
-TLS SHALL be terminated at the gateway for tenant subdomains.
+For public custom-domain mode tenant hosts (`<tenant_id>.<box-host>`), TLS SHALL be terminated at the gateway.
+
+**Trace:** [[arch_doc:AD-0001]] §5.4.2
+
+### GW-010: Gateway SHALL serve local-only tenant hosts over HTTP
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** gateway  
+**Rationale:** Local-only mode requires explicit HTTP tenant-host service posture.
+
+For local-only mode tenant hosts (`<tenant_id>.local`), the gateway SHALL serve tenant-origin traffic over HTTP.
 
 **Trace:** [[arch_doc:AD-0001]] §5.4.2
 
@@ -1400,16 +1489,17 @@ Path routing SHALL support:
 
 **Trace:** [[arch_doc:AD-0001]] §5.4.2
 
-### GW-007: Gateway SHALL map `/db` on the tenant origin to the tenant DB in CouchDB
+### GW-007: Gateway SHALL map `/db` on tenant origins to tenant DBs
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
 **Rationale:** Clients replicate same-origin without knowing CouchDB topology or database names.
 
-The gateway/reverse proxy maps:
+The gateway/reverse proxy maps tenant-origin replication endpoints to CouchDB database `tenant_<tenant_id>`:
 
-- `https://<tenant_id>.<box-host>/db` → CouchDB database `tenant_<tenant_id>`
+- local-only mode: `http://<tenant_id>.local/db` → `tenant_<tenant_id>`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/db` → `tenant_<tenant_id>`
 
 Clients SHALL NOT select arbitrary CouchDB database names directly.
 
@@ -1426,32 +1516,34 @@ CouchDB is exposed externally only through the tenant origin as a tenant-scoped 
 
 **Trace:** [[arch_doc:AD-0001]] §4.5
 
-### GW-009: Gateway SHALL treat hostname-derived tenant context as authoritative
+### GW-009: Gateway SHALL treat full-host-derived tenant context as authoritative
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
-**Rationale:** Prevent tenant confusion and parameter spoofing when hostname is present.
+**Rationale:** Prevent tenant confusion and parameter spoofing when full host is present.
 
-When hostname is present, `tenant_id` SHALL be derived from the request hostname and SHALL NOT be accepted from untrusted client parameters as the primary authority.
+When full host is present, `tenant_id` SHALL be derived from the leftmost DNS label of the request full host and SHALL NOT be accepted from untrusted client parameters as the primary authority.
 
 **Trace:** [[arch_doc:AD-0001]] §6.2
 
 ## External Interfaces
 
-Gateway external interfaces are HTTP(S) surfaces on tenant origins, including:
-- wildcard tenant hosts: `*.<box-host>`
+Gateway external interfaces are tenant-origin HTTP/HTTPS surfaces in two access modes:
+- local-only mode tenant hosts: `<tenant_id>.local` over HTTP
+- optional local landing host: `ourbox.local` over HTTP
+- public custom-domain tenant hosts: `*.<box-host>` over HTTPS/TLS
 - app paths: `/<app_slug>`
 - replication path: `/db`
 - API paths: `/api/...` (when present)
 
+Same-origin replication endpoints are:
+- `http://<tenant_id>.local/db`
+- `https://<tenant_id>.<box-host>/db`
+
 The authoritative definition of these external surfaces (host routing, paths, routing objects, and service bindings)
 is the versioned deployment baseline (rendered Kubernetes manifests) and the running cluster state, verified by
 conformance/integration tests (see ADR-0008).
-
-This SRS intentionally does not define internal identity/session wire details (header names, claim keys, token formats).
-Those concrete wire details are defined as versioned contract artifacts (e.g., OpenAPI security schemes and/or JSON schemas)
-and are enforced by automated tests.
 
 ## Verification
 
@@ -1705,15 +1797,14 @@ Allocated system requirements from `[[spec:SyRS-0001]]` are included here for tr
 Kubernetes namespaces SHALL be used for operational grouping and SHALL NOT be treated as the primary
 tenant isolation boundary.
 
-### K8S-002: Gateway ingress SHALL support wildcard tenant hosts
+### K8S-002: Gateway ingress SHALL support public custom-domain wildcard tenant hosts
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** k8s  
-**Rationale:** Tenant origins rely on hostname routing.
+**Rationale:** Public custom-domain tenant hosts rely on wildcard routing.
 
-Ingress configuration SHALL support wildcard host routing for `*.<box-host>` to enable tenant
-subdomains.
+Ingress configuration for public custom-domain mode SHALL support wildcard host routing for `*.<box-host>`.
 
 ### K8S-003: Shipped app workloads SHOULD use dedicated namespaces
 
@@ -1724,6 +1815,17 @@ subdomains.
 
 Shipped app workload bundles SHOULD run in their own Kubernetes namespaces to simplify operations
 and isolation from platform services.
+
+### K8S-010: Gateway routing SHALL support local-only tenant hosts over HTTP
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** k8s  
+**Rationale:** Local-only mode requires explicit HTTP host routing for tenant hosts.
+
+Gateway routing configuration SHALL support local-only tenant hosts `<tenant_id>.local` over HTTP.
+
+Gateway routing MAY also expose a reserved local landing host such as `ourbox.local`.
 
 ### K8S-004: OurBox OS SHALL use k3s as the Kubernetes distribution
 
@@ -1839,7 +1941,7 @@ This SRS defines requirements for the **local tenant replica** on client devices
 Key posture (already established in architecture):
 - many client devices may exist per tenant
 - connectivity may be intermittent; sync is opportunistic
-- storage isolation is by tenant origin (`https://<tenant_id>.<box-host>`)
+- storage isolation is by tenant origin (`http://<tenant_id>.local` or `https://<tenant_id>.<box-host>`)
 
 Out of scope:
 - on-box CouchDB service requirements (see `[[spec:SRS-0202]]`)
@@ -1925,11 +2027,11 @@ Within a tenant origin, the local tenant replica SHALL use the stable PouchDB da
 
 The local tenant replica interacts with:
 - browser storage via IndexedDB (through PouchDB)
-- replication endpoints on the tenant origin (presented by the Gateway)
+- same-origin replication endpoints presented by the gateway:
+  - `http://<tenant_id>.local/db`
+  - `https://<tenant_id>.<box-host>/db`
 
-Concrete replication configuration (credentials/session mechanics and any required request metadata) is defined by the deployed Gateway
-and identity implementation, and is verified by automated integration tests. This SRS specifies stable invariants (tenant origin,
-`tenant_local`, whole-DB replication posture) rather than wire-format details.
+For the same tenant on the same browser profile, local-only and public custom-domain origins are different origins and therefore different local tenant replicas.
 
 ## Verification
 
@@ -2091,15 +2193,14 @@ Out of scope:
 
 Allocated requirements are included here for traceability; identity- and membership-specific requirements follow.
 
-### GW-001: Gateway SHALL derive tenant context from hostname
+### GW-001: Gateway SHALL derive tenant context from the full host
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
 **Rationale:** Tenant origins are the canonical boundary.
 
-The gateway SHALL derive `tenant_id` from the request hostname and treat it as the authoritative
-tenant context.
+The gateway SHALL derive `tenant_id` from the leftmost DNS label of the request full host and treat it as the authoritative tenant context.
 
 ### GW-002: Gateway SHALL enforce tenant membership
 
@@ -2108,17 +2209,17 @@ tenant context.
 **Area:** gateway  
 **Rationale:** Ensures user access is scoped to the tenant origin.
 
-The gateway SHALL enforce that authenticated users are members of the tenant implied by the hostname
+The gateway SHALL enforce that authenticated users are members of the tenant implied by the full host
 before allowing access to tenant-scoped services.
 
-### GW-009: Gateway SHALL treat hostname-derived tenant context as authoritative
+### GW-009: Gateway SHALL treat full-host-derived tenant context as authoritative
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
-**Rationale:** Prevent tenant confusion and parameter spoofing when hostname is present.
+**Rationale:** Prevent tenant confusion and parameter spoofing when full host is present.
 
-When hostname is present, `tenant_id` SHALL be derived from the request hostname and SHALL NOT be accepted from untrusted client parameters as the primary authority.
+When full host is present, `tenant_id` SHALL be derived from the leftmost DNS label of the request full host and SHALL NOT be accepted from untrusted client parameters as the primary authority.
 
 **Trace:** [[arch_doc:AD-0001]] §6.2
 
@@ -2139,7 +2240,7 @@ Within an OurBox instance, `user_id` SHALL be unique.
 
 **Trace:** `docs/00-Glossary/Terms-and-Definitions.md` (user_id)
 
-### ID-002: tenant_id SHALL satisfy hostname and CouchDB naming constraints
+### ID-002: tenant_id SHALL satisfy tenant-host DNS-label and CouchDB naming constraints
 
 **Status:** Draft  
 **Testable:** true  
@@ -2148,7 +2249,7 @@ Within an OurBox instance, `user_id` SHALL be unique.
 
 `tenant_id` SHALL be lowercase.
 
-`tenant_id` SHALL be safe for use in DNS labels (tenant subdomains).
+`tenant_id` SHALL be safe for use in DNS labels and as the leftmost DNS label of a tenant host.
 
 `tenant_id` SHALL be safe for use in CouchDB database names.
 
@@ -2174,7 +2275,7 @@ Within an OurBox instance, `user_id` SHALL be unique.
 
 Authorization SHALL consider:
 - authenticated user identity (`user_id`)
-- tenant derived from hostname (`tenant_id`)
+- tenant derived from the full host (`tenant_id` from leftmost DNS label)
 - membership and roles/capabilities within that tenant
 - any doc-kind-specific rules where applicable
 
@@ -2241,14 +2342,15 @@ Typical groupings (to be filled in later):
 
 ## External Interfaces
 
-SimpleNote external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+SimpleNote external interfaces are tenant-origin app/replication surfaces in both access modes.
 
-- App route: `https://<tenant_id>.<box-host>/simplenote`
-- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-- Local storage: shared local tenant replica `tenant_local` within the tenant origin
+- App route (local-only mode): `http://<tenant_id>.local/simplenote`
+- App route (public custom-domain mode): `https://<tenant_id>.<box-host>/simplenote`
+- Replication endpoint (local-only mode): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain mode): `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within the current tenant origin
 
-Any additional APIs consumed or exposed by SimpleNote are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
-by automated integration tests.
+Public custom-domain mode is the full installable-PWA posture. Local-only mode remains HTTP local mode with local data continuity and opportunistic sync, without equivalent full installability/reopen-offline guarantees.
 
 ## Verification
 
@@ -2301,14 +2403,15 @@ Typical groupings (to be filled in later):
 
 ## External Interfaces
 
-RichNote external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+RichNote external interfaces are tenant-origin app/replication surfaces in both access modes.
 
-- App route: `https://<tenant_id>.<box-host>/richnote`
-- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-- Local storage: shared local tenant replica `tenant_local` within the tenant origin
+- App route (local-only mode): `http://<tenant_id>.local/richnote`
+- App route (public custom-domain mode): `https://<tenant_id>.<box-host>/richnote`
+- Replication endpoint (local-only mode): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain mode): `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within the current tenant origin
 
-Any additional APIs consumed or exposed by RichNote are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
-by automated integration tests.
+Public custom-domain mode is the full installable-PWA posture. Local-only mode remains HTTP local mode with local data continuity and opportunistic sync, without equivalent full installability/reopen-offline guarantees.
 
 ## Verification
 
@@ -2374,15 +2477,14 @@ Allocated system requirements from `[[spec:SyRS-0001]]` are included here for tr
 
 ### Allocated System Requirements (from SyRS)
 
-#### APP-001: Shipped apps SHALL be offline-first PWAs
+#### APP-001: Shipped apps SHALL provide full installable-PWA posture in public custom-domain mode
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Aligns shipped apps with ADR-0001 posture.
+**Rationale:** Aligns shipped-app installability guarantees with mode-specific browser behavior.
 
-Shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful
-online session.
+In public custom-domain mode, shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful online session.
 
 #### APP-002: Shipped apps SHALL persist working data locally
 
@@ -2402,15 +2504,18 @@ Shipped apps SHALL store working data locally in the tenant origin using PouchDB
 
 Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
 
-#### APP-004: Apps SHALL operate within a tenant origin
+#### APP-004: Apps SHALL operate within a mode-aware tenant origin
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Tenant origins define storage isolation and routing.
+**Rationale:** Tenant origins define storage isolation and routing in both access modes.
 
-Shipped apps SHALL be served under `https://<tenant_id>.<box-host>/<app_slug>` and derive tenant
-context from the hostname.
+Shipped apps SHALL be served under mode-aware tenant origins:
+- local-only mode: `http://<tenant_id>.local/<app_slug>`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/<app_slug>`
+
+Tenant context SHALL be derived from the full host; `tenant_id` is the leftmost DNS label.
 
 #### APP-005: Apps SHALL share one local tenant replica per origin
 
@@ -2468,7 +2573,7 @@ Any feature that materially restricts message visibility MUST be implemented by 
 **Area:** app  
 **Rationale:** Tenant origins define storage isolation and routing (AD-0001).
 
-Messager SHALL be served under `https://<tenant_id>.<box-host>/messager` and SHALL derive tenant context from the hostname.
+Messager SHALL be served under tenant-origin mode-aware routes (`http://<tenant_id>.local/messager` and `https://<tenant_id>.<box-host>/messager`) and SHALL derive tenant context from the full host (leftmost DNS label = `tenant_id`).
 
 #### MSG-004: Messager SHALL use the shared local tenant replica
 
@@ -2643,7 +2748,8 @@ Call participation SHALL be limited to tenant members (per membership enforced b
 **Rationale:** Avoid CORS/topology coupling; align with tenant-origin routing posture.
 
 Call signaling (offer/answer/ICE exchange) SHALL occur over a tenant-origin surface:
-- `https://<tenant_id>.<box-host>/api/messager/call/...`
+- local-only mode: `http://<tenant_id>.local/api/messager/call/...`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/api/messager/call/...`
 
 The Gateway SHALL enforce tenant membership on signaling endpoints.
 
@@ -2714,15 +2820,16 @@ Resource budgets (exact numbers) are defined in performance test baselines, not 
 
 ## External Interfaces
 
-Messager external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+Messager external interfaces are tenant-origin app/replication surfaces in both access modes.
 
-- App route: `https://<tenant_id>.<box-host>/messager`
-- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-- Local storage: shared local tenant replica `tenant_local` within the tenant origin
+- App route (local-only mode): `http://<tenant_id>.local/messager`
+- App route (public custom-domain mode): `https://<tenant_id>.<box-host>/messager`
+- Replication endpoint (local-only mode): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain mode): `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within the current tenant origin
 - Attachments: tenant blob store (accessed via platform services / gateway-mediated APIs when present)
 
-Any additional APIs consumed or exposed by Messager are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
-by automated integration tests.
+Public custom-domain mode is the full installable-PWA posture. Local-only mode remains HTTP local mode with local data continuity and opportunistic sync, without equivalent full installability/reopen-offline guarantees.
 
 ## Verification
 
@@ -2795,15 +2902,14 @@ Allocated system requirements from `[[spec:SyRS-0001]]` are included here for tr
 
 ### Allocated System Requirements (from SyRS)
 
-#### APP-001: Shipped apps SHALL be offline-first PWAs
+#### APP-001: Shipped apps SHALL provide full installable-PWA posture in public custom-domain mode
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Aligns shipped apps with ADR-0001 posture.
+**Rationale:** Aligns shipped-app installability guarantees with mode-specific browser behavior.
 
-Shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful
-online session.
+In public custom-domain mode, shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful online session.
 
 #### APP-002: Shipped apps SHALL persist working data locally
 
@@ -2823,15 +2929,18 @@ Shipped apps SHALL store working data locally in the tenant origin using PouchDB
 
 Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
 
-#### APP-004: Apps SHALL operate within a tenant origin
+#### APP-004: Apps SHALL operate within a mode-aware tenant origin
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Tenant origins define storage isolation and routing.
+**Rationale:** Tenant origins define storage isolation and routing in both access modes.
 
-Shipped apps SHALL be served under `https://<tenant_id>.<box-host>/<app_slug>` and derive tenant
-context from the hostname.
+Shipped apps SHALL be served under mode-aware tenant origins:
+- local-only mode: `http://<tenant_id>.local/<app_slug>`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/<app_slug>`
+
+Tenant context SHALL be derived from the full host; `tenant_id` is the leftmost DNS label.
 
 #### APP-005: Apps SHALL share one local tenant replica per origin
 
@@ -3052,15 +3161,17 @@ Scout SHOULD support:
 
 ## External Interfaces
 
-Scout external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+Scout external interfaces are tenant-origin app/replication surfaces in both access modes.
 
-* App route: `https://<tenant_id>.<box-host>/scout`
-* Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-* Local storage: shared local tenant replica `tenant_local` within the tenant origin
-* Source artifacts and retained binary snapshots: tenant blob store (when binary/large)
-* Optional service APIs: `https://<tenant_id>.<box-host>/api/scout/...` for source monitoring, extraction, briefing generation, and question-answering (when present)
+- App route (local-only mode): `http://<tenant_id>.local/scout`
+- App route (public custom-domain mode): `https://<tenant_id>.<box-host>/scout`
+- Replication endpoint (local-only mode): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain mode): `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within the current tenant origin
+- Source artifacts and retained binary snapshots: tenant blob store (when binary/large)
+- Optional service APIs: `/api/scout/...` on the current tenant origin
 
-Any additional APIs consumed or exposed by Scout are described via machine-readable API contracts (OpenAPI/JSON schema) and verified by automated integration tests.
+Public custom-domain mode is the full installable-PWA posture. Local-only mode remains HTTP local mode with local data continuity and opportunistic sync, without equivalent full installability/reopen-offline guarantees.
 
 ## Verification
 
@@ -3138,15 +3249,14 @@ Allocated system requirements from `[[spec:SyRS-0001]]` are included here for tr
 
 ### Allocated System Requirements (from SyRS)
 
-#### APP-001: Shipped apps SHALL be offline-first PWAs
+#### APP-001: Shipped apps SHALL provide full installable-PWA posture in public custom-domain mode
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Aligns shipped apps with ADR-0001 posture.
+**Rationale:** Aligns shipped-app installability guarantees with mode-specific browser behavior.
 
-Shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful
-online session.
+In public custom-domain mode, shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful online session.
 
 #### APP-002: Shipped apps SHALL persist working data locally
 
@@ -3166,15 +3276,18 @@ Shipped apps SHALL store working data locally in the tenant origin using PouchDB
 
 Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
 
-#### APP-004: Apps SHALL operate within a tenant origin
+#### APP-004: Apps SHALL operate within a mode-aware tenant origin
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Tenant origins define storage isolation and routing.
+**Rationale:** Tenant origins define storage isolation and routing in both access modes.
 
-Shipped apps SHALL be served under `https://<tenant_id>.<box-host>/<app_slug>` and derive tenant
-context from the hostname.
+Shipped apps SHALL be served under mode-aware tenant origins:
+- local-only mode: `http://<tenant_id>.local/<app_slug>`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/<app_slug>`
+
+Tenant context SHALL be derived from the full host; `tenant_id` is the leftmost DNS label.
 
 #### APP-005: Apps SHALL share one local tenant replica per origin
 
@@ -3439,17 +3552,17 @@ A side-by-side comparison SHOULD highlight, at minimum:
 
 ## External Interfaces
 
-Compass external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+Compass external interfaces are tenant-origin app/replication surfaces in both access modes.
 
-* App route: `https://<tenant_id>.<box-host>/compass`
-* Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-* Local storage: shared local tenant replica `tenant_local` within the tenant origin
-* Candidate and contest source artifacts: tenant blob store (when binary/large)
-* Optional service APIs: `https://<tenant_id>.<box-host>/api/compass/...` for profile capture, contest scoping, stance extraction, fit evaluation, and candidate comparison (when present)
+- App route (local-only mode): `http://<tenant_id>.local/compass`
+- App route (public custom-domain mode): `https://<tenant_id>.<box-host>/compass`
+- Replication endpoint (local-only mode): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain mode): `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within the current tenant origin
+- Candidate and contest source artifacts: tenant blob store (when binary/large)
+- Optional service APIs: `/api/compass/...` on the current tenant origin
 
-Compass MAY consume source-grounded civic records already present in the shared local tenant replica (e.g., `source:*`, `snapshot:*`, `issue:*`, and `brief:*` records) when available.
-
-Any additional APIs consumed or exposed by Compass are described via machine-readable API contracts (OpenAPI/JSON schema) and verified by automated integration tests.
+Public custom-domain mode is the full installable-PWA posture. Local-only mode remains HTTP local mode with local data continuity and opportunistic sync, without equivalent full installability/reopen-offline guarantees.
 
 ## Verification
 
@@ -3529,15 +3642,14 @@ Allocated system requirements from `[[spec:SyRS-0001]]` are included here for tr
 
 ### Allocated System Requirements (from SyRS)
 
-#### APP-001: Shipped apps SHALL be offline-first PWAs
+#### APP-001: Shipped apps SHALL provide full installable-PWA posture in public custom-domain mode
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Aligns shipped apps with ADR-0001 posture.
+**Rationale:** Aligns shipped-app installability guarantees with mode-specific browser behavior.
 
-Shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful
-online session.
+In public custom-domain mode, shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful online session.
 
 #### APP-002: Shipped apps SHALL persist working data locally
 
@@ -3557,15 +3669,18 @@ Shipped apps SHALL store working data locally in the tenant origin using PouchDB
 
 Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
 
-#### APP-004: Apps SHALL operate within a tenant origin
+#### APP-004: Apps SHALL operate within a mode-aware tenant origin
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Tenant origins define storage isolation and routing.
+**Rationale:** Tenant origins define storage isolation and routing in both access modes.
 
-Shipped apps SHALL be served under `https://<tenant_id>.<box-host>/<app_slug>` and derive tenant
-context from the hostname.
+Shipped apps SHALL be served under mode-aware tenant origins:
+- local-only mode: `http://<tenant_id>.local/<app_slug>`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/<app_slug>`
+
+Tenant context SHALL be derived from the full host; `tenant_id` is the leftmost DNS label.
 
 #### APP-005: Apps SHALL share one local tenant replica per origin
 
@@ -3812,17 +3927,17 @@ Previously saved dialogues SHOULD be resumable by the user within the same tenan
 
 ## External Interfaces
 
-Spar external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+Spar external interfaces are tenant-origin app/replication surfaces in both access modes.
 
-* App route: `https://<tenant_id>.<box-host>/spar`
-* Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-* Local storage: shared local tenant replica `tenant_local` within the tenant origin
-* Supporting source artifacts: tenant blob store (when binary/large)
-* Optional service APIs: `https://<tenant_id>.<box-host>/api/spar/...` for dialogue session management, challenge generation, source-grounded analysis, and reflection summaries (when present)
+- App route (local-only mode): `http://<tenant_id>.local/spar`
+- App route (public custom-domain mode): `https://<tenant_id>.<box-host>/spar`
+- Replication endpoint (local-only mode): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain mode): `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within the current tenant origin
+- Supporting source artifacts: tenant blob store (when binary/large)
+- Optional service APIs: `/api/spar/...` on the current tenant origin
 
-Spar MAY consume shared civic records already present in the shared local tenant replica (e.g., `claim:*`, `issue:*`, `brief:*`, `candidate:*`, `stance:*`, and `fit:*` records) when available.
-
-Any additional APIs consumed or exposed by Spar are described via machine-readable API contracts (OpenAPI/JSON schema) and verified by automated integration tests.
+Public custom-domain mode is the full installable-PWA posture. Local-only mode remains HTTP local mode with local data continuity and opportunistic sync, without equivalent full installability/reopen-offline guarantees.
 
 ## Verification
 

@@ -34,7 +34,8 @@ This document is concerned with target integration surfaces such as:
 - persistent data expectations,
 - bootstrap phases,
 - airgap packaging behavior,
-- operator-visible status and health surfaces.
+- operator-visible status and health surfaces,
+- access-mode realization and routing posture.
 
 It does not define:
 
@@ -249,6 +250,19 @@ boundary should remain comparable across targets.
 When a target exposes installer SSH, it SHOULD realize the shared installer SSH contract defined in
 `docs/reference/installer-ssh-contract.md`, while keeping lifecycle, disclosure, and support UX
 local to the target implementation.
+
+
+### 5.9 Access-mode realization
+
+Every target integration repo MUST document how access modes are realized above the hardware seam.
+
+Minimum expectations:
+- local-only mode support and host grammar (`<tenant_id>.local`) are documented,
+- local-only mode HTTP-only posture is documented,
+- local landing host behavior (`ourbox.local`) is documented when exposed,
+- public custom-domain mode support and host grammar (`<tenant_id>.<box-host>`) are documented,
+- operator prerequisites for public mode (DNS/routing/TLS) are documented,
+- any unsupported combinations or target-specific limitations are explicit.
 
 ## 6. Intentionally divergent surfaces
 

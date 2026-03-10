@@ -5,7 +5,9 @@
 
 ## Context
 OurBox OS is deployed as an appliance on a k3s cluster. The system has critical integration seams:
-- wildcard host ingress for tenant origins
+- local-only HTTP tenant-host routing for `<tenant_id>.local`
+- optional reserved local landing host routing (`ourbox.local`)
+- public HTTPS wildcard host routing for `*.<box-host>`
 - gateway path routing (`/<app_slug>`, `/db`, `/api/...`)
 - CouchDB workload topology and persistence (PVC/PV)
 - namespace posture (namespaces are operational; not tenant boundaries)
@@ -32,6 +34,8 @@ Specifically:
    (component identity, contract version/source revision).
 4) A conformance/integration test suite SHALL verify:
    - the baseline satisfies the platform requirements (e.g., K8S-00x, GW-00x),
+   - mode-aware host routing and posture (`<tenant_id>.local` HTTP, `*.<box-host>` HTTPS),
+   - same-origin `/db` routing in both modes,
    - and a deployed cluster matches the baseline in the expected ways.
 5) We will not produce standalone ICD documents for Kubernetes wiring. Where non-Kubernetes interfaces
    exist (e.g., HTTP APIs), the contract will be expressed as machine-readable artifacts
@@ -62,7 +66,7 @@ tests provide the concrete, inspectable wiring contract and verification evidenc
 ## Implementation Notes
 - Establish `deploy/` baseline structure and deterministic render tooling
 - Add standard labels/annotations and a contract metadata ConfigMap
-- Add policy checks and runtime conformance tests in CI
+- Add policy checks, access-mode route conformance checks, and runtime conformance tests in CI
 - Pair this ADR with the target integration contract documentation so cross-target debates stay at
   the correct architectural layer
 

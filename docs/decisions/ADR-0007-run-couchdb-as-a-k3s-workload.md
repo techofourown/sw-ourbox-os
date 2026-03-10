@@ -5,7 +5,7 @@
 ## Context
 
 OurBox OS is an offline-first, browser-first appliance whose shipped apps use PouchDB in the browser
-and replicate with CouchDB on the box (ADR-0001, ADR-0002). Tenant context is derived from hostname
+and replicate with CouchDB on the box (ADR-0001, ADR-0002). Tenant context is derived from full host (leftmost DNS label = `tenant_id`)
 and enforced by the gateway (ADR-0003, AD-0001). Each tenant has exactly one tenant DB and tenant DBs
 are partitioned (ADR-0002, ADR-0004, SyRS-0001 DATA-001/DATA-002).
 
@@ -41,8 +41,10 @@ Specifically:
      Tenant and client access is mediated by the gateway (AD-0001 §4.5–4.7; SyRS-0001 GW-001..GW-003).
 
 3) **Tenant access posture**
-   - Clients replicate same-origin via the gateway surface (`/db` on the tenant origin) as defined in
-     AD-0001 (e.g., `https://<tenant_id>.<box-host>/db`).
+   - Clients replicate same-origin via the gateway surface (`/db` on the tenant origin) in both modes:
+     - local-only mode: `http://<tenant_id>.local/db`
+     - public custom-domain mode: `https://<tenant_id>.<box-host>/db`
+   - Raw CouchDB endpoints remain unexposed in both modes; gateway HTTP/HTTPS surfaces are tenant-facing.
    - Clients SHALL NOT be required to know CouchDB ports, pod IPs, or internal database topology.
 
 This ADR decides **where CouchDB runs** (k3s workload vs host service) and the associated default
