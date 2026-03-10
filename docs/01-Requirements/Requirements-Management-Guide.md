@@ -287,6 +287,8 @@ You should see:
   * `### APP-007: Apps SHALL <do the thing>`
 * your metadata lines (`Status`, `Testable`, `Area`, `Rationale`) rendered under the requirement heading
 
+**Allocation-view rule (required):** if you add a new allocated system requirement (for example `APP-*`, `GW-*`, `K8S-*`) that is expected to appear in downstream SRS allocation views, you MUST update the relevant `fields.includes` lists (or equivalent allocation section source records) for each affected SRS, rerun compilation, and verify the generated SRS files actually render the new requirement ID.
+
 ### Step 5 — Commit only the source
 
 Commit:

@@ -13,4 +13,6 @@ fields:
     - req:APP-004
     - req:APP-005
     - req:APP-006
+    - req:APP-007
+    - req:APP-008
 ---

@@ -117,6 +117,24 @@ replica database on that device.
 Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
 vocabulary defined for OurBox OS.
 
+#### APP-007: Local-only mode SHALL be HTTP-only
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Local-only mode uses the local HTTP tenant origin and does not require HTTPS/TLS transport posture.
+
+Local-only mode SHALL use `http://<tenant_id>.local/<app_slug>` and SHALL NOT require or imply HTTPS/TLS.
+
+#### APP-008: Local-only mode documentation SHALL NOT promise public-mode-equivalent full PWA posture
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Product documentation must accurately represent local-only mode browser capability limits versus public custom-domain mode.
+
+Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
+
 ### Functional and Data Requirements (Scout-specific)
 
 #### SCOUT-001: Scout SHALL monitor user-chosen civic information sources

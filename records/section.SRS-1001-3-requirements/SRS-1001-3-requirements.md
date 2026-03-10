@@ -7,11 +7,5 @@ fields:
   order: 3
   level: 1
 ---
-This section will be populated with SimpleNote software requirements.
 
-Typical groupings (to be filled in later):
-- Allocated System Requirements (from SyRS)
-- Functional Requirements
-- Data Requirements
-- Quality Requirements (NFRs)
-- Constraints
+Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; SimpleNote-specific requirements follow.
