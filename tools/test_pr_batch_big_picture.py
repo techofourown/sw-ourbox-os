@@ -167,17 +167,24 @@ class PrBatchBigPictureTests(unittest.TestCase):
         self.assertIn("(no content)", text)
 
     def test_create_touched_files_compilation_can_include_deleted_path_source(self) -> None:
+        def fake_run_command(cmd: str, check: bool = True, capture_output: bool = True) -> str:
+            expected = "git show HEAD:package-lock.json"
+            if cmd == expected:
+                return '{\n  "name": "fixture"\n}\n'
+            raise AssertionError(f"Unexpected command: {cmd}")
+
         with tempfile.TemporaryDirectory() as tmpdir:
             output_file = str(Path(tmpdir) / "touched.txt")
-            ok = MODULE.create_touched_files_compilation(
-                touched_files={"package-lock.json"},
-                touched_file_prs={"package-lock.json": {78}},
-                base_branch="HEAD",
-                selection_requested="78",
-                selection_canonical="78",
-                selected_prs=[78],
-                output_file=output_file,
-            )
+            with mock.patch.object(MODULE, "run_command", side_effect=fake_run_command):
+                ok = MODULE.create_touched_files_compilation(
+                    touched_files={"package-lock.json"},
+                    touched_file_prs={"package-lock.json": {78}},
+                    base_branch="HEAD",
+                    selection_requested="78",
+                    selection_canonical="78",
+                    selected_prs=[78],
+                    output_file=output_file,
+                )
 
             self.assertTrue(ok)
             text = Path(output_file).read_text(encoding="utf-8")
@@ -220,6 +227,25 @@ class PrBatchBigPictureTests(unittest.TestCase):
             )
 
         self.assertEqual(outputs, [])
+
+    def test_checkout_pr_branch_prefers_pr_ref_over_existing_local_branch(self) -> None:
+        commands = []
+
+        def fake_run_command(cmd: str, check: bool = True, capture_output: bool = True) -> str:
+            commands.append(cmd)
+            return ""
+
+        with mock.patch.object(MODULE, "run_command", side_effect=fake_run_command):
+            branch = MODULE.checkout_pr_branch({"number": 123, "branch": "patch-1"}, "github")
+
+        self.assertEqual(branch, "pr-123")
+        self.assertEqual(
+            commands,
+            [
+                "git fetch github pull/123/head",
+                "git checkout -B pr-123 FETCH_HEAD",
+            ],
+        )
 
 
 if __name__ == "__main__":
