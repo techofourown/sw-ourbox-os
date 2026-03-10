@@ -275,6 +275,16 @@ def normalize_comment_entry(comment: Dict[str, Any], comment_type: str) -> Dict[
     return normalized
 
 
+def should_include_review_entry(review: Dict[str, Any]) -> bool:
+    """Decide whether a review object should appear in the comment stream."""
+    review_body = review.get("body") or ""
+    if review_body.strip():
+        return True
+
+    review_state = (review.get("state") or "").upper()
+    return review_state in {"APPROVED", "CHANGES_REQUESTED"}
+
+
 def get_pr_comments(pr_number: int) -> List[Dict[str, str]]:
     """Get issue comments, review summaries, inline review comments, and replies."""
     comments_json = run_command(f"gh pr view {pr_number} --json comments,reviews")
@@ -285,8 +295,7 @@ def get_pr_comments(pr_number: int) -> List[Dict[str, str]]:
         normalized.append(normalize_comment_entry(comment, "issue"))
 
     for review in data.get("reviews", []):
-        review_body = review.get("body") or ""
-        if review_body.strip():
+        if should_include_review_entry(review):
             normalized.append(normalize_comment_entry(review, "review"))
 
     review_comments_json = run_command(
@@ -655,6 +664,10 @@ def create_touched_files_compilation(
             outf.write(f"{line}\n")
         outf.write(f"# Total unique files: {len(sorted_files)}\n")
         outf.write(f"# Source branch: {base_branch}\n")
+        outf.write(
+            "# Includes all changed paths from the selected PRs, including deleted "
+            "or otherwise excluded diff paths when they exist on the base branch.\n"
+        )
         outf.write(f"# Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
         outf.write("=" * 80 + "\n\n")
 
@@ -945,7 +958,7 @@ def main() -> None:
                     f"All changed files for PR #{pr_info['number']} were excluded "
                     f"from diff output; preserving PR metadata/comments/checks."
                 )
-            touched_files.update(included_files)
+            touched_files.update(all_files)
 
             try:
                 comments = get_pr_comments(pr_info["number"])
