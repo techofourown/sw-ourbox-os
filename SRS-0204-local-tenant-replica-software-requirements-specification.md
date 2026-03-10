@@ -12,16 +12,13 @@ Normative keywords (SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) and OurBox OS pro
 
 ## Introduction
 
-This SRS defines requirements for the **local tenant replica** on client devices: the PouchDB database (IndexedDB-backed) within a tenant origin that enables offline-first behavior.
+The Local Tenant Replica stores tenant data in-browser per tenant origin.
 
-Key posture (already established in architecture):
-- many client devices may exist per tenant
-- connectivity may be intermittent; sync is opportunistic
-- storage isolation is by tenant origin (`https://<tenant_id>.<box-host>`)
+Tenant origins include both mode patterns:
+- `http://<tenant_id>.local`
+- `https://<tenant_id>.<box-host>`
 
-Out of scope:
-- on-box CouchDB service requirements (see `[[spec:SRS-0202]]`)
-- gateway routing and `/db` mapping (see `[[spec:SRS-0201]]`)
+These are different origins and therefore different local tenant replicas.
 
 ## Referenced Documents
 
@@ -101,13 +98,11 @@ Within a tenant origin, the local tenant replica SHALL use the stable PouchDB da
 
 ## External Interfaces
 
-The local tenant replica interacts with:
-- browser storage via IndexedDB (through PouchDB)
-- replication endpoints on the tenant origin (presented by the Gateway)
+Replication interfaces:
+- local-only: `http://<tenant_id>.local/db`
+- public custom-domain: `https://<tenant_id>.<box-host>/db`
 
-Concrete replication configuration (credentials/session mechanics and any required request metadata) is defined by the deployed Gateway
-and identity implementation, and is verified by automated integration tests. This SRS specifies stable invariants (tenant origin,
-`tenant_local`, whole-DB replication posture) rather than wire-format details.
+Same tenant across these two origins uses distinct local replicas on the same browser profile.
 
 ## Verification
 

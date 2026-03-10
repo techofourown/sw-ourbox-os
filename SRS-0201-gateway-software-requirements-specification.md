@@ -33,58 +33,11 @@ This SRS intentionally remains a minimal scaffold, but it includes the Gateway r
 
 ## Requirements
 
-Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; Gateway-specific requirements follow.
-
-### GW-001: Gateway SHALL derive tenant context from hostname
-
-**Status:** Draft  
-**Testable:** true  
-**Area:** gateway  
-**Rationale:** Tenant origins are the canonical boundary.
-
-The gateway SHALL derive `tenant_id` from the request hostname and treat it as the authoritative
-tenant context.
-
-### GW-002: Gateway SHALL enforce tenant membership
-
-**Status:** Draft  
-**Testable:** true  
-**Area:** gateway  
-**Rationale:** Ensures user access is scoped to the tenant origin.
-
-The gateway SHALL enforce that authenticated users are members of the tenant implied by the hostname
-before allowing access to tenant-scoped services.
-
-### GW-003: Replication endpoints SHALL be same-origin
-
-**Status:** Draft  
-**Testable:** true  
-**Area:** gateway  
-**Rationale:** Browser clients must replicate without CORS or topology leakage.
-
-The gateway SHALL expose replication at `/db` on the tenant origin and SHALL NOT require clients to
-know internal CouchDB endpoints.
-
-### K8S-002: Gateway ingress SHALL support wildcard tenant hosts
-
-**Status:** Draft  
-**Testable:** true  
-**Area:** k8s  
-**Rationale:** Tenant origins rely on hostname routing.
-
-Ingress configuration SHALL support wildcard host routing for `*.<box-host>` to enable tenant
-subdomains.
-
-### GW-005: TLS SHALL be terminated at the gateway for tenant subdomains
-
-**Status:** Draft  
-**Testable:** true  
-**Area:** gateway  
-**Rationale:** Tenant origins are HTTPS surfaces; clients should not depend on internal service TLS topologies.
-
-TLS SHALL be terminated at the gateway for tenant subdomains.
-
-**Trace:** [[arch_doc:AD-0001]] §5.4.2
+Gateway requirements are mode-aware:
+- TLS requirements apply to public custom-domain mode.
+- Local-only tenant-host access is HTTP-only.
+- Host routing covers `<tenant_id>.local` and `*.<box-host>`.
+- Same-origin `/db` mapping is provided in both modes.
 
 ### GW-006: Gateway path routing SHALL support app, replication, and API paths under the tenant origin
 
@@ -99,21 +52,6 @@ Path routing SHALL support:
 - `/api/...` for service APIs (when present)
 
 **Trace:** [[arch_doc:AD-0001]] §5.4.2
-
-### GW-007: Gateway SHALL map `/db` on the tenant origin to the tenant DB in CouchDB
-
-**Status:** Draft  
-**Testable:** true  
-**Area:** gateway  
-**Rationale:** Clients replicate same-origin without knowing CouchDB topology or database names.
-
-The gateway/reverse proxy maps:
-
-- `https://<tenant_id>.<box-host>/db` → CouchDB database `tenant_<tenant_id>`
-
-Clients SHALL NOT select arbitrary CouchDB database names directly.
-
-**Trace:** [[arch_doc:AD-0001]] §4.5–§4.6
 
 ### GW-008: CouchDB SHALL be exposed externally only through the tenant origin as a tenant-scoped surface
 
@@ -139,19 +77,12 @@ When hostname is present, `tenant_id` SHALL be derived from the request hostname
 
 ## External Interfaces
 
-Gateway external interfaces are HTTP(S) surfaces on tenant origins, including:
-- wildcard tenant hosts: `*.<box-host>`
-- app paths: `/<app_slug>`
+Gateway tenant-facing interfaces:
+- local-only app route pattern: `http://<tenant_id>.local/<app_slug>`
+- public app route pattern: `https://<tenant_id>.<box-host>/<app_slug>`
+- local-only replication endpoint: `http://<tenant_id>.local/db`
+- public replication endpoint: `https://<tenant_id>.<box-host>/db`
 - replication path: `/db`
-- API paths: `/api/...` (when present)
-
-The authoritative definition of these external surfaces (host routing, paths, routing objects, and service bindings)
-is the versioned deployment baseline (rendered Kubernetes manifests) and the running cluster state, verified by
-conformance/integration tests (see ADR-0008).
-
-This SRS intentionally does not define internal identity/session wire details (header names, claim keys, token formats).
-Those concrete wire details are defined as versioned contract artifacts (e.g., OpenAPI security schemes and/or JSON schemas)
-and are enforced by automated tests.
 
 ## Verification
 

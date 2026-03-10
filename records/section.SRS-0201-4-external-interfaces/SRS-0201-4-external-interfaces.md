@@ -7,16 +7,9 @@ fields:
   order: 4
   level: 1
 ---
-Gateway external interfaces are HTTP(S) surfaces on tenant origins, including:
-- wildcard tenant hosts: `*.<box-host>`
-- app paths: `/<app_slug>`
+Gateway tenant-facing interfaces:
+- local-only app route pattern: `http://<tenant_id>.local/<app_slug>`
+- public app route pattern: `https://<tenant_id>.<box-host>/<app_slug>`
+- local-only replication endpoint: `http://<tenant_id>.local/db`
+- public replication endpoint: `https://<tenant_id>.<box-host>/db`
 - replication path: `/db`
-- API paths: `/api/...` (when present)
-
-The authoritative definition of these external surfaces (host routing, paths, routing objects, and service bindings)
-is the versioned deployment baseline (rendered Kubernetes manifests) and the running cluster state, verified by
-conformance/integration tests (see ADR-0008).
-
-This SRS intentionally does not define internal identity/session wire details (header names, claim keys, token formats).
-Those concrete wire details are defined as versioned contract artifacts (e.g., OpenAPI security schemes and/or JSON schemas)
-and are enforced by automated tests.

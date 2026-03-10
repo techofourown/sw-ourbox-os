@@ -8,6 +8,15 @@ This specification defines the software requirements for the **Scout** applicati
 
 Scout is a shipped, tenant-scoped civic intelligence experience for OurBox OS. It monitors user-chosen civic information sources and user-provided civic artifacts, then produces source-grounded briefings, extracted claims, issue tracking, and question-answering for the tenant.
 
+## External Interfaces
+
+- App route (local-only): `http://<tenant_id>.local/scout`
+- App route (public custom-domain): `https://<tenant_id>.<box-host>/scout`
+- Replication endpoint (local-only): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain): `https://<tenant_id>.<box-host>/db` (same-origin, via Gateway)
+- Optional service APIs (local-only): `http://<tenant_id>.local/api/scout/...`
+- Optional service APIs (public custom-domain): `https://<tenant_id>.<box-host>/api/scout/...`
+
 ## Normative Language
 
 The key words **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** are to be interpreted as requirements.
@@ -57,15 +66,15 @@ Allocated system requirements from `[[spec:SyRS-0001]]` are included here for tr
 
 ### Allocated System Requirements (from SyRS)
 
-#### APP-001: Shipped apps SHALL be offline-first PWAs
+#### APP-001: Public custom-domain mode SHALL provide full installable-PWA posture
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Aligns shipped apps with ADR-0001 posture.
+**Rationale:** Installability and reopen-offline guarantees depend on HTTPS secure-context behavior.
 
-Shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful
-online session.
+In public custom-domain mode, shipped OurBox apps SHALL support full installable-PWA behavior,
+including service-worker-backed reopen-offline operation after first successful load.
 
 #### APP-002: Shipped apps SHALL persist working data locally
 
@@ -85,15 +94,17 @@ Shipped apps SHALL store working data locally in the tenant origin using PouchDB
 
 Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
 
-#### APP-004: Apps SHALL operate within a tenant origin
+#### APP-004: Shipped apps SHALL use mode-aware tenant-origin route patterns
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Tenant origins define storage isolation and routing.
+**Rationale:** Tenant routing is mode-aware and path identifies app in both modes.
 
-Shipped apps SHALL be served under `https://<tenant_id>.<box-host>/<app_slug>` and derive tenant
-context from the hostname.
+Shipped apps SHALL be served at tenant origins using supported mode patterns: local-only mode
+`http://<tenant_id>.local/<app_slug>` and public custom-domain mode
+`https://<tenant_id>.<box-host>/<app_slug>`, where `tenant_id` is derived from the leftmost DNS
+label of the full host.
 
 #### APP-005: Apps SHALL share one local tenant replica per origin
 
@@ -311,18 +322,6 @@ Scout SHOULD support:
 * on-demand briefings for watched issues,
 * on-demand briefings for candidates or organizations referenced in the watched corpus, and
 * scheduled digests covering recent changes across watched sources.
-
-## External Interfaces
-
-Scout external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
-
-* App route: `https://<tenant_id>.<box-host>/scout`
-* Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-* Local storage: shared local tenant replica `tenant_local` within the tenant origin
-* Source artifacts and retained binary snapshots: tenant blob store (when binary/large)
-* Optional service APIs: `https://<tenant_id>.<box-host>/api/scout/...` for source monitoring, extraction, briefing generation, and question-answering (when present)
-
-Any additional APIs consumed or exposed by Scout are described via machine-readable API contracts (OpenAPI/JSON schema) and verified by automated integration tests.
 
 ## Verification
 

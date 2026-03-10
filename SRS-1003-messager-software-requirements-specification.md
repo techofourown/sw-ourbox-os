@@ -10,6 +10,13 @@ Messager is a shipped, tenant-scoped messaging experience for OurBox OS. It is d
 communication within a tenant without introducing “private compartments” inside the tenant boundary,
 aligning with the principle that the tenant is the social boundary.
 
+## External Interfaces
+
+- App route (local-only): `http://<tenant_id>.local/messager`
+- App route (public custom-domain): `https://<tenant_id>.<box-host>/messager`
+- Replication endpoint (local-only): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain): `https://<tenant_id>.<box-host>/db` (same-origin, via Gateway)
+
 ## Normative Language
 
 The key words **SHALL**, **SHALL NOT**, **SHOULD**, **SHOULD NOT**, and **MAY** are to be interpreted as
@@ -55,15 +62,15 @@ Allocated system requirements from `[[spec:SyRS-0001]]` are included here for tr
 
 ### Allocated System Requirements (from SyRS)
 
-#### APP-001: Shipped apps SHALL be offline-first PWAs
+#### APP-001: Public custom-domain mode SHALL provide full installable-PWA posture
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Aligns shipped apps with ADR-0001 posture.
+**Rationale:** Installability and reopen-offline guarantees depend on HTTPS secure-context behavior.
 
-Shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful
-online session.
+In public custom-domain mode, shipped OurBox apps SHALL support full installable-PWA behavior,
+including service-worker-backed reopen-offline operation after first successful load.
 
 #### APP-002: Shipped apps SHALL persist working data locally
 
@@ -83,15 +90,17 @@ Shipped apps SHALL store working data locally in the tenant origin using PouchDB
 
 Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
 
-#### APP-004: Apps SHALL operate within a tenant origin
+#### APP-004: Shipped apps SHALL use mode-aware tenant-origin route patterns
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Tenant origins define storage isolation and routing.
+**Rationale:** Tenant routing is mode-aware and path identifies app in both modes.
 
-Shipped apps SHALL be served under `https://<tenant_id>.<box-host>/<app_slug>` and derive tenant
-context from the hostname.
+Shipped apps SHALL be served at tenant origins using supported mode patterns: local-only mode
+`http://<tenant_id>.local/<app_slug>` and public custom-domain mode
+`https://<tenant_id>.<box-host>/<app_slug>`, where `tenant_id` is derived from the leftmost DNS
+label of the full host.
 
 #### APP-005: Apps SHALL share one local tenant replica per origin
 
@@ -114,6 +123,17 @@ Shipped apps SHALL only create and update documents whose `_id` prefixes match t
 vocabulary defined for OurBox OS.
 
 ### Functional and Data Requirements (Messager-specific)
+
+#### MSG-003: Messager SHALL use mode-aware tenant routes
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Messager follows shared tenant-host/path routing model across both access modes.
+
+Messager SHALL be served at `http://<tenant_id>.local/messager` in local-only mode and
+`https://<tenant_id>.<box-host>/messager` in public custom-domain mode, deriving tenant context
+from the leftmost DNS label of the full host.
 
 #### MSG-001: Messager SHALL treat the tenant as the social boundary
 
@@ -141,15 +161,6 @@ Messager SHALL NOT implement:
 - per-message encryption keys that exclude some tenant members.
 
 Any feature that materially restricts message visibility MUST be implemented by using a separate tenant.
-
-#### MSG-003: Messager SHALL operate within a tenant origin
-
-**Status:** Draft  
-**Testable:** true  
-**Area:** app  
-**Rationale:** Tenant origins define storage isolation and routing (AD-0001).
-
-Messager SHALL be served under `https://<tenant_id>.<box-host>/messager` and SHALL derive tenant context from the hostname.
 
 #### MSG-004: Messager SHALL use the shared local tenant replica
 
@@ -392,18 +403,6 @@ Messager SHOULD minimize client resource usage by:
 - keeping client bundle size small.
 
 Resource budgets (exact numbers) are defined in performance test baselines, not in this SRS.
-
-## External Interfaces
-
-Messager external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
-
-- App route: `https://<tenant_id>.<box-host>/messager`
-- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-- Local storage: shared local tenant replica `tenant_local` within the tenant origin
-- Attachments: tenant blob store (accessed via platform services / gateway-mediated APIs when present)
-
-Any additional APIs consumed or exposed by Messager are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
-by automated integration tests.
 
 ## Verification
 

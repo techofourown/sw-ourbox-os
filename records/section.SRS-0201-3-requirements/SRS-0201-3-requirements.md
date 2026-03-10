@@ -6,8 +6,9 @@ fields:
   title: "Requirements"
   order: 3
   level: 1
-  includes:
-    - "section:3-gateway-and-identity"
-    - "req:K8S-002"
 ---
-Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; Gateway-specific requirements follow.
+Gateway requirements are mode-aware:
+- TLS requirements apply to public custom-domain mode.
+- Local-only tenant-host access is HTTP-only.
+- Host routing covers `<tenant_id>.local` and `*.<box-host>`.
+- Same-origin `/db` mapping is provided in both modes.

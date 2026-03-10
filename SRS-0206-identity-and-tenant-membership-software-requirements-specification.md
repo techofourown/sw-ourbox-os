@@ -34,38 +34,8 @@ Out of scope:
 
 ## Requirements
 
-Allocated requirements are included here for traceability; identity- and membership-specific requirements follow.
-
-### GW-001: Gateway SHALL derive tenant context from hostname
-
-**Status:** Draft  
-**Testable:** true  
-**Area:** gateway  
-**Rationale:** Tenant origins are the canonical boundary.
-
-The gateway SHALL derive `tenant_id` from the request hostname and treat it as the authoritative
-tenant context.
-
-### GW-002: Gateway SHALL enforce tenant membership
-
-**Status:** Draft  
-**Testable:** true  
-**Area:** gateway  
-**Rationale:** Ensures user access is scoped to the tenant origin.
-
-The gateway SHALL enforce that authenticated users are members of the tenant implied by the hostname
-before allowing access to tenant-scoped services.
-
-### GW-009: Gateway SHALL treat hostname-derived tenant context as authoritative
-
-**Status:** Draft  
-**Testable:** true  
-**Area:** gateway  
-**Rationale:** Prevent tenant confusion and parameter spoofing when hostname is present.
-
-When hostname is present, `tenant_id` SHALL be derived from the request hostname and SHALL NOT be accepted from untrusted client parameters as the primary authority.
-
-**Trace:** [[arch_doc:AD-0001]] §6.2
+Identity requirements derive tenant context from the leftmost DNS label of the full host in both modes.
+`tenant_id` constraints are DNS-label-safe and mode-neutral.
 
 ### ID-001: user_id SHALL be unique and stable within an OurBox instance
 
@@ -83,21 +53,6 @@ Within an OurBox instance, `user_id` SHALL be unique.
 `user_id` SHALL be safe for use in URLs, logs, and configuration.
 
 **Trace:** `docs/00-Glossary/Terms-and-Definitions.md` (user_id)
-
-### ID-002: tenant_id SHALL satisfy hostname and CouchDB naming constraints
-
-**Status:** Draft  
-**Testable:** true  
-**Area:** identity  
-**Rationale:** Glossary defines tenant_id constraints required for tenant origins and tenant DB naming.
-
-`tenant_id` SHALL be lowercase.
-
-`tenant_id` SHALL be safe for use in DNS labels (tenant subdomains).
-
-`tenant_id` SHALL be safe for use in CouchDB database names.
-
-**Trace:** `docs/00-Glossary/Terms-and-Definitions.md` (tenant_id)
 
 ### ID-003: display_name SHALL NOT be used as an identifier
 

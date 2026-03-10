@@ -7,11 +7,7 @@ fields:
   order: 4
   level: 1
 ---
-RichNote external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
-
-- App route: `https://<tenant_id>.<box-host>/richnote`
-- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-- Local storage: shared local tenant replica `tenant_local` within the tenant origin
-
-Any additional APIs consumed or exposed by RichNote are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
-by automated integration tests.
+- App route (local-only): `http://<tenant_id>.local/richnote`
+- App route (public custom-domain): `https://<tenant_id>.<box-host>/richnote`
+- Replication endpoint (local-only): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain): `https://<tenant_id>.<box-host>/db` (same-origin, via Gateway)
