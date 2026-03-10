@@ -472,6 +472,20 @@ fields:
 * Existing records use sequential integers (0, 1, 2, …). You may use gaps (10, 20, 30…) if you anticipate frequent insertions, but keep it consistent within a spec.
 * If `fields.order` is absent the compiler treats it as `0`.
 
+### Access-mode scoping rules
+- Any requirement that mentions tenant origin, app URL, replication endpoint, PWA/installability, service worker, or offline behavior SHALL be explicit about mode unless the statement is truly mode-agnostic.
+- If a requirement is true in both modes, state both modes.
+- If a requirement is true only in public custom-domain mode, scope it explicitly to public custom-domain mode.
+- If local-only mode is covered, state that local-only mode is HTTP-only and describe any weaker guarantees (for example, no guaranteed full installable-PWA/reopen-offline equivalence).
+
+### Access-mode terminology rules
+- Use glossary terms: `full host`, `box-host`, `tenant host`, `Local-only mode`, and `Public custom-domain mode`.
+- Do not use “subdomain” as the primary architecture term for tenant routing. Use “leftmost DNS label of the full host” when deriving `tenant_id`.
+
+### Compiled-output discipline
+- Do not hand-edit compiled SyRS/SRS/omnibus outputs.
+- Update authoritative GraphMD source records under `records/`, then run `npm test`.
+
 ### Requirement writing rules
 
 * One requirement per record.

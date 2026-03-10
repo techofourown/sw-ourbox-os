@@ -93,21 +93,25 @@ Replication between clients and the box SHALL use the standard CouchDB HTTP API 
 **Status:** Draft  
 **Testable:** true  
 **Area:** client  
-**Rationale:** A stable local DB name enables multiple shipped apps under the same tenant origin to share the same working store.
+**Rationale:** A stable local DB name enables shipped apps under one tenant origin to share one working store.
 
 Within a tenant origin, the local tenant replica SHALL use the stable PouchDB database name `tenant_local`.
 
-**Trace:** [[arch_doc:AD-0001]] §5.2.2
+`http://<tenant_id>.local` and `https://<tenant_id>.<box-host>` are different origins and therefore different local tenant replicas even for the same tenant and browser.
+
+**Trace:** [[arch_doc:AD-0001]] §4.4, §5.2
 
 ## External Interfaces
 
 The local tenant replica interacts with:
 - browser storage via IndexedDB (through PouchDB)
-- replication endpoints on the tenant origin (presented by the Gateway)
+- same-origin replication endpoints presented by the gateway
 
-Concrete replication configuration (credentials/session mechanics and any required request metadata) is defined by the deployed Gateway
-and identity implementation, and is verified by automated integration tests. This SRS specifies stable invariants (tenant origin,
-`tenant_local`, whole-DB replication posture) rather than wire-format details.
+Mode-aware endpoint patterns:
+- `http://<tenant_id>.local/db`
+- `https://<tenant_id>.<box-host>/db`
+
+For the same tenant/browser, these two origins are different origins and therefore different local tenant replicas.
 
 ## Verification
 

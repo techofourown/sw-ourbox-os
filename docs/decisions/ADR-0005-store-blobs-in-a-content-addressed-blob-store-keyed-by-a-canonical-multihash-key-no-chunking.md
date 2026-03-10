@@ -5,7 +5,7 @@
 2026-01-29
 ## Context
 
-OurBox OS is an offline-first, browser-first system (ADR-0001) built on CouchDB (box) + PouchDB (browser) replication (ADR-0002). Tenant databases are the replication unit and are partitioned by doc kind (ADR-0002, ADR-0004). Tenant context is derived from hostname and enforced by the gateway (ADR-0003, AD-0001).
+OurBox OS is an offline-first, browser-first system (ADR-0001) built on CouchDB (box) + PouchDB (browser) replication (ADR-0002). Tenant databases are the replication unit and are partitioned by doc kind (ADR-0002, ADR-0004). Tenant context is derived from the leftmost DNS label of the full host and enforced by the gateway (ADR-0003, AD-0001).
 
 We have committed to the posture that **large blobs SHALL NOT be stored as CouchDB attachments by default** (ADR-0002 Rule 9; SyRS-0001 DATA-006). That pushes us toward a tenant blob store for large binary content (photos, audio, video, etc.) with documents storing references.
 
@@ -110,7 +110,7 @@ Documents and schemas SHALL treat the CID as the authoritative blob reference. T
 
 ### 7) Tenant-scoped access posture
 
-Blob access SHALL be evaluated in **tenant context** derived from hostname (ADR-0003, AD-0001).
+Blob access SHALL be evaluated in **tenant context** derived from the leftmost DNS label of the full host (ADR-0003, AD-0001).
 
 * CIDs and Blob Keys are identifiers for integrity/dedupe and SHALL NOT be treated as secrets or access tokens.
 * Authorization remains a gateway/platform responsibility, consistent with the OurBox posture that tenant membership gates access.

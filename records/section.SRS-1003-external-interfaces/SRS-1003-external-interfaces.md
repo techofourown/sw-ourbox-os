@@ -7,13 +7,14 @@ fields:
   order: 50
   level: 1
 ---
+Messager external interfaces are mode-aware tenant-origin surfaces.
 
-Messager external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+- App routes:
+  - local-only mode: `http://<tenant_id>.local/messager`
+  - public custom-domain mode: `https://<tenant_id>.<box-host>/messager`
+- Replication endpoints:
+  - `http://<tenant_id>.local/db`
+  - `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within one origin
 
-- App route: `https://<tenant_id>.<box-host>/messager`
-- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-- Local storage: shared local tenant replica `tenant_local` within the tenant origin
-- Attachments: tenant blob store (accessed via platform services / gateway-mediated APIs when present)
-
-Any additional APIs consumed or exposed by Messager are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
-by automated integration tests.
+Full installable-PWA posture is scoped to public custom-domain mode. Local-only mode is HTTP local mode with local data continuity and opportunistic sync while reachable.

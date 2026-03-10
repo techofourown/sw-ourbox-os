@@ -240,7 +240,7 @@ The Platform Contract is the primary upstream output of `sw-ourbox-os`.
 It represents the versioned deployment baseline for the on-device platform:
 
 - `k3s` workloads
-- gateway defaults
+- gateway and access-mode defaults
 - storage and platform integration expectations
 - platform-level configuration baseline
 

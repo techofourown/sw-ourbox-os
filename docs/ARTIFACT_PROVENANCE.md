@@ -11,7 +11,7 @@ and
 
 | Artifact | Registry path | Description |
 |---|---|---|
-| Platform contract | `ghcr.io/techofourown/sw-ourbox-os/platform-contract` | Baseline manifests, platform configuration, and contract metadata baked into every OurBox OS image |
+| Platform contract | `ghcr.io/techofourown/sw-ourbox-os/platform-contract` | Baseline manifests, platform configuration, including gateway/access-mode defaults, and contract metadata baked into every OurBox OS image |
 | Airgap platform (arm64) | `ghcr.io/techofourown/sw-ourbox-os/airgap-platform` (tag: `edge-arm64`) | k3s binary + airgap images + platform images for ARM64 devices (Matchbox, Cinderbox) |
 | Airgap platform (amd64) | `ghcr.io/techofourown/sw-ourbox-os/airgap-platform` (tag: `edge-amd64`) | k3s binary + airgap images + platform images for x86-64 devices (Woodbox) |
 | Install defaults | `ghcr.io/techofourown/sw-ourbox-os/install-defaults` | Installer configuration defaults baked into installer media |

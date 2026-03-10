@@ -139,6 +139,19 @@ Characteristics (normative intent):
 - user controls the public DNS base host,
 - and external routing is operator-managed.
 
+### tenant host
+The full host used to address a tenant.
+
+Supported patterns:
+- local-only mode: `<tenant_id>.local`
+- public custom-domain mode: `<tenant_id>.<box-host>`
+
+### local landing host
+A reserved non-tenant local host used for setup/admin entry flows.
+
+Recommended pattern:
+- `ourbox.local`
+
 ### origin
 A web security boundary defined by `(scheme, host, port)`. Origins isolate:
 - IndexedDB and related browser storage,
@@ -170,13 +183,14 @@ Stable identifier for a tenant.
 
 Constraints (normative):
 - SHALL be lowercase.
-- SHALL be safe for use in DNS labels (tenant subdomains).
+- SHALL be safe for use in DNS labels.
+- SHALL be safe for use as the leftmost DNS label of a tenant host.
 - SHALL be safe for use in CouchDB database names.
 
 Examples: `bob`, `alice`, `family`, `roommates-2026`
 
 ### Tenant origin
-A tenant-scoped browser origin derived from hostname.
+A tenant-scoped browser origin derived from the full host.
 
 Supported patterns by mode:
 - local-only mode: `http://<tenant_id>.local/...`
@@ -244,7 +258,7 @@ A user-facing browser experience (a shipped OurBox PWA) reachable under a tenant
 Apps are experiences. Apps are replaceable. Apps do not define data boundaries.
 
 ### shipped app
-A first-party OurBox app distributed as part of OurBox OS that SHALL conform to ADR-0001 posture.
+A first-party OurBox app distributed as part of OurBox OS that SHALL conform to ADR-0001 posture across both access modes.
 
 ### app_slug
 The path portion that identifies an app experience under a tenant origin.

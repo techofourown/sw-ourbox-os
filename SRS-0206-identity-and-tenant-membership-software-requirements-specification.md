@@ -36,15 +36,14 @@ Out of scope:
 
 Allocated requirements are included here for traceability; identity- and membership-specific requirements follow.
 
-### GW-001: Gateway SHALL derive tenant context from hostname
+### GW-001: Gateway SHALL derive tenant context from the full host
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
-**Rationale:** Tenant origins are the canonical boundary.
+**Rationale:** Tenant host is the canonical routing and identity boundary.
 
-The gateway SHALL derive `tenant_id` from the request hostname and treat it as the authoritative
-tenant context.
+The gateway SHALL derive `tenant_id` from the leftmost DNS label of the full host and treat that tenant context as authoritative.
 
 ### GW-002: Gateway SHALL enforce tenant membership
 
@@ -56,14 +55,14 @@ tenant context.
 The gateway SHALL enforce that authenticated users are members of the tenant implied by the hostname
 before allowing access to tenant-scoped services.
 
-### GW-009: Gateway SHALL treat hostname-derived tenant context as authoritative
+### GW-009: Gateway SHALL treat full-host-derived tenant context as authoritative
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
-**Rationale:** Prevent tenant confusion and parameter spoofing when hostname is present.
+**Rationale:** Prevent tenant confusion and parameter spoofing when tenant host is present.
 
-When hostname is present, `tenant_id` SHALL be derived from the request hostname and SHALL NOT be accepted from untrusted client parameters as the primary authority.
+When full host is present, `tenant_id` SHALL be derived from the leftmost DNS label of the full host and SHALL NOT be accepted from untrusted client parameters as primary authority.
 
 **Trace:** [[arch_doc:AD-0001]] §6.2
 
@@ -93,7 +92,7 @@ Within an OurBox instance, `user_id` SHALL be unique.
 
 `tenant_id` SHALL be lowercase.
 
-`tenant_id` SHALL be safe for use in DNS labels (tenant subdomains).
+`tenant_id` SHALL be safe for use in DNS labels and as the leftmost DNS label of a tenant host.
 
 `tenant_id` SHALL be safe for use in CouchDB database names.
 
@@ -115,11 +114,11 @@ Within an OurBox instance, `user_id` SHALL be unique.
 **Status:** Draft  
 **Testable:** true  
 **Area:** identity  
-**Rationale:** AD-0001 defines the normative authorization decision inputs at the tenant boundary.
+**Rationale:** AD-0001 defines normative authorization inputs at the tenant boundary.
 
 Authorization SHALL consider:
 - authenticated user identity (`user_id`)
-- tenant derived from hostname (`tenant_id`)
+- tenant derived from the leftmost DNS label of the full host (`tenant_id`)
 - membership and roles/capabilities within that tenant
 - any doc-kind-specific rules where applicable
 
@@ -127,10 +126,9 @@ Authorization SHALL consider:
 
 ## External Interfaces
 
-This SRS does not define token formats, cookie names, header names, or claim shapes.
+Identity context is consumed from gateway requests where tenant context is derived from the leftmost DNS label of the full host.
 
-Concrete identity/session wire formats and internal identity-context propagation are defined as versioned contract artifacts
-(e.g., OpenAPI security schemes and/or JSON schemas) and are enforced by automated tests.
+This SRS does not define token formats, cookie names, header names, or claim shapes.
 
 ## Verification
 

@@ -57,15 +57,14 @@ Allocated system requirements from `[[spec:SyRS-0001]]` are included here for tr
 
 ### Allocated System Requirements (from SyRS)
 
-#### APP-001: Shipped apps SHALL be offline-first PWAs
+#### APP-001: Shipped apps SHALL provide full installable-PWA posture in public custom-domain mode
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Aligns shipped apps with ADR-0001 posture.
+**Rationale:** Public custom-domain mode is the canonical full-PWA posture.
 
-Shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful
-online session.
+In public custom-domain mode, shipped OurBox apps SHALL be installable PWAs with service-worker-backed assets and reopen-offline behavior after first successful load.
 
 #### APP-002: Shipped apps SHALL persist working data locally
 
@@ -85,15 +84,18 @@ Shipped apps SHALL store working data locally in the tenant origin using PouchDB
 
 Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
 
-#### APP-004: Apps SHALL operate within a tenant origin
+#### APP-004: Apps SHALL operate within mode-aware tenant origins
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Tenant origins define storage isolation and routing.
+**Rationale:** Tenant origins define storage isolation and routing in both access modes.
 
-Shipped apps SHALL be served under `https://<tenant_id>.<box-host>/<app_slug>` and derive tenant
-context from the hostname.
+Shipped apps SHALL be served under mode-aware tenant origins:
+- `http://<tenant_id>.local/<app_slug>` in local-only mode
+- `https://<tenant_id>.<box-host>/<app_slug>` in public custom-domain mode
+
+Across both modes, tenant context is derived from the leftmost DNS label of the full host.
 
 #### APP-005: Apps SHALL share one local tenant replica per origin
 
@@ -314,15 +316,17 @@ Scout SHOULD support:
 
 ## External Interfaces
 
-Scout external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+Scout external interfaces are mode-aware tenant-origin surfaces.
 
-* App route: `https://<tenant_id>.<box-host>/scout`
-* Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-* Local storage: shared local tenant replica `tenant_local` within the tenant origin
-* Source artifacts and retained binary snapshots: tenant blob store (when binary/large)
-* Optional service APIs: `https://<tenant_id>.<box-host>/api/scout/...` for source monitoring, extraction, briefing generation, and question-answering (when present)
+- App routes:
+  - local-only mode: `http://<tenant_id>.local/scout`
+  - public custom-domain mode: `https://<tenant_id>.<box-host>/scout`
+- Replication endpoints:
+  - `http://<tenant_id>.local/db`
+  - `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within one origin
 
-Any additional APIs consumed or exposed by Scout are described via machine-readable API contracts (OpenAPI/JSON schema) and verified by automated integration tests.
+Full installable-PWA posture is scoped to public custom-domain mode. Local-only mode is HTTP local mode with local data continuity and opportunistic sync while reachable.
 
 ## Verification
 

@@ -4,14 +4,17 @@ recordId: SRS-1002-4-external-interfaces
 parent: spec:SRS-1002
 fields:
   title: "External Interfaces"
-  order: 4
+  order: 50
   level: 1
 ---
-RichNote external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+Richnote external interfaces are mode-aware tenant-origin surfaces.
 
-- App route: `https://<tenant_id>.<box-host>/richnote`
-- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-- Local storage: shared local tenant replica `tenant_local` within the tenant origin
+- App routes:
+  - local-only mode: `http://<tenant_id>.local/richnote`
+  - public custom-domain mode: `https://<tenant_id>.<box-host>/richnote`
+- Replication endpoints:
+  - `http://<tenant_id>.local/db`
+  - `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within one origin
 
-Any additional APIs consumed or exposed by RichNote are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
-by automated integration tests.
+Full installable-PWA posture is scoped to public custom-domain mode. Local-only mode is HTTP local mode with local data continuity and opportunistic sync while reachable.

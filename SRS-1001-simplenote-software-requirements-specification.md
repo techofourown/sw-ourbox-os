@@ -40,18 +40,21 @@ Typical groupings (to be filled in later):
 - Quality Requirements (NFRs)
 - Constraints
 
-## External Interfaces
-
-SimpleNote external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
-
-- App route: `https://<tenant_id>.<box-host>/simplenote`
-- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-- Local storage: shared local tenant replica `tenant_local` within the tenant origin
-
-Any additional APIs consumed or exposed by SimpleNote are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
-by automated integration tests.
-
 ## Verification
 
 Verification provisions (methods, environments, and trace links to evidence) will be defined here.
 Verification methods are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
+
+## External Interfaces
+
+Simplenote external interfaces are mode-aware tenant-origin surfaces.
+
+- App routes:
+  - local-only mode: `http://<tenant_id>.local/simplenote`
+  - public custom-domain mode: `https://<tenant_id>.<box-host>/simplenote`
+- Replication endpoints:
+  - `http://<tenant_id>.local/db`
+  - `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within one origin
+
+Full installable-PWA posture is scoped to public custom-domain mode. Local-only mode is HTTP local mode with local data continuity and opportunistic sync while reachable.
