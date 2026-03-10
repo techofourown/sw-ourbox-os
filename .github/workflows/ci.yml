@@ -101,6 +101,16 @@ jobs:
       - name: Run release-control tests
         run: python3 -m unittest discover -s tools/release-control/tests -p 'test_*.py'
 
+  pr-batch-big-picture:
+    name: PR batch comparison tool tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run PR batch comparison tool tests
+        run: python3 tools/test_pr_batch_big_picture.py
+
   graphmd:
     runs-on: ubuntu-latest
     permissions:
