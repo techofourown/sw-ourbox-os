@@ -258,7 +258,7 @@ def normalize_comment_entry(comment: Dict[str, Any], comment_type: str) -> Dict[
             or comment.get("created_at")
             or ""
         ),
-        "url": comment.get("url") or comment.get("html_url") or "",
+        "url": comment.get("html_url") or comment.get("url") or "",
         "body": comment.get("body") or "",
         "state": comment.get("state") or "",
     }
@@ -870,6 +870,7 @@ def main() -> None:
     selection_requested = args.pr_selection
     selection_canonical = format_pr_selection(selected_prs)
     selection_tag = build_selection_tag(selected_prs, selection_canonical)
+    os.makedirs(args.output_dir, exist_ok=True)
 
     print(f"Requested PR selection: {selection_requested}")
     print(f"Canonical PR selection: {selection_canonical}")
