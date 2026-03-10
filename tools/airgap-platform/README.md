@@ -120,6 +120,9 @@ Primary consumers today:
 - Matchbox uses the `arm64` bundle
 - Woodbox uses the `amd64` bundle
 
+This README is intentionally local to the tool directory so maintainers can
+understand the airgap pipeline without reconstructing it from workflows first.
+
 See also:
 
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)
