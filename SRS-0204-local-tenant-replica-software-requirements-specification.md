@@ -12,16 +12,13 @@ Normative keywords (SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) and OurBox OS pro
 
 ## Introduction
 
-This SRS defines requirements for the **local tenant replica** on client devices: the PouchDB database (IndexedDB-backed) within a tenant origin that enables offline-first behavior.
+This SRS defines requirements for the local tenant replica (`tenant_local`) within a tenant origin.
 
-Key posture (already established in architecture):
-- many client devices may exist per tenant
-- connectivity may be intermittent; sync is opportunistic
-- storage isolation is by tenant origin (`https://<tenant_id>.<box-host>`)
+Tenant-origin patterns:
+- `http://<tenant_id>.local`
+- `https://<tenant_id>.<box-host>`
 
-Out of scope:
-- on-box CouchDB service requirements (see `[[spec:SRS-0202]]`)
-- gateway routing and `/db` mapping (see `[[spec:SRS-0201]]`)
+For the same tenant in one browser/device, these are different origins and therefore different local tenant replicas.
 
 ## Referenced Documents
 
@@ -99,15 +96,22 @@ Within a tenant origin, the local tenant replica SHALL use the stable PouchDB da
 
 **Trace:** [[arch_doc:AD-0001]] §5.2.2
 
+### LCR-002: Same tenant across local-only and public modes SHALL map to different local tenant replicas
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Browser origin isolation separates local storage across scheme/host differences.
+
+On the same browser/device, `http://<tenant_id>.local` and `https://<tenant_id>.<box-host>` are different origins and SHALL use different local tenant replicas.
+
 ## External Interfaces
 
 The local tenant replica interacts with:
 - browser storage via IndexedDB (through PouchDB)
-- replication endpoints on the tenant origin (presented by the Gateway)
-
-Concrete replication configuration (credentials/session mechanics and any required request metadata) is defined by the deployed Gateway
-and identity implementation, and is verified by automated integration tests. This SRS specifies stable invariants (tenant origin,
-`tenant_local`, whole-DB replication posture) rather than wire-format details.
+- mode-aware same-origin replication endpoints:
+  - `http://<tenant_id>.local/db`
+  - `https://<tenant_id>.<box-host>/db`
 
 ## Verification
 

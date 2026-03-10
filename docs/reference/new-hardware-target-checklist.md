@@ -186,3 +186,14 @@ Before green-lighting the target, reviewers should be able to answer:
 - Are the divergences explicit and supportable?
 - Is the documentation good enough that future maintainers will not have to rediscover the same
   boundary from scratch?
+
+
+## Access modes
+- [ ] Local-only mode support documented
+- [ ] Local-only mode host grammar documented (`http://<tenant_id>.local/...`)
+- [ ] Local-only mode HTTP-only posture documented
+- [ ] Local landing host documented if present (`ourbox.local`)
+- [ ] Public custom-domain mode support documented
+- [ ] Public custom-domain host grammar documented (`https://<tenant_id>.<box-host>/...`)
+- [ ] Public DNS / external routing prerequisites documented
+- [ ] Any target-specific limitations documented

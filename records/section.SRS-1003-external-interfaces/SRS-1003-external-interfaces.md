@@ -7,13 +7,11 @@ fields:
   order: 50
   level: 1
 ---
+Messager external interfaces are mode-aware tenant-origin surfaces.
 
-Messager external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
-
-- App route: `https://<tenant_id>.<box-host>/messager`
-- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-- Local storage: shared local tenant replica `tenant_local` within the tenant origin
-- Attachments: tenant blob store (accessed via platform services / gateway-mediated APIs when present)
-
-Any additional APIs consumed or exposed by Messager are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
-by automated integration tests.
+- Local-only app route: `http://<tenant_id>.local/messager`
+- Public custom-domain app route: `https://<tenant_id>.<box-host>/messager`
+- Local-only replication endpoint: `http://<tenant_id>.local/db` (same-origin, via the Gateway)
+- Public custom-domain replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
+- Local storage: shared local tenant replica `tenant_local` within the active origin
+- Optional service APIs by mode: `http://<tenant_id>.local/api/messager/...` and `https://<tenant_id>.<box-host>/api/messager/...` (when present)

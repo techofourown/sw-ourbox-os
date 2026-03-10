@@ -7,5 +7,5 @@ fields:
   order: 3
   level: 1
 ---
-These requirements define tenant routing, identity enforcement, and the gateway surface used by
+These requirements define mode-aware tenant host routing, identity enforcement, and the gateway surface used by
 clients and shipped apps.

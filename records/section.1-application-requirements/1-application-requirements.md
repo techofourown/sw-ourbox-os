@@ -7,5 +7,4 @@ fields:
   order: 1
   level: 1
 ---
-These requirements describe the baseline posture for shipped OurBox applications operating within a
-single tenant origin, including offline-first behavior and doc-kind handling.
+These requirements describe shipped OurBox application posture across both tenant-origin access modes, including mode-scoped offline/PWA behavior and doc-kind handling.

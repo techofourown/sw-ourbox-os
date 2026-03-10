@@ -116,6 +116,19 @@ Examples:
 
 In local-only mode, tenant hosts are `<tenant_id>.local`; there is no separate public `box-host` suffix in that local tenant-host grammar.
 
+### tenant host
+The full host used to address a tenant.
+
+Supported patterns:
+- local-only mode: `<tenant_id>.local`
+- public custom-domain mode: `<tenant_id>.<box-host>`
+
+### local landing host
+A reserved non-tenant local host used for setup/admin entry flows.
+
+Recommended pattern:
+- `ourbox.local`
+
 ### Local-only mode
 The zero-preparation joined-LAN mode for tenant app access.
 
@@ -145,7 +158,7 @@ A web security boundary defined by `(scheme, host, port)`. Origins isolate:
 - Cache Storage,
 - service workers.
 
-OurBox uses tenant-in-hostname so each tenant is a distinct origin.
+OurBox uses tenant-in-full-host so each tenant is a distinct origin.
 
 ### Operator Truth
 The posture that the device operator (physical/root/update control) can access anything on the box
@@ -170,13 +183,14 @@ Stable identifier for a tenant.
 
 Constraints (normative):
 - SHALL be lowercase.
-- SHALL be safe for use in DNS labels (tenant subdomains).
+- SHALL be safe for use in DNS labels.
+- SHALL be safe for use as the leftmost DNS label of a tenant host.
 - SHALL be safe for use in CouchDB database names.
 
 Examples: `bob`, `alice`, `family`, `roommates-2026`
 
 ### Tenant origin
-A tenant-scoped browser origin derived from hostname.
+A tenant-scoped browser origin derived from the full host.
 
 Supported patterns by mode:
 - local-only mode: `http://<tenant_id>.local/...`
@@ -245,6 +259,27 @@ Apps are experiences. Apps are replaceable. Apps do not define data boundaries.
 
 ### shipped app
 A first-party OurBox app distributed as part of OurBox OS that SHALL conform to ADR-0001 posture.
+
+### Progressive Web App (PWA)
+An app delivered through the web platform, commonly using service workers and browser installation support.
+
+Mode scope:
+- public custom-domain mode is the intended full installable-PWA posture,
+- local-only mode is HTTP-only and does not guarantee equivalent installability or reopen-offline behavior.
+
+### service worker
+A browser feature that can cache app assets and intercept network requests within an origin scope.
+
+Mode scope:
+- public custom-domain mode is the intended full service-worker-backed PWA posture,
+- local-only mode is HTTP-only and does not guarantee equivalent behavior.
+
+### Gateway
+The tenant-facing edge surface that routes by full host and path, enforces tenant-aware access control, and maps stable app/API/replication endpoints to internal platform services.
+
+Transport posture by mode:
+- local-only mode: serves HTTP tenant hosts,
+- public custom-domain mode: terminates HTTPS/TLS for public tenant hosts.
 
 ### app_slug
 The path portion that identifies an app experience under a tenant origin.

@@ -303,3 +303,18 @@ The target integration contract exists so that:
 - target-specific repos can make practical hardware choices,
 - the platform stays coherent above the hardware seam,
 - and future target discussions stay grounded in named seams rather than vague instincts.
+
+
+## 5.6 Access-mode realization
+Targets SHALL document and realize both access modes (or explicitly justify limitations):
+- local-only mode host grammar: `http://<tenant_id>.local/<app_slug>` and `http://<tenant_id>.local/db`
+- public custom-domain mode host grammar: `https://<tenant_id>.<box-host>/<app_slug>` and `https://<tenant_id>.<box-host>/db`
+- local-only mode is HTTP-only
+- public custom-domain mode is HTTPS/TLS
+- whether `ourbox.local` is exposed
+- operator prerequisites for public mode and any unsupported combinations
+
+Conformance questions:
+- How does the target realize local-only mode?
+- How does the target realize public custom-domain mode?
+- Are there target-specific limitations in either mode?

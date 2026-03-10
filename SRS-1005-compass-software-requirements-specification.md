@@ -59,15 +59,14 @@ Allocated system requirements from `[[spec:SyRS-0001]]` are included here for tr
 
 ### Allocated System Requirements (from SyRS)
 
-#### APP-001: Shipped apps SHALL be offline-first PWAs
+#### APP-001: Public custom-domain mode SHALL provide full installable-PWA posture for shipped apps
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Aligns shipped apps with ADR-0001 posture.
+**Rationale:** Full installability and reopen-offline guarantees are mode-scoped to public HTTPS tenant origins.
 
-Shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful
-online session.
+In public custom-domain mode, shipped OurBox apps SHALL be installable PWAs and SHALL be capable of reopen-offline behavior after first successful load via service-worker-backed cached assets.
 
 #### APP-002: Shipped apps SHALL persist working data locally
 
@@ -87,15 +86,18 @@ Shipped apps SHALL store working data locally in the tenant origin using PouchDB
 
 Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
 
-#### APP-004: Apps SHALL operate within a tenant origin
+#### APP-004: Apps SHALL operate within a tenant origin in both access modes
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Tenant origins define storage isolation and routing.
+**Rationale:** Tenant origins define storage isolation and routing in both local-only and public custom-domain modes.
 
-Shipped apps SHALL be served under `https://<tenant_id>.<box-host>/<app_slug>` and derive tenant
-context from the hostname.
+Shipped apps SHALL be served under tenant origins in both supported patterns:
+- local-only mode: `http://<tenant_id>.local/<app_slug>`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/<app_slug>`
+
+The full host SHALL carry tenant context, `tenant_id` SHALL be derived from the leftmost DNS label of the full host, and path SHALL identify app.
 
 #### APP-005: Apps SHALL share one local tenant replica per origin
 
@@ -360,17 +362,14 @@ A side-by-side comparison SHOULD highlight, at minimum:
 
 ## External Interfaces
 
-Compass external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+Compass external interfaces are mode-aware tenant-origin surfaces.
 
-* App route: `https://<tenant_id>.<box-host>/compass`
-* Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-* Local storage: shared local tenant replica `tenant_local` within the tenant origin
-* Candidate and contest source artifacts: tenant blob store (when binary/large)
-* Optional service APIs: `https://<tenant_id>.<box-host>/api/compass/...` for profile capture, contest scoping, stance extraction, fit evaluation, and candidate comparison (when present)
-
-Compass MAY consume source-grounded civic records already present in the shared local tenant replica (e.g., `source:*`, `snapshot:*`, `issue:*`, and `brief:*` records) when available.
-
-Any additional APIs consumed or exposed by Compass are described via machine-readable API contracts (OpenAPI/JSON schema) and verified by automated integration tests.
+- Local-only app route: `http://<tenant_id>.local/compass`
+- Public custom-domain app route: `https://<tenant_id>.<box-host>/compass`
+- Local-only replication endpoint: `http://<tenant_id>.local/db` (same-origin, via the Gateway)
+- Public custom-domain replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
+- Local storage: shared local tenant replica `tenant_local` within the active origin
+- Optional service APIs by mode: `http://<tenant_id>.local/api/compass/...` and `https://<tenant_id>.<box-host>/api/compass/...` (when present)
 
 ## Verification
 

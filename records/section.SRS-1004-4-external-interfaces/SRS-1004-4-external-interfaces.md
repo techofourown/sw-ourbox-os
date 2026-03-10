@@ -7,13 +7,11 @@ fields:
   order: 50
   level: 1
 ---
+Scout external interfaces are mode-aware tenant-origin surfaces.
 
-Scout external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
-
-* App route: `https://<tenant_id>.<box-host>/scout`
-* Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-* Local storage: shared local tenant replica `tenant_local` within the tenant origin
-* Source artifacts and retained binary snapshots: tenant blob store (when binary/large)
-* Optional service APIs: `https://<tenant_id>.<box-host>/api/scout/...` for source monitoring, extraction, briefing generation, and question-answering (when present)
-
-Any additional APIs consumed or exposed by Scout are described via machine-readable API contracts (OpenAPI/JSON schema) and verified by automated integration tests.
+- Local-only app route: `http://<tenant_id>.local/scout`
+- Public custom-domain app route: `https://<tenant_id>.<box-host>/scout`
+- Local-only replication endpoint: `http://<tenant_id>.local/db` (same-origin, via the Gateway)
+- Public custom-domain replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
+- Local storage: shared local tenant replica `tenant_local` within the active origin
+- Optional service APIs by mode: `http://<tenant_id>.local/api/scout/...` and `https://<tenant_id>.<box-host>/api/scout/...` (when present)

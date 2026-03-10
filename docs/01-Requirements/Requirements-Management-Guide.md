@@ -542,3 +542,13 @@ Not required for day-to-day work, but worth knowing:
 * **RTM/VCD support:** add fields like `verifies`, `allocatedTo`, `derivedFrom`, and render them into output for traceability.
 
 ---
+
+
+## Mode-aware requirement authoring rules
+- Any requirement mentioning tenant origin, app URL, replication endpoint, PWA/installability, service worker, or offline behavior SHALL be explicit about mode unless it is truly mode-agnostic.
+- Use glossary terms: full host, box-host, tenant host, Local-only mode, Public custom-domain mode.
+- Do not use “subdomain” as the primary architecture term for tenant routing.
+- If a requirement is only true in public custom-domain mode, state that explicitly.
+- If a requirement is true in both modes, state that explicitly.
+- If local-only mode behavior is HTTP-only with weaker guarantees, state that explicitly.
+- Do not hand-edit compiled SRS/SyRS outputs; update GraphMD source records under `records/` and recompile.

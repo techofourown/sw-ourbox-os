@@ -35,15 +35,14 @@ This SRS intentionally remains a minimal scaffold, but it includes the Gateway r
 
 Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; Gateway-specific requirements follow.
 
-### GW-001: Gateway SHALL derive tenant context from hostname
+### GW-001: Gateway SHALL derive tenant context from the full host
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
-**Rationale:** Tenant origins are the canonical boundary.
+**Rationale:** Tenant routing is host-derived across both access modes.
 
-The gateway SHALL derive `tenant_id` from the request hostname and treat it as the authoritative
-tenant context.
+The gateway SHALL derive `tenant_id` from the leftmost DNS label of the request full host and treat it as authoritative tenant context.
 
 ### GW-002: Gateway SHALL enforce tenant membership
 
@@ -52,37 +51,39 @@ tenant context.
 **Area:** gateway  
 **Rationale:** Ensures user access is scoped to the tenant origin.
 
-The gateway SHALL enforce that authenticated users are members of the tenant implied by the hostname
+The gateway SHALL enforce that authenticated users are members of the tenant implied by the full host
 before allowing access to tenant-scoped services.
 
-### GW-003: Replication endpoints SHALL be same-origin
+### GW-003: Replication endpoints SHALL be same-origin in both access modes
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
-**Rationale:** Browser clients must replicate without CORS or topology leakage.
+**Rationale:** Browser clients replicate without CORS/topology leakage in local-only and public custom-domain modes.
 
-The gateway SHALL expose replication at `/db` on the tenant origin and SHALL NOT require clients to
-know internal CouchDB endpoints.
+The gateway SHALL expose replication at `/db` on the tenant origin in both modes:
+- `http://<tenant_id>.local/db`
+- `https://<tenant_id>.<box-host>/db`
 
-### K8S-002: Gateway ingress SHALL support wildcard tenant hosts
+Clients SHALL NOT require internal CouchDB endpoints.
+
+### K8S-002: Public custom-domain ingress SHALL support wildcard tenant hosts
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** k8s  
-**Rationale:** Tenant origins rely on hostname routing.
+**Rationale:** Public tenant-host routing relies on wildcard full-host matching.
 
-Ingress configuration SHALL support wildcard host routing for `*.<box-host>` to enable tenant
-subdomains.
+For public custom-domain mode, ingress configuration SHALL support wildcard host routing for `*.<box-host>`.
 
-### GW-005: TLS SHALL be terminated at the gateway for tenant subdomains
+### GW-005: Gateway SHALL terminate TLS in public custom-domain mode
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
-**Rationale:** Tenant origins are HTTPS surfaces; clients should not depend on internal service TLS topologies.
+**Rationale:** Public tenant hosts are HTTPS/TLS surfaces.
 
-TLS SHALL be terminated at the gateway for tenant subdomains.
+In public custom-domain mode, TLS SHALL be terminated at the gateway for `*.<box-host>` tenant hosts.
 
 **Trace:** [[arch_doc:AD-0001]] §5.4.2
 
@@ -100,7 +101,7 @@ Path routing SHALL support:
 
 **Trace:** [[arch_doc:AD-0001]] §5.4.2
 
-### GW-007: Gateway SHALL map `/db` on the tenant origin to the tenant DB in CouchDB
+### GW-007: Gateway SHALL map `/db` on tenant origins to tenant DBs in both modes
 
 **Status:** Draft  
 **Testable:** true  
@@ -108,7 +109,7 @@ Path routing SHALL support:
 **Rationale:** Clients replicate same-origin without knowing CouchDB topology or database names.
 
 The gateway/reverse proxy maps:
-
+- `http://<tenant_id>.local/db` → CouchDB database `tenant_<tenant_id>`
 - `https://<tenant_id>.<box-host>/db` → CouchDB database `tenant_<tenant_id>`
 
 Clients SHALL NOT select arbitrary CouchDB database names directly.
@@ -126,32 +127,35 @@ CouchDB is exposed externally only through the tenant origin as a tenant-scoped 
 
 **Trace:** [[arch_doc:AD-0001]] §4.5
 
-### GW-009: Gateway SHALL treat hostname-derived tenant context as authoritative
+### GW-009: Gateway SHALL treat full host-derived tenant context as authoritative
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** gateway  
-**Rationale:** Prevent tenant confusion and parameter spoofing when hostname is present.
+**Rationale:** Prevent tenant confusion and parameter spoofing when full host is present.
 
-When hostname is present, `tenant_id` SHALL be derived from the request hostname and SHALL NOT be accepted from untrusted client parameters as the primary authority.
+When full host is present, `tenant_id` SHALL be derived from the request full host and SHALL NOT be accepted from untrusted client parameters as the primary authority.
 
 **Trace:** [[arch_doc:AD-0001]] §6.2
 
+### GW-010: Gateway SHALL serve HTTP tenant hosts in local-only mode
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** gateway  
+**Rationale:** Local-only mode requires HTTP routing for `<tenant_id>.local`.
+
+In local-only mode, the gateway SHALL route HTTP requests for tenant hosts matching `<tenant_id>.local` and MAY expose `ourbox.local` for local landing flows.
+
 ## External Interfaces
 
-Gateway external interfaces are HTTP(S) surfaces on tenant origins, including:
-- wildcard tenant hosts: `*.<box-host>`
+Gateway external interfaces are mode-aware tenant-origin surfaces:
+- local-only mode tenant hosts: `<tenant_id>.local` over HTTP
+- optional local landing host: `ourbox.local` over HTTP
+- public custom-domain tenant hosts: `*.<box-host>` over HTTPS/TLS
 - app paths: `/<app_slug>`
 - replication path: `/db`
 - API paths: `/api/...` (when present)
-
-The authoritative definition of these external surfaces (host routing, paths, routing objects, and service bindings)
-is the versioned deployment baseline (rendered Kubernetes manifests) and the running cluster state, verified by
-conformance/integration tests (see ADR-0008).
-
-This SRS intentionally does not define internal identity/session wire details (header names, claim keys, token formats).
-Those concrete wire details are defined as versioned contract artifacts (e.g., OpenAPI security schemes and/or JSON schemas)
-and are enforced by automated tests.
 
 ## Verification
 
@@ -159,5 +163,5 @@ Verification methods are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
 
 Initial verification posture for this SRS:
 - **Inspection:** confirm Gateway configuration supports wildcard hosts and path routing shapes (K8S-002, GW-005, GW-006).
-- **Test:** automated integration tests that validate hostname→tenant mapping and membership gating (GW-001..GW-003, GW-007..GW-009).
+- **Test:** automated integration tests that validate full host→tenant mapping and membership gating (GW-001..GW-003, GW-007..GW-009).
 - Evidence artifacts (test outputs, config snapshots, and release manifests) will be linked here as they are produced.

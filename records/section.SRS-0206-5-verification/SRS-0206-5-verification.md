@@ -12,4 +12,4 @@ Verification methods are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
 
 Initial verification posture:
 - **Inspection:** identifier rules for `tenant_id` and `user_id` are enforced consistently.
-- **Test:** membership gating prevents cross-tenant access when hostnames differ.
+- **Test:** membership gating prevents cross-tenant access when full hosts differ.

@@ -7,15 +7,11 @@ fields:
   order: 50
   level: 1
 ---
+Spar external interfaces are mode-aware tenant-origin surfaces.
 
-Spar external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
-
-* App route: `https://<tenant_id>.<box-host>/spar`
-* Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-* Local storage: shared local tenant replica `tenant_local` within the tenant origin
-* Supporting source artifacts: tenant blob store (when binary/large)
-* Optional service APIs: `https://<tenant_id>.<box-host>/api/spar/...` for dialogue session management, challenge generation, source-grounded analysis, and reflection summaries (when present)
-
-Spar MAY consume shared civic records already present in the shared local tenant replica (e.g., `claim:*`, `issue:*`, `brief:*`, `candidate:*`, `stance:*`, and `fit:*` records) when available.
-
-Any additional APIs consumed or exposed by Spar are described via machine-readable API contracts (OpenAPI/JSON schema) and verified by automated integration tests.
+- Local-only app route: `http://<tenant_id>.local/spar`
+- Public custom-domain app route: `https://<tenant_id>.<box-host>/spar`
+- Local-only replication endpoint: `http://<tenant_id>.local/db` (same-origin, via the Gateway)
+- Public custom-domain replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
+- Local storage: shared local tenant replica `tenant_local` within the active origin
+- Optional service APIs by mode: `http://<tenant_id>.local/api/spar/...` and `https://<tenant_id>.<box-host>/api/spar/...` (when present)
