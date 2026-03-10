@@ -12,6 +12,7 @@ fields:
     - "req:APP-005"
     - "req:DATA-005"
     - "req:BOXDB-001"
+    - "req:LCR-002"
 ---
 
 Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; local-replica-specific requirements follow.

@@ -279,6 +279,12 @@ Then inspect:
 * the specific spec file (`SyRS-0001-*.md`, `SRS-0202-*.md`, etc.)
 * `OurBox-OS-Requirements-Omnibus.md`
 
+**Allocation propagation rule (required):**
+
+* If you add a new requirement intended to appear in downstream allocation views (for example `APP-*`, `GW-*`, `K8S-*`), you MUST also update the corresponding allocation section source records (`fields.includes` and/or section structure) for each affected SRS.
+* After updating those include lists/section records, rerun compilation (`npm test`) and verify each generated downstream SRS actually renders the new requirement in its allocated-system-requirements block.
+* Do not hand-edit compiled outputs to “patch in” missing allocations; fix the GraphMD source records and rebuild.
+
 You should see:
 
 * your new section heading (if you added one)

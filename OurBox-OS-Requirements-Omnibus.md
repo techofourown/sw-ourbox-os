@@ -1190,23 +1190,23 @@ replica database on that device.
 Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
 vocabulary defined for OurBox OS.
 
-### APP-007: Local-only mode SHALL be documented as HTTP-only with narrower browser guarantees
+### APP-007: Local-only mode SHALL be HTTP-only
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Local-only mode has transport and browser capability limits that differ from public mode.
+**Rationale:** Local-only mode is designed for HTTP-only access on `.local` routes without TLS requirements.
 
-Local-only mode SHALL be documented as HTTP-only and SHALL NOT be documented as guaranteeing full installable-PWA or reopen-offline behavior equivalent to public custom-domain mode.
+Local-only mode SHALL use `http://<tenant_id>.local/<app_slug>` and SHALL NOT require or imply HTTPS/TLS for app access in that mode.
 
-### APP-008: Local-only and public tenant origins for the same tenant SHALL be treated as distinct local replicas
+### APP-008: Local-only mode documentation SHALL NOT promise public-mode-equivalent full PWA posture
 
 **Status:** Draft  
 **Testable:** true  
 **Area:** app  
-**Rationale:** Origin boundaries isolate browser storage and local replica state.
+**Rationale:** Product and app documentation must accurately describe local-only browser capability limits versus public custom-domain mode.
 
-For the same tenant on the same browser, `http://<tenant_id>.local` and `https://<tenant_id>.<box-host>` SHALL be treated as different origins and therefore different local tenant replicas.
+Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
 
 ## Data and Replication
 
@@ -1941,7 +1941,8 @@ This SRS defines requirements for the **local tenant replica** on client devices
 Key posture (already established in architecture):
 - many client devices may exist per tenant
 - connectivity may be intermittent; sync is opportunistic
-- storage isolation is by tenant origin (`http://<tenant_id>.local` or `https://<tenant_id>.<box-host>`)
+- storage isolation is by tenant origin (`http://<tenant_id>.local` in local-only mode and `https://<tenant_id>.<box-host>` in public custom-domain mode)
+- for the same tenant, those two tenant-origin patterns are different browser origins and therefore different local tenant replicas
 
 Out of scope:
 - on-box CouchDB service requirements (see `[[spec:SRS-0202]]`)
@@ -2012,6 +2013,15 @@ Replication between clients and the box SHALL use the standard CouchDB HTTP API 
 
 **Trace:** [[arch_doc:AD-0001]] §4.5
 
+### LCR-002: Same tenant across local-only and public modes SHALL map to different local tenant replicas
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** client  
+**Rationale:** Browser origin boundaries isolate storage; local-only and public custom-domain origins cannot share one local tenant replica.
+
+For the same tenant on the same browser/device, `http://<tenant_id>.local` and `https://<tenant_id>.<box-host>` are different origins and SHALL use different local tenant replicas.
+
 ### LCR-001: Local tenant replica SHALL use the stable database name `tenant_local`
 
 **Status:** Draft  
@@ -2031,7 +2041,7 @@ The local tenant replica interacts with:
   - `http://<tenant_id>.local/db`
   - `https://<tenant_id>.<box-host>/db`
 
-For the same tenant on the same browser profile, local-only and public custom-domain origins are different origins and therefore different local tenant replicas.
+For the same tenant on the same browser profile, `http://<tenant_id>.local` and `https://<tenant_id>.<box-host>` are different origins and therefore different local tenant replicas.
 
 ## Verification
 
@@ -2357,6 +2367,86 @@ Public custom-domain mode is the full installable-PWA posture. Local-only mode r
 Verification provisions (methods, environments, and trace links to evidence) will be defined here.
 Verification methods are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
 
+### Allocated System Requirements (from SyRS)
+
+#### APP-001: Shipped apps SHALL provide full installable-PWA posture in public custom-domain mode
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Aligns shipped-app installability guarantees with mode-specific browser behavior.
+
+In public custom-domain mode, shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful online session.
+
+#### APP-002: Shipped apps SHALL persist working data locally
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Offline writes depend on local persistence.
+
+Shipped apps SHALL store working data locally in the tenant origin using PouchDB-backed IndexedDB.
+
+#### APP-003: Shipped apps SHALL sync opportunistically
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Supports sporadic connectivity while keeping data consistent.
+
+Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
+
+#### APP-004: Apps SHALL operate within a mode-aware tenant origin
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Tenant origins define storage isolation and routing in both access modes.
+
+Shipped apps SHALL be served under mode-aware tenant origins:
+- local-only mode: `http://<tenant_id>.local/<app_slug>`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/<app_slug>`
+
+Tenant context SHALL be derived from the full host; `tenant_id` is the leftmost DNS label.
+
+#### APP-005: Apps SHALL share one local tenant replica per origin
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Ensures apps share doc kinds offline.
+
+All shipped apps under the same tenant origin SHALL read and write through a single local tenant
+replica database on that device.
+
+#### APP-006: Apps SHALL honor doc-kind contracts
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Shared storage requires strict doc-kind boundaries.
+
+Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
+vocabulary defined for OurBox OS.
+
+#### APP-007: Local-only mode SHALL be HTTP-only
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Local-only mode is designed for HTTP-only access on `.local` routes without TLS requirements.
+
+Local-only mode SHALL use `http://<tenant_id>.local/<app_slug>` and SHALL NOT require or imply HTTPS/TLS for app access in that mode.
+
+#### APP-008: Local-only mode documentation SHALL NOT promise public-mode-equivalent full PWA posture
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Product and app documentation must accurately describe local-only browser capability limits versus public custom-domain mode.
+
+Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
+
 ---
 
 # SRS-1002: RichNote Software Requirements Specification
@@ -2417,6 +2507,86 @@ Public custom-domain mode is the full installable-PWA posture. Local-only mode r
 
 Verification provisions (methods, environments, and trace links to evidence) will be defined here.
 Verification methods are defined in `docs/00-Glossary/Terms-and-Definitions.md`.
+
+### Allocated System Requirements (from SyRS)
+
+#### APP-001: Shipped apps SHALL provide full installable-PWA posture in public custom-domain mode
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Aligns shipped-app installability guarantees with mode-specific browser behavior.
+
+In public custom-domain mode, shipped OurBox apps SHALL be installable PWAs that can load from cache after the first successful online session.
+
+#### APP-002: Shipped apps SHALL persist working data locally
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Offline writes depend on local persistence.
+
+Shipped apps SHALL store working data locally in the tenant origin using PouchDB-backed IndexedDB.
+
+#### APP-003: Shipped apps SHALL sync opportunistically
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Supports sporadic connectivity while keeping data consistent.
+
+Shipped apps SHALL initiate incremental replication with the tenant DB when connectivity is available.
+
+#### APP-004: Apps SHALL operate within a mode-aware tenant origin
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Tenant origins define storage isolation and routing in both access modes.
+
+Shipped apps SHALL be served under mode-aware tenant origins:
+- local-only mode: `http://<tenant_id>.local/<app_slug>`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/<app_slug>`
+
+Tenant context SHALL be derived from the full host; `tenant_id` is the leftmost DNS label.
+
+#### APP-005: Apps SHALL share one local tenant replica per origin
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Ensures apps share doc kinds offline.
+
+All shipped apps under the same tenant origin SHALL read and write through a single local tenant
+replica database on that device.
+
+#### APP-006: Apps SHALL honor doc-kind contracts
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Shared storage requires strict doc-kind boundaries.
+
+Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
+vocabulary defined for OurBox OS.
+
+#### APP-007: Local-only mode SHALL be HTTP-only
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Local-only mode is designed for HTTP-only access on `.local` routes without TLS requirements.
+
+Local-only mode SHALL use `http://<tenant_id>.local/<app_slug>` and SHALL NOT require or imply HTTPS/TLS for app access in that mode.
+
+#### APP-008: Local-only mode documentation SHALL NOT promise public-mode-equivalent full PWA posture
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Product and app documentation must accurately describe local-only browser capability limits versus public custom-domain mode.
+
+Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
 
 ---
 
@@ -2536,6 +2706,24 @@ replica database on that device.
 
 Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
 vocabulary defined for OurBox OS.
+
+#### APP-007: Local-only mode SHALL be HTTP-only
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Local-only mode is designed for HTTP-only access on `.local` routes without TLS requirements.
+
+Local-only mode SHALL use `http://<tenant_id>.local/<app_slug>` and SHALL NOT require or imply HTTPS/TLS for app access in that mode.
+
+#### APP-008: Local-only mode documentation SHALL NOT promise public-mode-equivalent full PWA posture
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Product and app documentation must accurately describe local-only browser capability limits versus public custom-domain mode.
+
+Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
 
 ### Functional and Data Requirements (Messager-specific)
 
@@ -2962,6 +3150,24 @@ replica database on that device.
 Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
 vocabulary defined for OurBox OS.
 
+#### APP-007: Local-only mode SHALL be HTTP-only
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Local-only mode is designed for HTTP-only access on `.local` routes without TLS requirements.
+
+Local-only mode SHALL use `http://<tenant_id>.local/<app_slug>` and SHALL NOT require or imply HTTPS/TLS for app access in that mode.
+
+#### APP-008: Local-only mode documentation SHALL NOT promise public-mode-equivalent full PWA posture
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Product and app documentation must accurately describe local-only browser capability limits versus public custom-domain mode.
+
+Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
+
 ### Functional and Data Requirements (Scout-specific)
 
 #### SCOUT-001: Scout SHALL monitor user-chosen civic information sources
@@ -3308,6 +3514,24 @@ replica database on that device.
 
 Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
 vocabulary defined for OurBox OS.
+
+#### APP-007: Local-only mode SHALL be HTTP-only
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Local-only mode is designed for HTTP-only access on `.local` routes without TLS requirements.
+
+Local-only mode SHALL use `http://<tenant_id>.local/<app_slug>` and SHALL NOT require or imply HTTPS/TLS for app access in that mode.
+
+#### APP-008: Local-only mode documentation SHALL NOT promise public-mode-equivalent full PWA posture
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Product and app documentation must accurately describe local-only browser capability limits versus public custom-domain mode.
+
+Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
 
 ### Functional and Data Requirements (Compass-specific)
 
@@ -3701,6 +3925,24 @@ replica database on that device.
 
 Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
 vocabulary defined for OurBox OS.
+
+#### APP-007: Local-only mode SHALL be HTTP-only
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Local-only mode is designed for HTTP-only access on `.local` routes without TLS requirements.
+
+Local-only mode SHALL use `http://<tenant_id>.local/<app_slug>` and SHALL NOT require or imply HTTPS/TLS for app access in that mode.
+
+#### APP-008: Local-only mode documentation SHALL NOT promise public-mode-equivalent full PWA posture
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Product and app documentation must accurately describe local-only browser capability limits versus public custom-domain mode.
+
+Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
 
 ### Functional and Data Requirements (Spar-specific)
 

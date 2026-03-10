@@ -115,6 +115,24 @@ replica database on that device.
 Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
 vocabulary defined for OurBox OS.
 
+#### APP-007: Local-only mode SHALL be HTTP-only
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Local-only mode is designed for HTTP-only access on `.local` routes without TLS requirements.
+
+Local-only mode SHALL use `http://<tenant_id>.local/<app_slug>` and SHALL NOT require or imply HTTPS/TLS for app access in that mode.
+
+#### APP-008: Local-only mode documentation SHALL NOT promise public-mode-equivalent full PWA posture
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Product and app documentation must accurately describe local-only browser capability limits versus public custom-domain mode.
+
+Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
+
 ### Functional and Data Requirements (Messager-specific)
 
 #### MSG-001: Messager SHALL treat the tenant as the social boundary
