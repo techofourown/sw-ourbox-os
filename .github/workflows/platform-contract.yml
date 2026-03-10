@@ -44,6 +44,10 @@ jobs:
       - name: Install platform-contract validation deps
         run: python3 -m pip install --disable-pip-version-check pyyaml
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
 

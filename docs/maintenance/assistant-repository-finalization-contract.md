@@ -88,10 +88,10 @@ The stable vendorable paths listed in section 2.4 are now part of the repository
 ### 3.2 Move repo-local requirements tooling into `tools/requirements/`
 Move these files:
 
-- `tools/requirements/compile-all-specs.cjs`
+- `tools/compile-all-specs.cjs`
 - `tools/load-graphmd-snapshot.cjs`
-- `tools/requirements/validate-dataset.cjs`
-- `tools/requirements/verify-spec-artifacts.cjs`
+- `tools/validate-dataset.cjs`
+- `tools/verify-spec-artifacts.cjs`
 
 to:
 
@@ -107,8 +107,8 @@ Do not leave duplicate canonical copies.
 ### 3.3 Move repo-local policy checks into `tools/policy/`
 Move these files:
 
-- `tools/policy/check-public-sanitization.sh`
-- `tools/policy/check-workflow-safety.sh`
+- `tools/check-public-sanitization.sh`
+- `tools/check-workflow-safety.sh`
 
 to:
 

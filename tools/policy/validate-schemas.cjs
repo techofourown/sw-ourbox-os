@@ -89,35 +89,84 @@ function validateFile(schemaPath, filePath) {
   return true;
 }
 
+function assertNoRootGeneratedRequirements(repoRoot) {
+  const rootFiles = fs.readdirSync(repoRoot, { withFileTypes: true }).filter((d) => d.isFile()).map((d) => d.name);
+  const offenders = rootFiles.filter((name) =>
+    /^SRS-.*\.md$/.test(name) || /^SyRS-.*\.md$/.test(name) || name === 'OurBox-OS-Requirements-Omnibus.md'
+  );
+  if (offenders.length > 0) {
+    console.error('Root cleanliness check failed; generated requirements artifacts found at repo root:');
+    for (const offender of offenders) console.error(`- ${offender}`);
+    return false;
+  }
+  console.log('Verified: no generated requirements artifacts at repository root.');
+  return true;
+}
+
+function resolveRepoPath(repoRoot, value) {
+  return path.isAbsolute(value) ? value : path.resolve(repoRoot, value);
+}
+
 function main() {
   const repoRoot = path.resolve(__dirname, '..', '..');
   const args = process.argv.slice(2);
+
+  const approvedInputs = [];
   const publishRecordFiles = [];
+  let discoverPublishRecords = false;
+  let checkRootGeneratedClean = false;
 
   for (let i = 0; i < args.length; i += 1) {
-    if (args[i] === '--publish-record' && args[i + 1]) {
-      publishRecordFiles.push(path.resolve(repoRoot, args[i + 1]));
+    const arg = args[i];
+    if (arg === '--approved-upstream-inputs' && args[i + 1]) {
+      approvedInputs.push(resolveRepoPath(repoRoot, args[i + 1]));
       i += 1;
+      continue;
+    }
+    if (arg === '--publish-record' && args[i + 1]) {
+      publishRecordFiles.push(resolveRepoPath(repoRoot, args[i + 1]));
+      i += 1;
+      continue;
+    }
+    if (arg === '--discover-publish-records') {
+      discoverPublishRecords = true;
+      continue;
+    }
+    if (arg === '--check-root-generated-clean') {
+      checkRootGeneratedClean = true;
+      continue;
     }
   }
 
+  const noTargets = approvedInputs.length === 0 && publishRecordFiles.length === 0 && !discoverPublishRecords;
+  if (noTargets) {
+    approvedInputs.push(path.resolve(repoRoot, 'release', 'approved-upstream-inputs.json'));
+    discoverPublishRecords = true;
+  }
+
   let ok = true;
-  ok = validateFile(
-    path.resolve(repoRoot, 'schemas', 'approved-upstream-inputs.schema.json'),
-    path.resolve(repoRoot, 'release', 'approved-upstream-inputs.json')
-  ) && ok;
 
-  const distDir = path.resolve(repoRoot, 'dist');
-  const discovered = fs.existsSync(distDir)
-    ? fs.readdirSync(distDir).filter((f) => f.endsWith('.publish-record.json')).map((f) => path.resolve(distDir, f))
-    : [];
-  const targets = [...new Set([...discovered, ...publishRecordFiles])];
+  for (const approvedPath of approvedInputs) {
+    ok = validateFile(path.resolve(repoRoot, 'schemas', 'approved-upstream-inputs.schema.json'), approvedPath) && ok;
+  }
 
+  const discovered = [];
+  if (discoverPublishRecords) {
+    const distDir = path.resolve(repoRoot, 'dist');
+    if (fs.existsSync(distDir)) {
+      discovered.push(...fs.readdirSync(distDir)
+        .filter((f) => f.endsWith('.publish-record.json'))
+        .map((f) => path.resolve(distDir, f)));
+    }
+  }
+
+  const targets = [...new Set([...publishRecordFiles, ...discovered])];
   for (const target of targets) {
-    ok = validateFile(
-      path.resolve(repoRoot, 'schemas', 'artifact-publish-record.schema.json'),
-      target
-    ) && ok;
+    ok = validateFile(path.resolve(repoRoot, 'schemas', 'artifact-publish-record.schema.json'), target) && ok;
+  }
+
+  if (checkRootGeneratedClean) {
+    ok = assertNoRootGeneratedRequirements(repoRoot) && ok;
   }
 
   if (!ok) process.exit(1);

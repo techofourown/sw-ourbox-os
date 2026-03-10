@@ -69,6 +69,7 @@ Key outputs:
 - `dist/platform-contract.meta.env`
 - `dist/platform-contract.push.log`
 - `dist/platform-contract.ref`
+- `dist/platform-contract.publish-record.json` (canonical machine-readable publish record)
 
 ## Official workflows
 
@@ -89,4 +90,3 @@ See also:
 - [platform-contract/README.md](../../platform-contract/README.md)
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)
 
-- `dist/platform-contract.publish-record.json` (canonical machine-readable publish record)

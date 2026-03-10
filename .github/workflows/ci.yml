@@ -203,6 +203,16 @@ jobs:
       - name: Verify compiled spec outputs and omnibus index coverage
         run: npm run verify:spec-artifacts
 
+      - name: Fail if generated requirements artifacts appear at repo root
+        run: |
+          set -euo pipefail
+          BAD=$(find . -maxdepth 1 -type f | sed "s#^./##" | rg "^(SRS-.*\.md|SyRS-.*\.md|OurBox-OS-Requirements-Omnibus\.md)$" || true)
+          if [ -n "${BAD}" ]; then
+            echo "Generated requirements artifacts must not be at repo root:" >&2
+            echo "${BAD}" >&2
+            exit 1
+          fi
+
       - name: Mint org-bot token
         id: app-token
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'

@@ -13,6 +13,7 @@ TAG="${TAG:-${1:-edge}}"
 [[ -n "${TAG}" ]] || die "TAG is required"
 
 command -v oras >/dev/null 2>&1 || die "oras is required (https://oras.land/)"
+command -v node >/dev/null 2>&1 || die "node is required for schema validation of publish records"
 
 log "Building install-defaults bundle"
 "${ROOT}/tools/install-defaults/build.sh"

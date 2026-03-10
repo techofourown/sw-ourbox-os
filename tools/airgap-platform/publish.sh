@@ -19,6 +19,7 @@ case "${ARCH}" in
 esac
 
 command -v oras >/dev/null 2>&1 || die "oras is required (https://oras.land/)"
+command -v node >/dev/null 2>&1 || die "node is required for schema validation of publish records"
 
 log "Building bundle for ${ARCH}"
 ARCH="${ARCH}" "${ROOT}/tools/airgap-platform/build.sh"

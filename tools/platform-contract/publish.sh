@@ -16,6 +16,11 @@ command -v oras >/dev/null 2>&1 || {
   exit 1
 }
 
+command -v node >/dev/null 2>&1 || {
+  echo "node is required for schema validation of publish records." >&2
+  exit 1
+}
+
 "${ROOT}/tools/platform-contract/build.sh"
 # shellcheck disable=SC1090
 source "${DIST_DIR}/platform-contract.meta.env"

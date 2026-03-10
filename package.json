@@ -12,7 +12,7 @@
     "build:specs": "node tools/requirements/compile-all-specs.cjs",
     "test": "npm run validate:dataset && npm run build:specs && npm run validate:schemas",
     "verify:spec-artifacts": "node tools/requirements/verify-spec-artifacts.cjs",
-    "validate:schemas": "node tools/policy/validate-schemas.cjs"
+    "validate:schemas": "node tools/policy/validate-schemas.cjs --approved-upstream-inputs release/approved-upstream-inputs.json --discover-publish-records --check-root-generated-clean"
   },
   "devDependencies": {
     "@graphmd/dataset": "<1.0.0",

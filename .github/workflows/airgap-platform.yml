@@ -38,6 +38,10 @@ jobs:
           fetch-depth: 0
           fetch-tags: true
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
 
