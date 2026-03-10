@@ -16,9 +16,10 @@ import shlex
 import subprocess
 import sys
 from datetime import datetime
+from functools import lru_cache
 from itertools import combinations
 from pathlib import Path
-from typing import Dict, List, Set, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 
 class SelectionParseError(ValueError):
@@ -35,6 +36,17 @@ def run_command(cmd: str, check: bool = True, capture_output: bool = True) -> st
         text=True,
     )
     return result.stdout.strip() if capture_output else ""
+
+
+@lru_cache(maxsize=1)
+def get_repo_slug() -> str:
+    """Return the current GitHub repository slug."""
+    repo_info = run_command("gh repo view --json nameWithOwner")
+    data = json.loads(repo_info)
+    name_with_owner = data.get("nameWithOwner") or ""
+    if not name_with_owner:
+        raise KeyError("Missing nameWithOwner in gh repo view output")
+    return name_with_owner
 
 
 def parse_pr_selection(selection: str) -> List[int]:
@@ -232,20 +244,39 @@ def get_pr_changed_files(pr_number: int) -> List[str]:
     return [file_info["path"] for file_info in data.get("files", [])]
 
 
-def normalize_comment_entry(comment: Dict[str, str], comment_type: str) -> Dict[str, str]:
+def normalize_comment_entry(comment: Dict[str, Any], comment_type: str) -> Dict[str, str]:
     """Normalize a comment structure to a consistent shape."""
-    author = (comment.get("author") or {}).get("login") or "unknown"
-    return {
+    author_info = comment.get("author") or comment.get("user") or {}
+    author = author_info.get("login") or "unknown"
+
+    normalized = {
         "type": comment_type,
         "author": author,
-        "createdAt": comment.get("createdAt") or comment.get("submittedAt") or "",
-        "url": comment.get("url") or "",
+        "createdAt": (
+            comment.get("createdAt")
+            or comment.get("submittedAt")
+            or comment.get("created_at")
+            or ""
+        ),
+        "url": comment.get("url") or comment.get("html_url") or "",
         "body": comment.get("body") or "",
+        "state": comment.get("state") or "",
     }
+
+    if comment.get("path"):
+        normalized["path"] = str(comment.get("path") or "")
+    if comment.get("line") is not None:
+        normalized["line"] = str(comment.get("line"))
+    if comment.get("side"):
+        normalized["side"] = str(comment.get("side") or "")
+    if comment.get("in_reply_to_id") is not None:
+        normalized["inReplyToId"] = str(comment.get("in_reply_to_id"))
+
+    return normalized
 
 
 def get_pr_comments(pr_number: int) -> List[Dict[str, str]]:
-    """Get all comments (issue + reviews) for a specific PR."""
+    """Get issue comments, review summaries, inline review comments, and replies."""
     comments_json = run_command(f"gh pr view {pr_number} --json comments,reviews")
     data = json.loads(comments_json)
 
@@ -254,7 +285,20 @@ def get_pr_comments(pr_number: int) -> List[Dict[str, str]]:
         normalized.append(normalize_comment_entry(comment, "issue"))
 
     for review in data.get("reviews", []):
-        normalized.append(normalize_comment_entry(review, "review"))
+        review_body = review.get("body") or ""
+        if review_body.strip():
+            normalized.append(normalize_comment_entry(review, "review"))
+
+    review_comments_json = run_command(
+        f"gh api repos/{shlex.quote(get_repo_slug())}/pulls/{pr_number}/comments --paginate"
+    )
+    for review_comment in json.loads(review_comments_json):
+        comment_type = (
+            "review-reply"
+            if review_comment.get("in_reply_to_id") is not None
+            else "review-comment"
+        )
+        normalized.append(normalize_comment_entry(review_comment, comment_type))
 
     normalized.sort(key=lambda c: c.get("createdAt") or "")
     return normalized
@@ -432,6 +476,8 @@ def generate_file_descriptions(files: List[str]) -> List[str]:
 def run_big_picture(
     pr_info: Dict[str, str],
     files: List[str],
+    excluded_files: List[str],
+    all_files: List[str],
     comments: List[Dict[str, str]],
     checks: List[Dict[str, str]],
     output_file: str,
@@ -443,14 +489,12 @@ def run_big_picture(
     branch_for_diff = local_branch or pr_info["branch"]
     print(f"Creating diff compilation for PR #{pr_info['number']}...")
 
-    if not files:
-        print(f"Warning: No files found for PR #{pr_info['number']}")
-        return False
-
     files_arg = " ".join(shlex.quote(f) for f in files)
-    cmd = f"git diff {shlex.quote(base_branch)}...{shlex.quote(branch_for_diff)} -- {files_arg}"
-
-    diff_output = run_command(cmd)
+    if files_arg:
+        cmd = f"git diff {shlex.quote(base_branch)}...{shlex.quote(branch_for_diff)} -- {files_arg}"
+        diff_output = run_command(cmd)
+    else:
+        diff_output = ""
 
     summary_text = " ".join(pr_info.get("body", "").split()) or "(no summary provided)"
 
@@ -462,10 +506,24 @@ def run_big_picture(
         diff_file.write(f"# Created: {pr_info.get('createdAt', '')}\n")
         diff_file.write(f"# URL: {pr_info.get('url', '')}\n")
         diff_file.write(f"# Summary: {summary_text}\n")
-        diff_file.write(f"# Changed files: {len(files)}\n")
-        diff_file.write(f"# Files: {', '.join(files)}\n\n")
+        diff_file.write(f"# Changed files (total): {len(all_files)}\n")
+        diff_file.write(f"# Included files: {len(files)}\n")
+        diff_file.write(f"# Excluded files: {len(excluded_files)}\n")
+        diff_file.write(f"# All files: {', '.join(all_files) if all_files else '(none)'}\n")
+        diff_file.write(
+            f"# Included file list: {', '.join(files) if files else '(none)'}\n"
+        )
+        diff_file.write(
+            f"# Excluded file list: {', '.join(excluded_files) if excluded_files else '(none)'}\n\n"
+        )
         diff_file.write("=" * 80 + "\n")
-        diff_file.write(diff_output if diff_output else "# No differences found\n")
+        if files:
+            diff_file.write(diff_output if diff_output else "# No differences found\n")
+        else:
+            diff_file.write(
+                "# No included files for diff generation.\n"
+                "# All changed files for this PR were excluded from diff output.\n"
+            )
         diff_file.write("\n\n")
         diff_file.write("=" * 80 + "\n")
         diff_file.write(f"Checks ({len(checks)}):\n")
@@ -505,7 +563,17 @@ def run_big_picture(
                 author = comment.get("author") or "unknown author"
                 comment_type = comment.get("type") or "comment"
                 url = comment.get("url") or ""
-                heading = f"- [{timestamp}] {author} ({comment_type})"
+                state = comment.get("state") or ""
+                heading = f"- [{timestamp}] {author} ({comment_type}"
+                if state:
+                    heading += f", state={state}"
+                heading += ")"
+                if comment.get("path"):
+                    heading += f" on {comment['path']}"
+                    if comment.get("line"):
+                        heading += f":{comment['line']}"
+                if comment.get("inReplyToId"):
+                    heading += f" reply-to={comment['inReplyToId']}"
                 if url:
                     heading += f" [{url}]"
                 diff_file.write(heading + "\n")
@@ -856,12 +924,6 @@ def main() -> None:
             print(f"Total changed files: {len(all_files)}")
 
             included_files, _excluded_files = filter_excluded_files(all_files)
-            if not included_files:
-                print(
-                    f"No files to process for PR #{pr_info['number']} "
-                    "(all files were excluded)"
-                )
-                continue
 
             try:
                 local_branch = checkout_pr_branch(pr_info, args.remote)
@@ -869,12 +931,19 @@ def main() -> None:
                 print(f"Failed to checkout branch for PR #{pr_info['number']}")
                 continue
 
-            report_missing_files_on_checked_out_branch(included_files)
+            if included_files:
+                report_missing_files_on_checked_out_branch(included_files)
 
-            print(
-                f"Files to process ({len(included_files)}): "
-                f"{', '.join(included_files)}"
-            )
+            if included_files:
+                print(
+                    f"Files to process ({len(included_files)}): "
+                    f"{', '.join(included_files)}"
+                )
+            else:
+                print(
+                    f"All changed files for PR #{pr_info['number']} were excluded "
+                    f"from diff output; preserving PR metadata/comments/checks."
+                )
             touched_files.update(included_files)
 
             try:
@@ -907,6 +976,8 @@ def main() -> None:
             if run_big_picture(
                 pr_info,
                 included_files,
+                _excluded_files,
+                all_files,
                 comments,
                 checks,
                 output_file,
@@ -926,6 +997,8 @@ def main() -> None:
             if run_big_picture(
                 pr_info,
                 included_files,
+                _excluded_files,
+                all_files,
                 comments,
                 checks_with_logs,
                 output_file_with_logs,
