@@ -42,14 +42,15 @@ Typical groupings (to be filled in later):
 
 ## External Interfaces
 
-SimpleNote external interfaces are tenant-origin HTTP surfaces and the standard replication surface.
+SimpleNote external interfaces are tenant-origin app/replication surfaces in both access modes.
 
-- App route: `https://<tenant_id>.<box-host>/simplenote`
-- Replication endpoint: `https://<tenant_id>.<box-host>/db` (same-origin, via the Gateway)
-- Local storage: shared local tenant replica `tenant_local` within the tenant origin
+- App route (local-only mode): `http://<tenant_id>.local/simplenote`
+- App route (public custom-domain mode): `https://<tenant_id>.<box-host>/simplenote`
+- Replication endpoint (local-only mode): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain mode): `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within the current tenant origin
 
-Any additional APIs consumed or exposed by SimpleNote are described via machine-readable API contracts (OpenAPI/JSON schema) and verified
-by automated integration tests.
+Public custom-domain mode is the full installable-PWA posture. Local-only mode remains HTTP local mode with local data continuity and opportunistic sync, without equivalent full installability/reopen-offline guarantees.
 
 ## Verification
 

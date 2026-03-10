@@ -62,14 +62,18 @@ Concretely:
      - bootstrap contract,
      - airgap packaging behavior when a platform bundle is embedded,
      - status, health, and observability surfaces,
-     - artifact identity and installation provenance.
+     - artifact identity and installation provenance,
+     - access-mode realization (local-only HTTP mode and public custom-domain HTTPS mode),
+     - operator-visible prerequisites and limitations for each mode.
 
 5. New targets must describe both commonality and divergence explicitly.
    - A new target proposal SHALL state:
      - which common seams are satisfied unchanged,
      - which target-specific choices are intentionally divergent,
      - why those divergences pay rent,
-     - and how the target will be validated and supported.
+     - support for local-only mode and any limitations,
+     - support for public custom-domain mode and any limitations,
+     - and how those limitations affect validation and supportability.
 
 6. Central terminology
    - In central `sw-ourbox-os` documentation, we will use the term **target integration contract**
@@ -90,7 +94,7 @@ Put plainly:
 
 2. It keeps the platform portable at the right layer.
    The parts that should stay stable across targets are the parts that affect how the deployed
-   OurBox platform behaves, how it is inspected, and how it is supported.
+   OurBox platform behaves, including access-mode behavior, how it is inspected, and how it is supported.
 
 3. It improves supportability.
    When a target diverges below the seam, that divergence is intentional, named, and bounded. We

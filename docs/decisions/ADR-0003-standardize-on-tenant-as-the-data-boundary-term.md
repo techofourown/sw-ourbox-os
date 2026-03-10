@@ -86,9 +86,11 @@ Tenant boundaries are not a claim of confidentiality from the device operator.
    - User identity is `user_id`.
    - Membership and roles are defined in the Terms doc and enforced by the gateway.
 
-4) **Tenant origin (hostname)**
-   - Tenant context is derived from hostname:
-     - `https://<tenant_id>.<box-host>/...`
+4) **Tenant origin (full host)**
+   - Tenant context is derived from the full host in both modes:
+     - local-only mode: `http://<tenant_id>.local/...`
+     - public custom-domain mode: `https://<tenant_id>.<box-host>/...`
+   - Full host carries tenant context; the leftmost DNS label identifies `tenant_id`.
    - Tenant origins are distinct browser origins and provide storage/cache isolation on shared devices.
 
 5) **Tenant DB naming**
@@ -108,7 +110,7 @@ Tenant boundaries are not a claim of confidentiality from the device operator.
 - Tenant is the industry-standard term for the primary boundary for scoping data and isolation policy.
 - Namespace already has a strong meaning in k3s/Kubernetes; reusing it would cause constant ambiguity.
 - Stable vocabulary reduces implementation mistakes, documentation drift, and debugging friction.
-- Tenant-in-hostname aligns tenant boundaries with the web’s native origin boundary.
+- Tenant context carried by full host aligns tenant boundaries with the web’s native origin boundary.
 
 ## Consequences
 

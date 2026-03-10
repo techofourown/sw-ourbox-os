@@ -56,7 +56,7 @@ What must stay stable is the contract above that boundary. See also:
 
 ### 1) Platform Contract (primary output of `sw-ourbox-os`)
 **Kind:** `platform-contract`  
-**Meaning:** the versioned deployment baseline for the on-device platform (k3s workloads, gateway routing, storage defaults, etc.).  
+**Meaning:** the versioned deployment baseline for the on-device platform (k3s workloads, gateway routing, access-mode defaults, storage defaults, etc.).  
 **Canonical distribution:** OCI artifact identified by digest.
 
 Recommended OCI repo:

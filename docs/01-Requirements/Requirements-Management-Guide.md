@@ -14,6 +14,7 @@
 * **Generated:** compiled Markdown files written by `tools/compile-all-specs.cjs`.
 
   * These are **build artifacts**. Do **not** hand-edit them.
+  * Do not hand-edit compiled SRS/SyRS outputs; update GraphMD source records and rebuild.
   * If something looks wrong in a generated file, fix the underlying GraphMD records and recompile.
 
 ### How compilation works (high level)
@@ -481,6 +482,8 @@ fields:
 
   * state the assumption explicitly in the requirement body, or
   * reference an ADR/AD where it’s defined.
+* Requirements that mention tenant origin, app URL, replication endpoint, PWA/installability, service worker, or offline behavior SHALL state whether they apply to local-only mode, public custom-domain mode, or both.
+* If local-only mode behavior is weaker due to HTTP-only posture, that weaker guarantee SHALL be stated explicitly.
 
 ### Metadata expectations (minimum)
 
@@ -493,9 +496,10 @@ For every requirement record:
 
 ### Glossary discipline
 
-* Product vocabulary (tenant, tenant origin, capability, etc.) goes in `docs/00-Glossary/Terms-and-Definitions.md`.
+* Product vocabulary (tenant, tenant host, full host, box-host, Local-only mode, Public custom-domain mode, capability, etc.) goes in `docs/00-Glossary/Terms-and-Definitions.md`.
 * Requirements language and SE/process terms go in `docs/00-Glossary/Terms-and-Definitions.md`.
 * If there is ever a conflict, the architecture glossary wins.
+* Do not use “subdomain” as the primary architecture term in requirements when full host/tenant host/leftmost DNS label is the intended meaning.
 * The glossaries are embedded into the omnibus and are part of the normative context.
 
 ---

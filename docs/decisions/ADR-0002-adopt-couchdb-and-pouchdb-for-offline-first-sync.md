@@ -118,8 +118,9 @@ both operate on `note:*`) without creating multiple local sources of truth on a 
 
 Definitions (normative for this ADR):
 - A **web origin** is the browser security boundary `(scheme, host, port)`.
-- A **tenant origin** is the origin whose host encodes the tenant:
-  - `https://<tenant_id>.<box-host>/...`
+- A **tenant origin** is the origin whose full host encodes the tenant:
+  - local-only mode: `http://<tenant_id>.local/...`
+  - public custom-domain mode: `https://<tenant_id>.<box-host>/...`
 - A **local tenant replica** is a PouchDB database stored in the browser (IndexedDB-backed) within a tenant origin on a specific client device.
 
 Rules:
@@ -128,8 +129,8 @@ Rules:
 2. All shipped apps served under the same tenant origin SHALL read/write through the same local tenant replica on that device.
 3. Scope clarification:
    - “exactly one” is per **(device + browser + tenant origin)**.
-   - Therefore, the same tenant will naturally have multiple local tenant replicas across multiple devices
-     (e.g., Bob’s phone and Bob’s laptop each have their own local tenant replica for `https://bob.<box-host>`).
+   - Therefore, the same tenant naturally has multiple local tenant replicas across multiple devices.
+   - On the same device/browser, `http://bob.local` and `https://bob.<box-host>` are different origins and therefore different local tenant replicas.
 4. The local tenant replica SHALL replicate opportunistically with the tenant DB on the box (Rule 8).
 5. Because apps share a tenant origin and a single local tenant replica, app boundaries are not a hard isolation boundary in the browser; preventing cross-doc-kind writes is enforced by discipline and tests (ADR-0001).
 
@@ -145,8 +146,9 @@ Rationale:
 1. Replication is incremental and resumable (CouchDB/PouchDB replication protocol).
 2. Replication is treated as availability/redundancy, not “backup.”
    - Replication can copy bad changes and deletions.
-3. Default replication unit is the tenant DB:
-   - local tenant replica ↔ `tenant_<tenant_id>` (CouchDB)
+3. Default replication unit is the tenant DB in the current origin mode:
+   - local-only mode: local tenant replica ↔ `http://<tenant_id>.local/db` ↔ `tenant_<tenant_id>`
+   - public custom-domain mode: local tenant replica ↔ `https://<tenant_id>.<box-host>/db` ↔ `tenant_<tenant_id>`
 4. Backup/retention (snapshots/versioned archives) is a separate system concern.
 
 ### 9) Large blobs are not stored as CouchDB attachments by default

@@ -30,15 +30,18 @@ built around ownership and local control, not trustless hosting.
 
 ### Critical architectural constraint: shared tenant origin + shared local replica
 
-OurBox encodes `tenant_id` into the hostname so that each tenant is a distinct **web origin**
-(`origin = scheme + host + port`). Example tenant origins:
+OurBox encodes `tenant_id` into the full host so each tenant is a distinct **web origin**
+(`origin = scheme + host + port`). Supported tenant-origin patterns:
 
-- `https://bob.<box-host>/...`
-- `https://alice.<box-host>/...`
+- local-only mode: `http://<tenant_id>.local/...`
+- public custom-domain mode: `https://<tenant_id>.<box-host>/...`
 
-Within a given **tenant origin** on a given client device, shipped apps share a single local working
+Within a given tenant origin on a given client device, shipped apps share a single local working
 database in the browser (PouchDB backed by IndexedDB) and replicate with the tenant’s CouchDB database
 on the box (see ADR-0002).
+
+For the same tenant on the same browser, `http://<tenant_id>.local` and
+`https://<tenant_id>.<box-host>` are different origins and therefore different local tenant replicas.
 
 **Implication:** within a tenant origin, any JavaScript running in that origin can technically read
 and write any documents in the tenant’s local working store (and may sync those changes back to the
@@ -59,9 +62,9 @@ provides an opinionated (non-normative for third parties) stance for shipped app
 We will **purpose-build example OurBox OS apps** as **offline-first Progressive Web Apps** designed
 from the beginning to:
 
-1) **Run from browser cache after first successful load**
+1) **Run from browser cache after first successful load in public custom-domain mode**
    - installable PWA (service worker + offline assets)
-   - resilient UI even when OurBox is unreachable (subject to browser/OS eviction)
+   - resilient UI when OurBox is unreachable after first successful load (subject to browser/OS eviction)
 
 2) **Persist working data locally**
    - local working data is stored in the browser via IndexedDB
@@ -74,9 +77,11 @@ from the beginning to:
    - shipped apps replicate with CouchDB on the box (ADR-0002)
 
 4) **Operate within a tenant**
-   - apps operate on a tenant-selected **tenant origin** (e.g., `https://bob.<box-host>/...`)
+   - apps operate on a tenant-selected **tenant origin** in either mode:
+     - `http://<tenant_id>.local/...`
+     - `https://<tenant_id>.<box-host>/...`
    - apps sync with the tenant’s **tenant DB** on the box (ADR-0002)
-   - tenant context is derived from the hostname and enforced by the gateway/platform (ADR-0003)
+   - tenant context is derived from the full host (`tenant_id` = leftmost DNS label) and enforced by the gateway/platform (ADR-0003, ADR-0014)
 
 5) **Remain product-coherent and blast-radius-aware**
    - shipped apps are views over tenant data, not silos
@@ -97,6 +102,11 @@ from the beginning to:
    - if we can’t make the app’s core doc kinds work offline (create/update/delete),
      we don’t ship it
 
+Local-only mode is intentionally HTTP-only and does not provide TLS transport authentication,
+confidentiality, or integrity. Browser insecure-transport UI can appear, secure-context features are
+not automatic, and local-only mode is not documented as guaranteeing equivalent full installability or
+reopen-offline behavior to public custom-domain mode.
+
 This ADR defines the posture for shipped first-party OurBox apps.
 
 ## Rationale
@@ -115,7 +125,7 @@ This ADR defines the posture for shipped first-party OurBox apps.
 ## Consequences
 
 ### Positive
-- OurBox shipped apps remain usable during network outages and poor connectivity.
+- OurBox shipped apps remain usable during network outages and poor connectivity with mode-aware behavior guarantees.
 - Strong mobile UX becomes a core competency, not a bolt-on.
 - OurBox OS avoids dependency on App Store distribution and native clients.
 - A consistent offline-first architecture improves long-term maintainability.
@@ -145,4 +155,6 @@ This ADR defines the posture for shipped first-party OurBox apps.
 - ADR-0002: Adopt CouchDB + PouchDB and Standardize OurBox Data Modeling (Tenant DBs + Partitions)
 - ADR-0003: Standardize on Tenant as the OurBox OS Data Boundary Term
 - ADR-0004: OurBox Document IDs
+- ADR-0014: Adopt Two Access Modes (Local-only HTTP and Public Custom-Domain HTTPS)
+- RFC-0002: Behavioral differences between local-only HTTP mode and public custom-domain HTTPS mode
 - `docs/00-Glossary/Terms-and-Definitions.md`
