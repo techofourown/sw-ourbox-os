@@ -22,6 +22,13 @@ The approved snapshot records:
 
 This replaced duplicated hand-maintained approval ledgers in downstream repos.
 
+## Schema and validation model
+
+- `release/approved-upstream-inputs.json` is defined by `schemas/approved-upstream-inputs.schema.json`.
+- Validation is two-stage:
+  1. schema validation (`npm run validate:schemas`)
+  2. semantic/digest/content validation (`tools/approved-upstream-inputs/validate.py`)
+
 ## Scripts
 
 - `validate.py`

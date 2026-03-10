@@ -7,9 +7,9 @@ on:
       - 'docs/**'
       - 'records/**'
       - 'types/**'
-      - 'SyRS-*.md'
-      - 'SRS-*.md'
-      - 'OurBox-OS-Requirements-Omnibus.md'
+      - 'generated/requirements/SyRS-*.md'
+      - 'generated/requirements/SRS-*.md'
+      - 'generated/requirements/OurBox-OS-Requirements-Omnibus.md'
       - 'CHANGELOG.md'
       - 'README.md'
       - 'CLAUDE.md'
@@ -36,6 +36,10 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
@@ -103,4 +107,5 @@ jobs:
           path: |
             dist/install-defaults.ref
             dist/install-defaults.push.log
+            dist/install-defaults.publish-record.json
           if-no-files-found: warn

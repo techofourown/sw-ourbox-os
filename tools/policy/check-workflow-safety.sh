@@ -13,7 +13,7 @@
 # Run in CI on every PR and push to main.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 WORKFLOW_DIR="${ROOT}/.github/workflows"
 
 PASS=0

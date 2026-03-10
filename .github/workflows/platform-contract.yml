@@ -7,9 +7,9 @@ on:
       - 'docs/**'
       - 'records/**'
       - 'types/**'
-      - 'SyRS-*.md'
-      - 'SRS-*.md'
-      - 'OurBox-OS-Requirements-Omnibus.md'
+      - 'generated/requirements/SyRS-*.md'
+      - 'generated/requirements/SRS-*.md'
+      - 'generated/requirements/OurBox-OS-Requirements-Omnibus.md'
       - 'CHANGELOG.md'
       - 'README.md'
       - 'CLAUDE.md'
@@ -43,6 +43,10 @@ jobs:
 
       - name: Install platform-contract validation deps
         run: python3 -m pip install --disable-pip-version-check pyyaml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
@@ -118,4 +122,5 @@ jobs:
           path: |
             dist/platform-contract.ref
             dist/platform-contract.push.log
+            dist/platform-contract.publish-record.json
           if-no-files-found: warn

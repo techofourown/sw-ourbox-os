@@ -68,6 +68,7 @@ The tarball contains:
 
 - `dist/airgap-platform.<arch>.push.log`
 - `dist/airgap-platform.<arch>.ref`
+- `dist/airgap-platform.<arch>.publish-record.json` (canonical machine-readable publish record)
 
 `promote.sh` writes:
 
@@ -124,3 +125,4 @@ See also:
 
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)
 - [official-image-production-and-consumption.md](../../docs/architecture/official-image-production-and-consumption.md)
+

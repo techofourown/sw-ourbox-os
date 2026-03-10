@@ -19,6 +19,7 @@ case "${ARCH}" in
 esac
 
 command -v oras >/dev/null 2>&1 || die "oras is required (https://oras.land/)"
+command -v node >/dev/null 2>&1 || die "node is required for schema validation of publish records"
 
 log "Building bundle for ${ARCH}"
 ARCH="${ARCH}" "${ROOT}/tools/airgap-platform/build.sh"
@@ -44,8 +45,7 @@ STATUS=$?
 set -e
 popd >/dev/null
 
-printf '%s
-' "${OUT}" | tee "${PUSH_LOG}"
+printf '%s\n' "${OUT}" | tee "${PUSH_LOG}"
 
 if [[ "${STATUS}" -ne 0 ]]; then
   die "oras push failed (exit ${STATUS}); see ${PUSH_LOG}"
@@ -56,7 +56,33 @@ DIGEST="$(printf '%s\n' "${OUT}" | grep -Eo 'sha256:[0-9a-f]{64}' | tail -n1)"
 
 PINNED="${REF_BASE}@${DIGEST}"
 REF_FILE="${DIST_DIR}/airgap-platform.${ARCH}.ref"
-printf '%s
-' "${PINNED}" | tee "${REF_FILE}"
+printf '%s\n' "${PINNED}" | tee "${REF_FILE}"
+
+K3S_VERSION="$(awk -F= '/^K3S_VERSION=/{print $2}' "${ROOT}/tools/airgap-platform/versions.env")"
+OURBOX_PLATFORM_PROFILE="$(tar -xOzf "${DIST_DIR}/airgap-platform.tar.gz" manifest.env | awk -F= '/^OURBOX_PLATFORM_PROFILE=/{print $2}')"
+OURBOX_PLATFORM_IMAGES_LOCK_SHA256="$(tar -xOzf "${DIST_DIR}/airgap-platform.tar.gz" manifest.env | awk -F= '/^OURBOX_PLATFORM_IMAGES_LOCK_SHA256=/{print $2}')"
+
+python3 "${ROOT}/tools/publish-records/write-publish-record.py" \
+  --artifact-family airgap-platform \
+  --artifact-type "${ARTIFACT_TYPE}" \
+  --artifact-repo "${REF_BASE}" \
+  --artifact-ref "${REF}" \
+  --artifact-pinned-ref "${PINNED}" \
+  --artifact-digest "${DIGEST}" \
+  --source-repo "${OURBOX_AIRGAP_PLATFORM_SOURCE}" \
+  --source-commit "${OURBOX_AIRGAP_PLATFORM_REVISION}" \
+  --source-version "${OURBOX_AIRGAP_PLATFORM_VERSION}" \
+  --created "${OURBOX_AIRGAP_PLATFORM_CREATED}" \
+  --artifact-metadata-env "${DIST_DIR}/airgap-platform.meta.env" \
+  --input K3S_VERSION="${K3S_VERSION}" \
+  --input OURBOX_PLATFORM_PROFILE="${OURBOX_PLATFORM_PROFILE}" \
+  --input OURBOX_PLATFORM_IMAGES_LOCK_SHA256="${OURBOX_PLATFORM_IMAGES_LOCK_SHA256}" \
+  --dist-file payload=dist/airgap-platform.tar.gz \
+  --dist-file meta_env=dist/airgap-platform.meta.env \
+  --dist-file push_log="dist/airgap-platform.${ARCH}.push.log" \
+  --dist-file pinned_ref="dist/airgap-platform.${ARCH}.ref" \
+  --output "${DIST_DIR}/airgap-platform.${ARCH}.publish-record.json"
+
+node "${ROOT}/tools/policy/validate-schemas.cjs" --publish-record "dist/airgap-platform.${ARCH}.publish-record.json"
 
 log "Pinned ref: ${PINNED}"

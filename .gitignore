@@ -4,3 +4,8 @@ npm-debug.log*
 .DS_Store
 # Generated requirements artifacts (built from GraphMD records)
 .root/
+
+# Prevent generated requirements artifacts at repo root
+/SRS-*.md
+/SyRS-*.md
+/OurBox-OS-Requirements-Omnibus.md

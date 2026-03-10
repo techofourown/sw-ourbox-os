@@ -194,3 +194,9 @@ This keeps the central model stable while making target-specific behavior legibl
 - Org ADR-0007: OCI artifacts as distribution substrate
 - Org RFC-0001: Trust/attestations phased plan
 - OurBox OS ADR-0008: Deployment baseline is the integration contract
+
+
+## Reference contracts
+
+- [Downstream consumer surfaces](../reference/downstream-consumer-surfaces.md)
+- [Artifact publish record contract](../reference/artifact-publish-record-contract.md)

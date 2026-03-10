@@ -7,9 +7,9 @@ on:
       - 'docs/**'
       - 'records/**'
       - 'types/**'
-      - 'SyRS-*.md'
-      - 'SRS-*.md'
-      - 'OurBox-OS-Requirements-Omnibus.md'
+      - 'generated/requirements/SyRS-*.md'
+      - 'generated/requirements/SRS-*.md'
+      - 'generated/requirements/OurBox-OS-Requirements-Omnibus.md'
       - 'CHANGELOG.md'
       - 'README.md'
       - 'CLAUDE.md'
@@ -37,6 +37,10 @@ jobs:
         with:
           fetch-depth: 0
           fetch-tags: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
@@ -106,4 +110,5 @@ jobs:
             dist/airgap-platform.${{ matrix.arch }}.ref
             dist/airgap-platform.${{ matrix.arch }}.push.log
             dist/airgap-platform.meta.env
+            dist/airgap-platform.${{ matrix.arch }}.publish-record.json
           if-no-files-found: warn
