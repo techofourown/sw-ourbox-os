@@ -1,0 +1,68 @@
+# Release Control Files
+
+This directory contains small release-control inputs used by the official
+publication and downstream synchronization workflows.
+
+These files are intentionally lightweight, human-reviewable control surfaces.
+
+## Files
+
+- `approved-upstream-inputs.json`
+  - the canonical approved upstream snapshot for downstream official image builds
+  - records approved `platform-contract` and `airgap-platform` refs and digests
+- `install-defaults-stable.env`
+  - optional curated stable defaults for the moving `install-defaults:stable` lane
+- `REVALIDATION_TRIGGER`
+  - documented escape hatch for forcing an official republish without a substantive
+    source change
+
+## How each file is used
+
+### `approved-upstream-inputs.json`
+
+Validated by:
+
+- `tools/approved-upstream-inputs/validate.py`
+
+Consumed by:
+
+- `.github/workflows/approved-upstream-inputs-sync.yml`
+- downstream lockfile sync PR automation
+
+Purpose:
+
+- keeps official downstream image repos pinned to one approved upstream snapshot
+
+### `install-defaults-stable.env`
+
+Consumed by:
+
+- `.github/workflows/install-defaults-promote.yml`
+- `tools/install-defaults/build.sh`
+
+Purpose:
+
+- allows release-time curated `OS_DEFAULT_REF` overrides for `install-defaults:stable`
+- if left empty, stable promotion can remain a pure digest retag
+
+### `REVALIDATION_TRIGGER`
+
+Consumed by:
+
+- the normal official publish workflows through path filtering
+
+Purpose:
+
+- lets maintainers force an official republish after infrastructure work or
+  revalidation, without making a fake source change elsewhere
+
+## Ownership rule
+
+These files are part of release control. Changes here should be treated as
+artifact-affecting even if no application source changed.
+
+See also:
+
+- [tools/approved-upstream-inputs/README.md](../tools/approved-upstream-inputs/README.md)
+- [tools/install-defaults/README.md](../tools/install-defaults/README.md)
+- [ARTIFACT_PROVENANCE.md](../docs/ARTIFACT_PROVENANCE.md)
