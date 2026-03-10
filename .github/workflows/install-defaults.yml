@@ -7,9 +7,9 @@ on:
       - 'docs/**'
       - 'records/**'
       - 'types/**'
-      - 'SyRS-*.md'
-      - 'SRS-*.md'
-      - 'OurBox-OS-Requirements-Omnibus.md'
+      - 'generated/requirements/SyRS-*.md'
+      - 'generated/requirements/SRS-*.md'
+      - 'generated/requirements/OurBox-OS-Requirements-Omnibus.md'
       - 'CHANGELOG.md'
       - 'README.md'
       - 'CLAUDE.md'
@@ -101,6 +101,7 @@ jobs:
         with:
           name: install-defaults-${{ github.run_id }}
           path: |
+            dist/install-defaults.publish-record.json
             dist/install-defaults.ref
             dist/install-defaults.push.log
           if-no-files-found: warn

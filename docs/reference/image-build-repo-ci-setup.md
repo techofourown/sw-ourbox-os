@@ -183,7 +183,7 @@ must download, validate, and consume that provenance file only.
 
 ### Workflow safety rules
 
-`tools/check-workflow-safety.sh` (run in CI) enforces two rules:
+`tools/policy/check-workflow-safety.sh` (run in CI) enforces two rules:
 
 **Rule 1 — No self-hosted workflow on pull_request trigger**
 Any workflow with `runs-on: [...self-hosted...]` must NOT trigger on
@@ -369,7 +369,7 @@ if command -v foo >/dev/null; then log "foo: $(foo --version)"; fi
 
 ## 5. Sanitization
 
-`tools/check-public-sanitization.sh` runs in CI on every PR and push. Copy it from
+`tools/policy/check-public-sanitization.sh` runs in CI on every PR and push. Copy it from
 an existing `img-*` repo (Woodbox or Matchbox) and adapt. It checks three categories:
 
 ### 5a. Forbidden files
@@ -389,7 +389,7 @@ Patterns that must not appear anywhere in tracked content. Two categories:
 
 **Internal infrastructure identifiers** — the internal registry hostname, the
 internal CA certificate path, and the build host name as it appears in Kubernetes
-`nodeName:` fields. Copy the exact regex strings from `tools/check-public-sanitization.sh`
+`nodeName:` fields. Copy the exact regex strings from `tools/policy/check-public-sanitization.sh`
 in an existing repo (Woodbox or Matchbox). Do not reproduce them in documentation,
 as documentation is scanned too.
 
@@ -400,7 +400,7 @@ from the script, don't document them as literal strings here.
 ### 5c. Banned words
 
 Words that must not appear anywhere in tracked files (word-boundary matched,
-case-insensitive). Copy the list from `tools/check-public-sanitization.sh` in an
+case-insensitive). Copy the list from `tools/policy/check-public-sanitization.sh` in an
 existing repo — it includes the internal build host name and the private
 infrastructure repo name.
 
@@ -416,7 +416,7 @@ those files before opening a PR.
 ### 5d. The script excludes itself
 
 The sanitization script references the banned strings as patterns. The scan
-automatically excludes `tools/check-public-sanitization.sh` itself from the scan,
+automatically excludes `tools/policy/check-public-sanitization.sh` itself from the scan,
 so the script can contain the banned strings without triggering its own check.
 All other tracked files (including docs) are scanned without exception.
 
@@ -434,8 +434,8 @@ All other tracked files (including docs) are scanned without exception.
 - [ ] `tools/config.env` — all variables use `:=` conditional assignment
 - [ ] `release/official-inputs.env` — upstream OCI refs digest-pinned and generated from `sw-ourbox-os/release/approved-upstream-inputs.json`
 - [ ] `release/official-artifacts.env` — publication namespaces and channel tags set
-- [ ] `tools/check-workflow-safety.sh` — copied from Woodbox (no target-specific changes needed)
-- [ ] `tools/check-public-sanitization.sh` — copied; add any target-specific banned legacy names
+- [ ] `tools/policy/check-workflow-safety.sh` — copied from Woodbox (no target-specific changes needed)
+- [ ] `tools/policy/check-public-sanitization.sh` — copied; add any target-specific banned legacy names
 - [ ] All 6 workflow files adapted from Woodbox with correct runner labels and target names
 - [ ] `paths-ignore` set on nightly workflow
 - [ ] No `workflow_dispatch` on official publish workflows

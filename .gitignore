@@ -2,5 +2,9 @@
 node_modules/
 npm-debug.log*
 .DS_Store
-# Generated requirements artifacts (built from GraphMD records)
+
+# Generated requirements artifacts now live under generated/requirements/
+/SRS-*.md
+/SyRS-*.md
+/OurBox-OS-Requirements-Omnibus.md
 .root/

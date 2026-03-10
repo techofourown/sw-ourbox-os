@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "artifact_family": "install-defaults",
+  "artifact_type": "application/vnd.techofourown.ourbox.install-defaults.v1.tar+gzip",
+  "artifact_repo": "ghcr.io/techofourown/sw-ourbox-os/install-defaults",
+  "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/install-defaults:edge",
+  "artifact_pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/install-defaults@sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "artifact_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "source_repo": "https://github.com/techofourown/sw-ourbox-os",
+  "source_commit": "2222222222222222222222222222222222222222",
+  "source_version": "dev",
+  "created": "2026-01-01T00:00:00Z",
+  "artifact_metadata": {"OURBOX_INSTALL_DEFAULTS_SOURCE": "https://github.com/techofourown/sw-ourbox-os"},
+  "input_metadata": {"PROFILE_COUNT": "3"},
+  "dist_files": {"payload": "dist/install-defaults.tar.gz"}
+}

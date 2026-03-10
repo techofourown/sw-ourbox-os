@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "artifact_family": "platform-contract",
+  "artifact_type": "application/vnd.techofourown.ourbox.platform-contract.v1.tar+gzip",
+  "artifact_repo": "ghcr.io/techofourown/sw-ourbox-os/platform-contract",
+  "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge",
+  "artifact_pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "artifact_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "source_repo": "https://github.com/techofourown/sw-ourbox-os",
+  "source_commit": "1111111111111111111111111111111111111111",
+  "source_version": "dev",
+  "created": "2026-01-01T00:00:00Z",
+  "artifact_metadata": {"OURBOX_PLATFORM_CONTRACT_SOURCE": "https://github.com/techofourown/sw-ourbox-os"},
+  "input_metadata": {"PROFILE_DEFAULT": "demo-apps"},
+  "dist_files": {"payload": "dist/platform-contract.tar.gz"}
+}

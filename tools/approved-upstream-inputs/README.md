@@ -72,3 +72,11 @@ python3 tools/approved-upstream-inputs/sync_downstream_official_inputs.py \
 
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)
 - [image-build-repo-ci-setup.md](../../docs/reference/image-build-repo-ci-setup.md)
+
+
+## Validation stages
+
+Validation is two-stage:
+
+1. Schema validation against `schemas/approved-upstream-inputs.schema.json`.
+2. Semantic/digest/content validation performed by `validate.py`.

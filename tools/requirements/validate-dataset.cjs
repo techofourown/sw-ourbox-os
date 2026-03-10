@@ -3,7 +3,7 @@ const { loadGraphmdSnapshot, CANONICAL_DIRS } = require("./load-graphmd-snapshot
 
 function loadSnapshot() {
   const dataset = require("@graphmd/dataset");
-  const datasetRootDir = path.resolve(__dirname, "..");
+  const datasetRootDir = path.resolve(__dirname, "..", "..");
   const loadDatasetSnapshot =
     dataset.loadDatasetSnapshot ||
     dataset.loadDatasetSnapshotFromDir ||

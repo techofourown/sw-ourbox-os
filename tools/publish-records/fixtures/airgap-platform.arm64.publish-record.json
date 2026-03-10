@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "artifact_family": "airgap-platform",
+  "artifact_type": "application/vnd.techofourown.ourbox.airgap-platform.v1.tar+gzip",
+  "artifact_repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
+  "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-arm64",
+  "artifact_pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:3333333333333333333333333333333333333333333333333333333333333333",
+  "artifact_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+  "source_repo": "https://github.com/techofourown/sw-ourbox-os",
+  "source_commit": "3333333333333333333333333333333333333333",
+  "source_version": "dev",
+  "created": "2026-01-01T00:00:00Z",
+  "artifact_metadata": {"OURBOX_AIRGAP_PLATFORM_SOURCE": "https://github.com/techofourown/sw-ourbox-os", "AIRGAP_PLATFORM_ARCH": "arm64"},
+  "input_metadata": {"K3S_VERSION": "v1.0.0+k3s1"},
+  "dist_files": {"payload": "dist/airgap-platform.tar.gz"}
+}

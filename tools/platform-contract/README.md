@@ -88,3 +88,8 @@ See also:
 
 - [platform-contract/README.md](../../platform-contract/README.md)
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)
+
+
+Publish record output:
+
+- `dist/platform-contract.publish-record.json`

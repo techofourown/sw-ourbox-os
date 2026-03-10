@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Artifact Publish Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "artifact_family",
+    "artifact_type",
+    "artifact_repo",
+    "artifact_ref",
+    "artifact_pinned_ref",
+    "artifact_digest",
+    "source_repo",
+    "source_commit",
+    "source_version",
+    "created",
+    "artifact_metadata",
+    "input_metadata",
+    "dist_files"
+  ],
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "artifact_family": {
+      "type": "string",
+      "enum": [
+        "platform-contract",
+        "airgap-platform",
+        "install-defaults"
+      ]
+    },
+    "artifact_type": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_repo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_pinned_ref": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "source_repo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_commit": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "source_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "created": {
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}Z$"
+    },
+    "artifact_metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "input_metadata": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "dist_files": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
+  }
+}

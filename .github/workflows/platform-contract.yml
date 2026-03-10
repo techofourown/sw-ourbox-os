@@ -7,9 +7,9 @@ on:
       - 'docs/**'
       - 'records/**'
       - 'types/**'
-      - 'SyRS-*.md'
-      - 'SRS-*.md'
-      - 'OurBox-OS-Requirements-Omnibus.md'
+      - 'generated/requirements/SyRS-*.md'
+      - 'generated/requirements/SRS-*.md'
+      - 'generated/requirements/OurBox-OS-Requirements-Omnibus.md'
       - 'CHANGELOG.md'
       - 'README.md'
       - 'CLAUDE.md'
@@ -116,6 +116,7 @@ jobs:
         with:
           name: platform-contract-publish-${{ github.run_id }}
           path: |
+            dist/platform-contract.publish-record.json
             dist/platform-contract.ref
             dist/platform-contract.push.log
           if-no-files-found: warn

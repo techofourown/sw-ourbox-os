@@ -95,15 +95,22 @@ def verify_platform_contract(platform_contract: dict[str, str]) -> None:
             raise SystemExit("verification/http-routes.tsv is missing the landing-root route")
 
 
+def run_schema_validation(repo_root: Path, approved_inputs_path: Path) -> None:
+    run(["node", str(repo_root / "tools" / "policy" / "validate-json-schemas.cjs")])
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate the approved upstream input snapshot.")
     parser.add_argument("--approved-inputs", required=True, help="Path to approved-upstream-inputs.json")
     args = parser.parse_args()
 
+    repo_root = Path(__file__).resolve().parents[2]
+    approved_inputs_path = Path(args.approved_inputs).resolve()
+
+    run_schema_validation(repo_root, approved_inputs_path)
+
     if shutil.which("oras") is None:
         raise SystemExit("oras is required to validate approved upstream inputs")
-
-    approved_inputs_path = Path(args.approved_inputs).resolve()
     snapshot = json.loads(approved_inputs_path.read_text(encoding="utf-8"))
 
     if snapshot.get("schema") != 1:

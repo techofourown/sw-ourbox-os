@@ -1,6 +1,6 @@
 # OurBox OS Requirements Management Guide
 
-**Applies to:** this repository’s GraphMD dataset + the CI compiler scripts in `tools/`  
+**Applies to:** this repository’s GraphMD dataset + the CI compiler scripts in `tools/requirements/`  
 **Source of truth:** GraphMD records in `types/`, `records/`, `blocks/`, `plugins/`  
 **Generated outputs:** one Markdown file per spec + an omnibus + glossary (published as the `requirements-artifacts` CI artifact)
 
@@ -11,7 +11,7 @@
 ### What is “authoritative” vs “generated”
 
 * **Authoritative:** GraphMD dataset content (records + types). This is where you **add/edit requirements**.
-* **Generated:** compiled Markdown files written by `tools/compile-all-specs.cjs`.
+* **Generated:** compiled Markdown files written by `tools/requirements/compile-all-specs.cjs`.
 
   * These are **build artifacts**. Do **not** hand-edit them.
   * Do not hand-edit compiled SRS/SyRS outputs; update GraphMD source records and rebuild.
@@ -28,10 +28,10 @@
   4. Any **child “requirement” records** under each section (also determined by `parent`)
 * It writes:
 
-  * One file per spec at repo root:
+  * One file per spec under `generated/requirements/`:
     `"<specId>-<slugified-title>.md"`
-  * One omnibus at repo root:
-    `OurBox-OS-Requirements-Omnibus.md`
+  * One omnibus under `generated/requirements/`:
+    `generated/requirements/OurBox-OS-Requirements-Omnibus.md`
   * The omnibus embeds:
     * `docs/00-Glossary/Terms-and-Definitions.md`
     * `docs/architecture/AD-0001-ourbox-os-architecture-description.md`
@@ -109,7 +109,7 @@ This runs validation followed by compilation (equivalent to `npm run validate:da
 To skip validation and only compile:
 
 ```bash
-node tools/compile-all-specs.cjs
+node tools/requirements/compile-all-specs.cjs
 ```
 
 What the compiler does:
@@ -119,8 +119,8 @@ What the compiler does:
 * Compiles **every** `spec:*` record it finds.
 * Writes:
 
-  * `SyRS-*.md`, `SRS-*.md`, etc. at **repo root**
-  * `OurBox-OS-Requirements-Omnibus.md` at **repo root**
+  * `generated/requirements/SyRS-*.md`, `generated/requirements/SRS-*.md`, etc. under **`generated/requirements/`**
+  * `generated/requirements/OurBox-OS-Requirements-Omnibus.md` under **`generated/requirements/`**
 
 Hard requirements:
 
@@ -134,7 +134,7 @@ Hard requirements:
 CI publishes an artifact containing:
 
 * one compiled Markdown file per spec (SyRS + each SRS)
-* `OurBox-OS-Requirements-Omnibus.md` (which embeds the glossary and architecture description inline)
+* `generated/requirements/OurBox-OS-Requirements-Omnibus.md` (which embeds the glossary and architecture description inline)
 * `docs/00-Glossary/Terms-and-Definitions.md` (also included as a standalone file)
 * `docs/architecture/AD-0001-ourbox-os-architecture-description.md` (also included as a standalone file)
 
@@ -277,7 +277,7 @@ npm test
 Then inspect:
 
 * the specific spec file (`SyRS-0001-*.md`, `SRS-0202-*.md`, etc.)
-* `OurBox-OS-Requirements-Omnibus.md`
+* `generated/requirements/OurBox-OS-Requirements-Omnibus.md`
 
 You should see:
 
@@ -296,7 +296,7 @@ Commit:
 * the GraphMD record(s) you added/changed
 * any referenced docs you created/updated (ADR, glossary, etc.)
 
-Do **not** "fix" a generated file by editing it directly. Generated files (`SyRS-*.md`, `SRS-*.md`, `OurBox-OS-Requirements-Omnibus.md`) are listed in `.gitignore` so Git won't track them.
+Do **not** "fix" a generated file by editing it directly. Generated files (`generated/requirements/SyRS-*.md`, `generated/requirements/SRS-*.md`, `generated/requirements/OurBox-OS-Requirements-Omnibus.md`) must be regenerated from source records via the requirements toolchain.
 
 ---
 
