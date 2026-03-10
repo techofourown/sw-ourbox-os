@@ -509,6 +509,7 @@ def run_big_picture(
 
     with open(output_file, "w", encoding="utf-8") as diff_file:
         diff_file.write(f"# PR #{pr_info['number']}: {pr_info['title']}\n")
+        diff_file.write(f"# PR Number: {pr_info['number']}\n")
         diff_file.write(f"# Branch: {branch_for_diff}\n")
         diff_file.write(f"# Base: {base_branch}\n")
         diff_file.write(f"# Author: {pr_info.get('author', 'unknown')}\n")
@@ -638,6 +639,7 @@ def create_master_comparison(
 
 def create_touched_files_compilation(
     touched_files: Set[str],
+    touched_file_prs: Dict[str, Set[int]],
     base_branch: str,
     selection_requested: str,
     selection_canonical: str,
@@ -683,7 +685,13 @@ def create_touched_files_compilation(
 
             outf.write("=" * 80 + "\n")
             outf.write(f"# File: {file_path}\n")
-            outf.write(f"# Source: {base_branch}\n\n")
+            outf.write(f"# Source: {base_branch}\n")
+            file_prs = sorted(touched_file_prs.get(file_path, set()))
+            if file_prs:
+                outf.write(f"# Touched by PRs: {', '.join(str(pr) for pr in file_prs)}\n")
+            else:
+                outf.write("# Touched by PRs: (unknown)\n")
+            outf.write("\n")
             outf.write(file_contents)
             if not file_contents.endswith("\n"):
                 outf.write("\n")
@@ -908,6 +916,7 @@ def main() -> None:
         print(f"Collecting info for PR selection: {selection_canonical}...")
         pr_infos: List[Dict[str, str]] = []
         touched_files: Set[str] = set()
+        touched_file_prs: Dict[str, Set[int]] = {}
         missing_prs: List[int] = []
 
         for pr_num in selected_prs:
@@ -965,6 +974,8 @@ def main() -> None:
                     f"from diff output; preserving PR metadata/comments/checks."
                 )
             touched_files.update(all_files)
+            for file_path in all_files:
+                touched_file_prs.setdefault(file_path, set()).add(pr_info["number"])
 
             try:
                 comments = get_pr_comments(pr_info["number"])
@@ -1077,6 +1088,7 @@ def main() -> None:
             )
             create_touched_files_compilation(
                 touched_files,
+                touched_file_prs,
                 args.base_branch,
                 selection_requested,
                 selection_canonical,
@@ -1135,6 +1147,7 @@ def main() -> None:
             )
             create_touched_files_compilation(
                 touched_files,
+                touched_file_prs,
                 args.base_branch,
                 selection_requested,
                 selection_canonical,
