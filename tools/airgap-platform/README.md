@@ -22,7 +22,7 @@ It packages:
 - the `k3s` binary for one target architecture
 - the matching upstream k3s airgap image tar
 - the platform app images listed in the rendered `images.lock.json`
-- the selected platform profile inputs used to build the bundle
+- the current upstream `demo-apps` profile inputs used to build the bundle
 
 The artifact is architecture-specific, but the source code is not split by
 architecture. `arm64` and `amd64` both use the same scripts here with a different
@@ -61,8 +61,8 @@ The tarball contains:
 - `platform/`
 - `manifest.env`
 
-`platform/` includes the rendered `images.lock.json` and the selected profile
-input used for the build.
+`platform/` includes the rendered `images.lock.json` and
+`platform/profile.env` from the current `demo-apps` build input.
 
 `publish.sh` also writes:
 

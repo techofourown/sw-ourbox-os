@@ -13,7 +13,7 @@ Published artifact:
   - assembles `dist/platform-contract.tar.gz`
   - copies checked-in source from `platform-contract/`
   - writes `contract.env`
-  - renders the selected default profile
+  - renders the current published `demo-apps` profile
   - lints the rendered output
 - `publish.sh`
   - pushes the tarball to GHCR with OCI annotations

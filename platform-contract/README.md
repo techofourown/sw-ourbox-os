@@ -32,8 +32,8 @@ Those live under `tools/platform-contract/`.
 ## What becomes published
 
 `tools/platform-contract/build.sh` copies this source tree into a temporary build
-area, writes `contract.env`, renders the selected profile, lints the render, and
-produces `dist/platform-contract.tar.gz`.
+area, writes `contract.env`, renders the current published `demo-apps` profile,
+lints the render, and produces `dist/platform-contract.tar.gz`.
 
 The published artifact contains:
 
@@ -56,8 +56,8 @@ This directory defines the contract consumed above the hardware seam:
 - profile-specific image lock and configuration inputs
 
 The same source tree is also used when building `airgap-platform`, because that
-bundle re-renders the contract and pulls the images pinned by the selected
-profile.
+bundle re-renders the contract and pulls the images pinned by the current
+published `demo-apps` profile.
 
 ## Build and validation
 
