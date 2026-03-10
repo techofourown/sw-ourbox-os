@@ -47,6 +47,7 @@ Build output:
 - `dist/install-defaults.meta.env`
 
 Publish output:
+- `dist/install-defaults.publish-record.json` (canonical machine-readable publish record)
 
 - `dist/install-defaults.push.log`
 - `dist/install-defaults.ref`

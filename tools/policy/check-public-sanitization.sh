@@ -3,7 +3,7 @@
 # in a public repository. Run in CI on every PR and push to main.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "${ROOT}"
 
 PASS=0
@@ -36,7 +36,7 @@ THIS_SCRIPT="$(basename "${BASH_SOURCE[0]}")"
 for pattern in "${!PATTERNS[@]}"; do
   description="${PATTERNS[${pattern}]}"
   matches="$(git ls-files -z | xargs -0 grep -rlE "${pattern}" 2>/dev/null \
-    | grep -v "^tools/${THIS_SCRIPT}$" || true)"
+    | grep -v "^tools/policy/${THIS_SCRIPT}$" || true)"
   if [[ -n "${matches}" ]]; then
     fail "Forbidden pattern '${pattern}' (${description}) found in: $(echo "${matches}" | tr '\n' ' ')"
   else
@@ -56,7 +56,7 @@ BANNED_WORDS=(
 
 for word in "${BANNED_WORDS[@]}"; do
   matches="$(git ls-files -z | xargs -0 grep -rilE "\b${word}\b" 2>/dev/null \
-    | grep -v "^tools/${THIS_SCRIPT}$" || true)"
+    | grep -v "^tools/policy/${THIS_SCRIPT}$" || true)"
   if [[ -n "${matches}" ]]; then
     fail "Banned word '${word}' found in: $(echo "${matches}" | tr '\n' ' ')"
   else

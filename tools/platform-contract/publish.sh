@@ -6,6 +6,7 @@ DIST_DIR="${ROOT}/dist"
 
 TAG="${1:-edge}"
 REF="ghcr.io/techofourown/sw-ourbox-os/platform-contract:${TAG}"
+ARTIFACT_REPO="ghcr.io/techofourown/sw-ourbox-os/platform-contract"
 ARTIFACT_TYPE="application/vnd.techofourown.ourbox.platform-contract.v1.tar+gzip"
 BLOB_REL="dist/platform-contract.tar.gz"
 PUSH_LOG="${DIST_DIR}/platform-contract.push.log"
@@ -49,8 +50,29 @@ if [[ -z "${DIGEST}" ]]; then
   exit 1
 fi
 
-PINNED="ghcr.io/techofourown/sw-ourbox-os/platform-contract@${DIGEST}"
+PINNED="${ARTIFACT_REPO}@${DIGEST}"
 printf '%s\n' "${PINNED}" | tee "${DIST_DIR}/platform-contract.ref"
+
+python3 "${ROOT}/tools/publish-records/write-publish-record.py" \
+  --artifact-family platform-contract \
+  --artifact-type "${ARTIFACT_TYPE}" \
+  --artifact-repo "${ARTIFACT_REPO}" \
+  --artifact-ref "${REF}" \
+  --artifact-pinned-ref "${PINNED}" \
+  --artifact-digest "${DIGEST}" \
+  --source-repo "${OURBOX_PLATFORM_CONTRACT_SOURCE}" \
+  --source-commit "${OURBOX_PLATFORM_CONTRACT_REVISION}" \
+  --source-version "${OURBOX_PLATFORM_CONTRACT_VERSION}" \
+  --created "${OURBOX_PLATFORM_CONTRACT_CREATED}" \
+  --artifact-metadata-env "${DIST_DIR}/platform-contract.meta.env" \
+  --input PROFILE_DEFAULT=demo-apps \
+  --dist-file payload=dist/platform-contract.tar.gz \
+  --dist-file meta_env=dist/platform-contract.meta.env \
+  --dist-file push_log=dist/platform-contract.push.log \
+  --dist-file pinned_ref=dist/platform-contract.ref \
+  --output "${DIST_DIR}/platform-contract.publish-record.json"
+
+node "${ROOT}/tools/policy/validate-schemas.cjs" --publish-record dist/platform-contract.publish-record.json
 
 echo ""
 echo "Pinned ref:"

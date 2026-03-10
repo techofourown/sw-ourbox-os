@@ -50,4 +50,30 @@ PINNED="${REF_BASE}@${DIGEST}"
 REF_FILE="${DIST_DIR}/install-defaults.ref"
 printf '%s\n' "${PINNED}" | tee "${REF_FILE}"
 
+mapfile -t PROFILE_IDS < <(awk -F= '/^INSTALLER_ID=/{print $2}' "${ROOT}"/install-defaults/defaults/*.env | sort)
+PROFILE_COUNT="${#PROFILE_IDS[@]}"
+PROFILE_IDS_JOINED="${PROFILE_IDS[*]}"
+
+python3 "${ROOT}/tools/publish-records/write-publish-record.py" \
+  --artifact-family install-defaults \
+  --artifact-type "${ARTIFACT_TYPE}" \
+  --artifact-repo "${REF_BASE}" \
+  --artifact-ref "${REF}" \
+  --artifact-pinned-ref "${PINNED}" \
+  --artifact-digest "${DIGEST}" \
+  --source-repo "${OURBOX_INSTALL_DEFAULTS_SOURCE}" \
+  --source-commit "${OURBOX_INSTALL_DEFAULTS_REVISION}" \
+  --source-version "${OURBOX_INSTALL_DEFAULTS_VERSION}" \
+  --created "${OURBOX_INSTALL_DEFAULTS_CREATED}" \
+  --artifact-metadata-env "${DIST_DIR}/install-defaults.meta.env" \
+  --input PROFILE_COUNT="${PROFILE_COUNT}" \
+  --input PROFILE_IDS="${PROFILE_IDS_JOINED}" \
+  --dist-file payload=dist/install-defaults.tar.gz \
+  --dist-file meta_env=dist/install-defaults.meta.env \
+  --dist-file push_log=dist/install-defaults.push.log \
+  --dist-file pinned_ref=dist/install-defaults.ref \
+  --output "${DIST_DIR}/install-defaults.publish-record.json"
+
+node "${ROOT}/tools/policy/validate-schemas.cjs" --publish-record dist/install-defaults.publish-record.json
+
 log "Pinned ref: ${PINNED}"

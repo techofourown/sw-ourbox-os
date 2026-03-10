@@ -14,7 +14,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check for forbidden content
-        run: bash tools/check-public-sanitization.sh
+        run: bash tools/policy/check-public-sanitization.sh
 
   workflow-safety:
     name: Workflow trust boundary check
@@ -24,7 +24,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Check workflow trust boundaries
-        run: bash tools/check-workflow-safety.sh
+        run: bash tools/policy/check-workflow-safety.sh
 
   platform-contract:
     name: Platform contract render + lint
@@ -50,6 +50,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install deps (deterministic)
+        run: npm ci
+
+      - name: Validate schemas
+        run: npm run validate:schemas
 
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
@@ -208,7 +218,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          NEW_FILES=$(git ls-files --others --exclude-standard -- 'SRS-*.md' 'SyRS-*.md' 2>/dev/null || true)
+          NEW_FILES=$(git ls-files --others --exclude-standard -- 'generated/requirements/SRS-*.md' 'generated/requirements/SyRS-*.md' 2>/dev/null || true)
           if [ -z "$NEW_FILES" ]; then
             echo "No new compiled spec artifacts to commit."
             exit 0
@@ -220,7 +230,7 @@ jobs:
           git config user.name "semantic-release-bot"
           git config user.email "semantic-release-bot@martynus.net"
           echo "$NEW_FILES" | xargs git add --
-          git add OurBox-OS-Requirements-Omnibus.md
+          git add generated/requirements/OurBox-OS-Requirements-Omnibus.md
           git commit -m "$(printf 'chore: add compiled spec artifacts for new specs\n\nCommitted by CI for specs that did not previously exist in the\nrepository. Triggered by %s.' "${GITHUB_SHA::12}")"
           git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git push origin "$BRANCH"
@@ -237,8 +247,8 @@ jobs:
         with:
           name: requirements-artifacts
           path: |
-            OurBox-OS-Requirements-Omnibus.md
-            SyRS-*.md
-            SRS-*.md
+            generated/requirements/OurBox-OS-Requirements-Omnibus.md
+            generated/requirements/SyRS-*.md
+            generated/requirements/SRS-*.md
             docs/00-Glossary/Terms-and-Definitions.md
             docs/architecture/AD-0001-ourbox-os-architecture-description.md

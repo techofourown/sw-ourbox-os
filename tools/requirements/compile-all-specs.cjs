@@ -6,7 +6,7 @@ const { loadGraphmdSnapshot, CANONICAL_DIRS } = require("./load-graphmd-snapshot
 
 function loadSnapshot() {
   const dataset = require("@graphmd/dataset");
-  const datasetRootDir = path.resolve(__dirname, "..");
+  const datasetRootDir = path.resolve(__dirname, "..", "..");
   const loadDatasetSnapshot =
     dataset.loadDatasetSnapshot ||
     dataset.loadDatasetSnapshotFromDir ||
@@ -227,7 +227,7 @@ function specSortKey(specId) {
 }
 
 function main() {
-  const repoRoot = path.resolve(__dirname, "..");
+  const repoRoot = path.resolve(__dirname, "..", "..");
   const snapshot = loadSnapshot();
   validateSnapshot(snapshot);
 
@@ -242,14 +242,17 @@ function main() {
     process.exit(1);
   }
 
+  const outputDir = path.resolve(repoRoot, "generated", "requirements");
+  fs.mkdirSync(outputDir, { recursive: true });
+
   const outputs = [];
 
-  // Compile each spec to its standard filename at repo root
+  // Compile each spec to generated/requirements
   for (const specId of specIds) {
     const specRecord = specRecords.find((r) => r.recordId === specId);
     const title = specRecord?.fields?.title || specId;
     const fileName = computeSpecFileName(specId, title);
-    const outPath = path.resolve(repoRoot, fileName);
+    const outPath = path.resolve(outputDir, fileName);
 
     const rendered = renderSpec(snapshot, specId);
     fs.writeFileSync(outPath, rendered, "utf8");
@@ -273,7 +276,7 @@ function main() {
   const archDesc = fs.readFileSync(archDescPath, "utf8").trimEnd();
 
   const omnibusName = "OurBox-OS-Requirements-Omnibus.md";
-  const omnibusPath = path.resolve(repoRoot, omnibusName);
+  const omnibusPath = path.resolve(outputDir, omnibusName);
 
   const sha = process.env.GITHUB_SHA ? process.env.GITHUB_SHA.slice(0, 12) : null;
 

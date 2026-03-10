@@ -103,6 +103,8 @@ def main() -> int:
     if shutil.which("oras") is None:
         raise SystemExit("oras is required to validate approved upstream inputs")
 
+    run(["node", "tools/policy/validate-schemas.cjs"])
+
     approved_inputs_path = Path(args.approved_inputs).resolve()
     snapshot = json.loads(approved_inputs_path.read_text(encoding="utf-8"))
 

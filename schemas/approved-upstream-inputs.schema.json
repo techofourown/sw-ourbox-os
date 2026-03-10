@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Approved Upstream Inputs",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "source_repo",
+    "approved_release_tag",
+    "platform_contract",
+    "airgap_platform"
+  ],
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "source_repo": {
+      "type": "string",
+      "minLength": 1
+    },
+    "approved_release_tag": {
+      "type": "string",
+      "pattern": "^v.+$"
+    },
+    "platform_contract": {
+      "$ref": "#/$defs/platformContract"
+    },
+    "airgap_platform": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "arm64",
+        "amd64"
+      ],
+      "properties": {
+        "arm64": {
+          "$ref": "#/$defs/artifactRefSet"
+        },
+        "amd64": {
+          "$ref": "#/$defs/artifactRefSet"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "artifactRefSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "versioned_ref",
+        "pinned_ref",
+        "digest"
+      ],
+      "properties": {
+        "versioned_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pinned_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "platformContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "versioned_ref",
+        "pinned_ref",
+        "digest",
+        "required_route_marker"
+      ],
+      "properties": {
+        "versioned_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "pinned_ref": {
+          "type": "string",
+          "minLength": 1
+        },
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "required_route_marker": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}
