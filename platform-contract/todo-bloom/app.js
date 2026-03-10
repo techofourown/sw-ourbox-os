@@ -289,6 +289,7 @@ const importTodos = async (file) => {
     sanitized.forEach((item) => {
       if (!existingIds.has(item.id)) {
         merged.push(item);
+        existingIds.add(item.id);
       }
     });
 
