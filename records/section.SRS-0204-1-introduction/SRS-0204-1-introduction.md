@@ -13,7 +13,7 @@ This SRS defines requirements for the **local tenant replica** on client devices
 Key posture (already established in architecture):
 - many client devices may exist per tenant
 - connectivity may be intermittent; sync is opportunistic
-- storage isolation is by tenant origin (`http://<tenant_id>.local` or `https://<tenant_id>.<box-host>`)
+- storage isolation is by tenant origin (`http://<tenant_id>.local` or `https://<tenant_id>.<box-host>`), so the same tenant in local-only and public custom-domain mode is origin-split
 
 Out of scope:
 - on-box CouchDB service requirements (see `[[spec:SRS-0202]]`)

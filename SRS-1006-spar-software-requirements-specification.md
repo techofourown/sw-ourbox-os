@@ -120,6 +120,24 @@ replica database on that device.
 Shipped apps SHALL only create and update documents whose `_id` prefixes match the stable doc-kind
 vocabulary defined for OurBox OS.
 
+#### APP-007: Local-only mode SHALL be HTTP-only
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Local-only mode is served on local HTTP tenant origins and does not depend on TLS.
+
+Local-only mode SHALL use `http://<tenant_id>.local/...` and SHALL NOT require or imply HTTPS/TLS.
+
+#### APP-008: Local-only mode documentation SHALL NOT promise public-mode-equivalent full PWA posture
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** app  
+**Rationale:** Documentation must accurately distinguish local-only limits from public custom-domain guarantees.
+
+Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
+
 ### Functional and Data Requirements (Spar-specific)
 
 #### SPAR-001: Spar SHALL support user-initiated civic dialogue over positions, claims, questions, and proposals

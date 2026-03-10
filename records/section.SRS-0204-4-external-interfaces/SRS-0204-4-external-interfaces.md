@@ -13,4 +13,4 @@ The local tenant replica interacts with:
   - `http://<tenant_id>.local/db`
   - `https://<tenant_id>.<box-host>/db`
 
-For the same tenant on the same browser profile, local-only and public custom-domain origins are different origins and therefore different local tenant replicas.
+For the same tenant on the same browser profile, local-only (`http://<tenant_id>.local`) and public custom-domain (`https://<tenant_id>.<box-host>`) are different origins and therefore different local tenant replicas.

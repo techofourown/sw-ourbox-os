@@ -17,7 +17,7 @@ This SRS defines requirements for the **local tenant replica** on client devices
 Key posture (already established in architecture):
 - many client devices may exist per tenant
 - connectivity may be intermittent; sync is opportunistic
-- storage isolation is by tenant origin (`http://<tenant_id>.local` or `https://<tenant_id>.<box-host>`)
+- storage isolation is by tenant origin (`http://<tenant_id>.local` or `https://<tenant_id>.<box-host>`), so the same tenant in local-only and public custom-domain mode is origin-split
 
 Out of scope:
 - on-box CouchDB service requirements (see `[[spec:SRS-0202]]`)
@@ -77,6 +77,15 @@ replica database on that device.
 Replication between client devices and the box SHALL use the tenant DB as the unit of replication and
 SHALL NOT require selective partition replication.
 
+### LCR-002: Same tenant across local-only and public modes SHALL map to different local tenant replicas
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** data  
+**Rationale:** Browser-origin boundaries isolate storage and therefore isolate local tenant replica state by origin.
+
+On the same browser/device, `http://<tenant_id>.local` and `https://<tenant_id>.<box-host>` are different origins for the same tenant and SHALL use different local tenant replicas.
+
 ### BOXDB-001: Replication SHALL use the standard CouchDB API and replication protocol
 
 **Status:** Draft  
@@ -107,7 +116,7 @@ The local tenant replica interacts with:
   - `http://<tenant_id>.local/db`
   - `https://<tenant_id>.<box-host>/db`
 
-For the same tenant on the same browser profile, local-only and public custom-domain origins are different origins and therefore different local tenant replicas.
+For the same tenant on the same browser profile, local-only (`http://<tenant_id>.local`) and public custom-domain (`https://<tenant_id>.<box-host>`) are different origins and therefore different local tenant replicas.
 
 ## Verification
 

@@ -11,6 +11,7 @@ fields:
     - "req:APP-003"
     - "req:APP-005"
     - "req:DATA-005"
+    - "req:LCR-002"
     - "req:BOXDB-001"
 ---
 

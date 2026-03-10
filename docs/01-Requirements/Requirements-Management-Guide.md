@@ -287,6 +287,16 @@ You should see:
   * `### APP-007: Apps SHALL <do the thing>`
 * your metadata lines (`Status`, `Testable`, `Area`, `Rationale`) rendered under the requirement heading
 
+### Step 4a — If you add allocated system requirements, update every allocation include list
+
+When you introduce a new allocated system requirement family item (for example `APP-*`, `GW-*`, `K8S-*`) that is intended to appear in downstream SRS allocation views, you MUST:
+
+* update the corresponding allocation section source records (`fields.includes`) for every affected downstream SRS,
+* rerun compilation (`npm test`), and
+* verify each generated SRS actually renders the new requirement in its **Allocated System Requirements** block.
+
+Do not hand-edit generated SRS files to patch missing allocations; fix GraphMD source records and rebuild.
+
 ### Step 5 — Commit only the source
 
 Commit:
