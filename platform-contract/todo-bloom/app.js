@@ -1,67 +1,357 @@
-(() => {
-  const listEl = document.getElementById("task-list");
-  const inputEl = document.getElementById("task-input");
-  const addBtn = document.getElementById("add-btn");
-  const STORAGE_KEY = "todo-bloom-tasks";
+const STORAGE_KEY = "todo-bloom-items";
+const THEME_KEY = "todo-bloom-theme";
 
-  const load = () => {
-    try {
-      return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    } catch (e) {
-      console.warn("Failed to parse tasks", e);
-      return [];
+const form = document.querySelector("#todo-form");
+const input = document.querySelector("#todo-input");
+const list = document.querySelector("#todo-list");
+const taskCount = document.querySelector("#task-count");
+const completedCount = document.querySelector("#completed-count");
+const clearCompletedButton = document.querySelector("#clear-completed");
+const exportButton = document.querySelector("#export-data");
+const importInput = document.querySelector("#import-file");
+const filterButtons = Array.from(document.querySelectorAll(".filters button"));
+const themeToggle = document.querySelector("#theme-toggle");
+
+let todos = [];
+let activeFilter = "all";
+let themePreferenceLocked = false;
+
+const getPreferredTheme = () => {
+  const stored = localStorage.getItem(THEME_KEY);
+  if (stored === "light" || stored === "dark") {
+    themePreferenceLocked = true;
+    return stored;
+  }
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+};
+
+const applyTheme = (theme, { persist = true } = {}) => {
+  if (theme !== "light" && theme !== "dark") return;
+  document.body.dataset.theme = theme;
+  if (themeToggle) {
+    const isDark = theme === "dark";
+    themeToggle.textContent = isDark ? "Light mode" : "Dark mode";
+    themeToggle.setAttribute("aria-pressed", String(isDark));
+  }
+  if (persist) {
+    localStorage.setItem(THEME_KEY, theme);
+  }
+};
+
+const generateId = () => {
+  if (window.crypto?.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  return `todo-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
+const loadTodos = () => {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) {
+    todos = [];
+    return;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      todos = parsed;
+    } else {
+      todos = [];
     }
-  };
+  } catch (error) {
+    console.warn("Failed to parse stored data", error);
+    todos = [];
+  }
+};
 
-  const save = (tasks) => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
-  };
+const persistTodos = () => {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+};
 
-  const render = (tasks) => {
-    listEl.innerHTML = "";
-    if (!tasks.length) {
-      const empty = document.createElement("li");
-      empty.className = "empty";
-      empty.textContent = "No tasks yet";
-      listEl.appendChild(empty);
-      return;
+const formatDate = (isoString) => {
+  if (!isoString) return "Just now";
+  const date = new Date(isoString);
+  return date.toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
+const updateCounts = () => {
+  const total = todos.length;
+  const completed = todos.filter((todo) => todo.completed).length;
+  taskCount.textContent = total;
+  completedCount.textContent = completed;
+};
+
+const launchConfetti = (originElement) => {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    return;
+  }
+
+  const container = document.createElement("div");
+  container.className = "confetti-burst";
+
+  const originRect = originElement?.getBoundingClientRect();
+  const startX = originRect
+    ? originRect.left + originRect.width / 2
+    : window.innerWidth / 2;
+  const startY = originRect
+    ? originRect.top + originRect.height / 2
+    : window.innerHeight / 2;
+
+  const colors = [
+    "#5b4bff",
+    "#ffb347",
+    "#7bd389",
+    "#ff6f91",
+    "#8bd3dd",
+    "#ffd166",
+  ];
+
+  const pieceCount = 28;
+  let maxDuration = 0;
+
+  for (let i = 0; i < pieceCount; i += 1) {
+    const piece = document.createElement("span");
+    piece.className = "confetti-piece";
+
+    const x = (Math.random() * 2 - 1) * 140;
+    const y = -Math.random() * 140 - 60;
+    const xEnd = x + (Math.random() * 2 - 1) * 40;
+    const fall = Math.random() * 120 + 180;
+    const duration = Math.random() * 0.4 + 0.9;
+    maxDuration = Math.max(maxDuration, duration);
+
+    piece.style.left = `${startX}px`;
+    piece.style.top = `${startY}px`;
+    piece.style.backgroundColor = colors[i % colors.length];
+    piece.style.setProperty("--x", `${x}px`);
+    piece.style.setProperty("--y", `${y}px`);
+    piece.style.setProperty("--x-end", `${xEnd}px`);
+    piece.style.setProperty("--fall", `${fall}px`);
+    piece.style.setProperty("--duration", `${duration}s`);
+
+    container.appendChild(piece);
+  }
+
+  document.body.appendChild(container);
+
+  window.setTimeout(() => {
+    container.remove();
+  }, (maxDuration + 0.2) * 1000);
+};
+
+const applyFilter = (items) => {
+  if (activeFilter === "active") {
+    return items.filter((todo) => !todo.completed);
+  }
+  if (activeFilter === "completed") {
+    return items.filter((todo) => todo.completed);
+  }
+  return items;
+};
+
+const renderTodos = () => {
+  list.innerHTML = "";
+  const filtered = applyFilter(todos);
+
+  if (filtered.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "todo-item";
+    const content = document.createElement("div");
+    content.className = "todo-content";
+    const title = document.createElement("p");
+    title.textContent = "No tasks here yet.";
+    const meta = document.createElement("div");
+    meta.className = "todo-meta";
+    meta.textContent = "Add something above to get started.";
+    content.append(title, meta);
+    empty.appendChild(content);
+    list.appendChild(empty);
+    updateCounts();
+    return;
+  }
+
+  filtered.forEach((todo) => {
+    const item = document.createElement("li");
+    item.className = "todo-item";
+    if (todo.completed) {
+      item.classList.add("completed");
     }
-    tasks.forEach((task, idx) => {
-      const li = document.createElement("li");
-      const label = document.createElement("span");
-      label.textContent = task;
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "ghost";
-      del.textContent = "Remove";
-      del.addEventListener("click", () => {
-        const next = [...tasks.slice(0, idx), ...tasks.slice(idx + 1)];
-        save(next);
-        render(next);
-      });
-      li.append(label, del);
-      listEl.appendChild(li);
-    });
-  };
 
-  const add = () => {
-    const value = (inputEl.value || "").trim();
-    if (!value) return;
-    const tasks = load();
-    const next = [...tasks, value];
-    save(next);
-    render(next);
-    inputEl.value = "";
-    inputEl.focus();
-  };
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.checked = todo.completed;
+    checkbox.setAttribute("aria-label", `Mark ${todo.text} as complete`);
+    checkbox.addEventListener("change", () => toggleTodo(todo.id, checkbox));
 
-  addBtn.addEventListener("click", add);
-  inputEl.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      add();
-    }
+    const content = document.createElement("div");
+    content.className = "todo-content";
+    const title = document.createElement("p");
+    title.textContent = todo.text;
+    const meta = document.createElement("div");
+    meta.className = "todo-meta";
+    meta.textContent = `Created ${formatDate(todo.createdAt)}`;
+    content.append(title, meta);
+
+    const actions = document.createElement("div");
+    actions.className = "todo-actions";
+    const deleteButton = document.createElement("button");
+    deleteButton.type = "button";
+    deleteButton.dataset.action = "delete";
+    deleteButton.textContent = "Delete";
+    deleteButton.addEventListener("click", () => removeTodo(todo.id));
+    actions.appendChild(deleteButton);
+
+    item.append(checkbox, content, actions);
+    list.appendChild(item);
   });
 
-  render(load());
-})();
+  updateCounts();
+};
+
+const addTodo = (text) => {
+  const trimmed = text.trim();
+  if (!trimmed) return;
+
+  todos.unshift({
+    id: generateId(),
+    text: trimmed,
+    completed: false,
+    createdAt: new Date().toISOString(),
+  });
+  persistTodos();
+  renderTodos();
+};
+
+const toggleTodo = (id, originElement) => {
+  const targetTodo = todos.find((todo) => todo.id === id);
+  const wasCompleted = targetTodo?.completed;
+  todos = todos.map((todo) =>
+    todo.id === id ? { ...todo, completed: !todo.completed } : todo
+  );
+  if (targetTodo && !wasCompleted) {
+    launchConfetti(originElement);
+  }
+  persistTodos();
+  renderTodos();
+};
+
+const removeTodo = (id) => {
+  todos = todos.filter((todo) => todo.id !== id);
+  persistTodos();
+  renderTodos();
+};
+
+const clearCompleted = () => {
+  todos = todos.filter((todo) => !todo.completed);
+  persistTodos();
+  renderTodos();
+};
+
+const exportTodos = () => {
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    items: todos,
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `todo-bloom-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+};
+
+const importTodos = async (file) => {
+  if (!file) return;
+
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    const incoming = Array.isArray(payload) ? payload : payload.items;
+    if (!Array.isArray(incoming)) {
+      throw new Error("Invalid import file");
+    }
+
+    const sanitized = incoming
+      .filter((item) => item && typeof item.text === "string")
+      .map((item) => ({
+        id: item.id || generateId(),
+        text: item.text.trim(),
+        completed: Boolean(item.completed),
+        createdAt: item.createdAt || new Date().toISOString(),
+      }))
+      .filter((item) => item.text.length > 0);
+
+    const existingIds = new Set(todos.map((todo) => todo.id));
+    const merged = [...todos];
+
+    sanitized.forEach((item) => {
+      if (!existingIds.has(item.id)) {
+        merged.push(item);
+        existingIds.add(item.id);
+      }
+    });
+
+    todos = merged;
+    persistTodos();
+    renderTodos();
+  } catch (error) {
+    console.error(error);
+    alert("Unable to import that file. Please use a valid export.");
+  } finally {
+    importInput.value = "";
+  }
+};
+
+form.addEventListener("submit", (event) => {
+  event.preventDefault();
+  addTodo(input.value);
+  input.value = "";
+});
+
+clearCompletedButton.addEventListener("click", clearCompleted);
+exportButton.addEventListener("click", exportTodos);
+importInput.addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  importTodos(file);
+});
+
+filterButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    filterButtons.forEach((btn) => btn.classList.remove("active"));
+    button.classList.add("active");
+    activeFilter = button.dataset.filter;
+    renderTodos();
+  });
+});
+
+loadTodos();
+renderTodos();
+
+const initialTheme = getPreferredTheme();
+applyTheme(initialTheme, { persist: themePreferenceLocked });
+
+if (!themePreferenceLocked) {
+  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  mediaQuery.addEventListener("change", (event) => {
+    applyTheme(event.matches ? "dark" : "light", { persist: false });
+  });
+}
+
+if (themeToggle) {
+  themeToggle.addEventListener("click", () => {
+    themePreferenceLocked = true;
+    const nextTheme = document.body.dataset.theme === "dark" ? "light" : "dark";
+    applyTheme(nextTheme, { persist: true });
+  });
+}
