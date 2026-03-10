@@ -2342,18 +2342,6 @@ SimpleNote is a user-facing application. Detailed requirements will be added ite
 
 Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; SimpleNote-specific requirements follow.
 
-## External Interfaces
-
-SimpleNote external interfaces are tenant-origin app/replication surfaces in both access modes.
-
-- App route (local-only mode): `http://<tenant_id>.local/simplenote`
-- App route (public custom-domain mode): `https://<tenant_id>.<box-host>/simplenote`
-- Replication endpoint (local-only mode): `http://<tenant_id>.local/db`
-- Replication endpoint (public custom-domain mode): `https://<tenant_id>.<box-host>/db`
-- Local storage: shared local tenant replica `tenant_local` within the current tenant origin
-
-Public custom-domain mode is the full installable-PWA posture. Local-only mode remains HTTP local mode with local data continuity and opportunistic sync, without equivalent full installability/reopen-offline guarantees.
-
 ### Allocated System Requirements (from SyRS)
 
 #### APP-001: Shipped apps SHALL provide full installable-PWA posture in public custom-domain mode
@@ -2433,6 +2421,18 @@ Local-only mode SHALL use `http://<tenant_id>.local/<app_slug>` and SHALL NOT re
 **Rationale:** Product documentation must accurately represent local-only mode browser capability limits versus public custom-domain mode.
 
 Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
+
+## External Interfaces
+
+SimpleNote external interfaces are tenant-origin app/replication surfaces in both access modes.
+
+- App route (local-only mode): `http://<tenant_id>.local/simplenote`
+- App route (public custom-domain mode): `https://<tenant_id>.<box-host>/simplenote`
+- Replication endpoint (local-only mode): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain mode): `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within the current tenant origin
+
+Public custom-domain mode is the full installable-PWA posture. Local-only mode remains HTTP local mode with local data continuity and opportunistic sync, without equivalent full installability/reopen-offline guarantees.
 
 ## Verification
 
@@ -2476,18 +2476,6 @@ RichNote is a user-facing application. Detailed requirements will be added itera
 
 Allocated system requirements from `[[spec:SyRS-0001]]` are included here for traceability; RichNote-specific requirements follow.
 
-## External Interfaces
-
-RichNote external interfaces are tenant-origin app/replication surfaces in both access modes.
-
-- App route (local-only mode): `http://<tenant_id>.local/richnote`
-- App route (public custom-domain mode): `https://<tenant_id>.<box-host>/richnote`
-- Replication endpoint (local-only mode): `http://<tenant_id>.local/db`
-- Replication endpoint (public custom-domain mode): `https://<tenant_id>.<box-host>/db`
-- Local storage: shared local tenant replica `tenant_local` within the current tenant origin
-
-Public custom-domain mode is the full installable-PWA posture. Local-only mode remains HTTP local mode with local data continuity and opportunistic sync, without equivalent full installability/reopen-offline guarantees.
-
 ### Allocated System Requirements (from SyRS)
 
 #### APP-001: Shipped apps SHALL provide full installable-PWA posture in public custom-domain mode
@@ -2567,6 +2555,18 @@ Local-only mode SHALL use `http://<tenant_id>.local/<app_slug>` and SHALL NOT re
 **Rationale:** Product documentation must accurately represent local-only mode browser capability limits versus public custom-domain mode.
 
 Local-only mode SHALL NOT be documented as guaranteeing installability or reopen-offline behavior equivalent to public custom-domain mode.
+
+## External Interfaces
+
+RichNote external interfaces are tenant-origin app/replication surfaces in both access modes.
+
+- App route (local-only mode): `http://<tenant_id>.local/richnote`
+- App route (public custom-domain mode): `https://<tenant_id>.<box-host>/richnote`
+- Replication endpoint (local-only mode): `http://<tenant_id>.local/db`
+- Replication endpoint (public custom-domain mode): `https://<tenant_id>.<box-host>/db`
+- Local storage: shared local tenant replica `tenant_local` within the current tenant origin
+
+Public custom-domain mode is the full installable-PWA posture. Local-only mode remains HTTP local mode with local data continuity and opportunistic sync, without equivalent full installability/reopen-offline guarantees.
 
 ## Verification
 
