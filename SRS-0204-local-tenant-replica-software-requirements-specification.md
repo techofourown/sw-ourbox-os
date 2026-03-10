@@ -14,10 +14,10 @@ Normative keywords (SHALL, SHALL NOT, SHOULD, SHOULD NOT, MAY) and OurBox OS pro
 
 This SRS defines requirements for the **local tenant replica** on client devices: the PouchDB database (IndexedDB-backed) within a tenant origin that enables offline-first behavior.
 
-Key posture (already established in architecture):
-- many client devices may exist per tenant
-- connectivity may be intermittent; sync is opportunistic
-- storage isolation is by tenant origin (`http://<tenant_id>.local` or `https://<tenant_id>.<box-host>`)
+Tenant-origin posture for local tenant replicas:
+- local-only mode tenant origin: `http://<tenant_id>.local`
+- public custom-domain mode tenant origin: `https://<tenant_id>.<box-host>`
+- for the same tenant on the same browser/device, those origins are different and therefore map to different local tenant replicas
 
 Out of scope:
 - on-box CouchDB service requirements (see `[[spec:SRS-0202]]`)
@@ -99,6 +99,15 @@ Within a tenant origin, the local tenant replica SHALL use the stable PouchDB da
 
 **Trace:** [[arch_doc:AD-0001]] §5.2.2
 
+### LCR-002: Same tenant across local-only and public modes SHALL map to different local tenant replicas
+
+**Status:** Draft  
+**Testable:** true  
+**Area:** client  
+**Rationale:** Browser origin boundaries isolate IndexedDB/PouchDB state across local-only and public custom-domain tenant hosts.
+
+On the same browser/device, `http://<tenant_id>.local` and `https://<tenant_id>.<box-host>` are different origins and SHALL use different local tenant replicas.
+
 ## External Interfaces
 
 The local tenant replica interacts with:
@@ -107,7 +116,7 @@ The local tenant replica interacts with:
   - `http://<tenant_id>.local/db`
   - `https://<tenant_id>.<box-host>/db`
 
-For the same tenant on the same browser profile, local-only and public custom-domain origins are different origins and therefore different local tenant replicas.
+For the same tenant on the same browser profile, local-only and public custom-domain tenant origins are different origins and therefore different local tenant replicas.
 
 ## Verification
 
