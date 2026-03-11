@@ -36,6 +36,10 @@ This replaced duplicated hand-maintained approval ledgers in downstream repos.
   - confirms versioned refs and pinned refs resolve to the recorded digests
   - pulls the approved platform-contract artifact and checks required marker and
     rendered route expectations
+  - pulls each approved airgap-platform artifact and verifies its embedded
+    `OURBOX_PLATFORM_CONTRACT_REF` and `OURBOX_PLATFORM_CONTRACT_DIGEST`
+    match the approved platform-contract entry
+  - also verifies the embedded airgap version and arch match the approved slot
 - `sync_downstream_official_inputs.py`
   - rewrites downstream `release/official-inputs.env` files from the approved
     snapshot

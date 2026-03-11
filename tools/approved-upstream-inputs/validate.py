@@ -95,6 +95,62 @@ def verify_platform_contract(platform_contract: dict[str, str]) -> None:
             raise SystemExit("verification/http-routes.tsv is missing the landing-root route")
 
 
+def parse_manifest_env(raw_text: str) -> dict[str, str]:
+    values: dict[str, str] = {}
+    for raw_line in raw_text.splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            raise SystemExit(f"manifest.env contains a non-assignment line: {raw_line!r}")
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        values[key] = value
+    return values
+
+
+def verify_airgap_platform(
+    approved_release_tag: str,
+    arch: str,
+    airgap: dict[str, str],
+    platform_contract: dict[str, str],
+) -> None:
+    with tempfile.TemporaryDirectory(prefix=f"approved-airgap-platform-{arch}-") as tmpdir:
+        tmp_path = Path(tmpdir)
+        pull_dir = tmp_path / "pull"
+
+        run(["oras", "pull", airgap["versioned_ref"], "-o", str(pull_dir)])
+
+        tarball = pull_dir / "dist" / "airgap-platform.tar.gz"
+        if not tarball.is_file():
+            raise SystemExit(f"Missing pulled airgap-platform tarball: {tarball}")
+
+        with tarfile.open(tarball, "r:gz") as handle:
+            try:
+                manifest_member = handle.extractfile("manifest.env")
+            except KeyError as exc:
+                raise SystemExit(f"airgap-platform tarball is missing manifest.env: {tarball}") from exc
+            if manifest_member is None:
+                raise SystemExit(f"airgap-platform manifest could not be read: {tarball}")
+            manifest = parse_manifest_env(manifest_member.read().decode("utf-8"))
+
+        expected_pairs = {
+            "OURBOX_PLATFORM_CONTRACT_REF": platform_contract["pinned_ref"],
+            "OURBOX_PLATFORM_CONTRACT_DIGEST": platform_contract["digest"],
+            "OURBOX_AIRGAP_PLATFORM_VERSION": approved_release_tag,
+            "AIRGAP_PLATFORM_ARCH": arch,
+        }
+        for key, expected in expected_pairs.items():
+            actual = manifest.get(key, "")
+            if actual != expected:
+                raise SystemExit(
+                    f"approved airgap-platform/{arch} manifest {key} is {actual!r}, expected {expected!r}"
+                )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate the approved upstream input snapshot.")
     parser.add_argument("--approved-inputs", required=True, help="Path to approved-upstream-inputs.json")
@@ -130,6 +186,7 @@ def main() -> int:
             airgap["pinned_ref"],
             airgap["digest"],
         )
+        verify_airgap_platform(snapshot["approved_release_tag"], arch, airgap, platform_contract)
 
     print(
         "Validated approved upstream inputs:",

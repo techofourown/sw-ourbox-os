@@ -67,6 +67,9 @@ jobs:
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
 
+      - name: Run approved upstream input validator tests
+        run: bash tools/approved-upstream-inputs/test-validate.sh
+
       - name: Validate approved upstream inputs
         run: python3 tools/approved-upstream-inputs/validate.py --approved-inputs release/approved-upstream-inputs.json
 
