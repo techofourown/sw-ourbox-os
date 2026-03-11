@@ -12,8 +12,8 @@ and
 | Artifact | Registry path | Description |
 |---|---|---|
 | Platform contract | `ghcr.io/techofourown/sw-ourbox-os/platform-contract` | Baseline manifests, platform configuration, gateway/access-mode defaults, and contract metadata baked into every OurBox OS image |
-| Airgap platform (arm64) | `ghcr.io/techofourown/sw-ourbox-os/airgap-platform` (tag: `edge-arm64`) | k3s binary + airgap images + platform images for ARM64 devices (Matchbox, Cinderbox) |
-| Airgap platform (amd64) | `ghcr.io/techofourown/sw-ourbox-os/airgap-platform` (tag: `edge-amd64`) | k3s binary + airgap images + platform images for x86-64 devices (Woodbox) |
+| Airgap platform (arm64) | `ghcr.io/techofourown/sw-ourbox-os/airgap-platform` (official lanes: `beta-arm64`, `nightly-arm64`, `stable-arm64`, `exp-labs-arm64`) | k3s binary + airgap images + platform images for ARM64 devices (Matchbox, Cinderbox) |
+| Airgap platform (amd64) | `ghcr.io/techofourown/sw-ourbox-os/airgap-platform` (official lanes: `beta-amd64`, `nightly-amd64`, `stable-amd64`, `exp-labs-amd64`) | k3s binary + airgap images + platform images for x86-64 devices (Woodbox) |
 | Install defaults | `ghcr.io/techofourown/sw-ourbox-os/install-defaults` | Installer configuration defaults baked into installer media |
 
 All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identity is by digest.
@@ -25,17 +25,22 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 | Channel tag | Artifact | Trigger |
 |---|---|---|
 | `edge` | Platform contract, install-defaults | Push to `main` (source-filtered) |
-| `edge-arm64` / `edge-amd64` | Airgap platform | Push to `main` (source-filtered) from the immutable candidate digest |
+| `beta-arm64` / `beta-amd64` | Airgap platform | Push to `main` (source-filtered) from the immutable candidate digest |
+| `nightly-arm64` / `nightly-amd64` | Airgap platform | Scheduled integration publish from the immutable nightly digest |
+| `stable-arm64` / `stable-amd64` | Airgap platform | Promotion after both candidate completion and matching GitHub Release `published` authorization are true; whichever arrives second wakes the retag |
+| `exp-labs-arm64` / `exp-labs-amd64` | Airgap platform | Promotion after both candidate completion and matching GitHub Release `prereleased` authorization are true; whichever arrives second wakes the retag |
 | `v*` | Platform contract, install-defaults | `release` event (published) |
-| `v*-arm64` / `v*-amd64` | Airgap platform | Promotion after both candidate completion and matching GitHub Release `published` authorization are true; whichever arrives second wakes the retag |
+| `v*-arm64` / `v*-amd64` | Airgap platform | Versioned retag of the same already-published digest during stable or exp-labs promotion |
 | `stable` | Install defaults | Promotion after the successful `Install Defaults` release publish for the matching published GitHub Release tag; uses that publish run's artifact outputs instead of racing a sibling release workflow |
 
 ---
 
 ## Trusted release contexts
 
-- Push to `main` branch (edge / nightly)
-- Candidate completion on `main` plus GitHub Release event with `published` type (versioned promotion); either event may wake promotion when the other condition is already satisfied
+- Push to `main` branch (beta candidate publication)
+- Scheduled nightly integration publication
+- Candidate completion on `main` plus GitHub Release event with `published` type (stable + versioned promotion); either event may wake promotion when the other condition is already satisfied
+- Candidate completion on `main` plus GitHub Release event with `prereleased` type (exp-labs + versioned promotion); either event may wake promotion when the other condition is already satisfied
 
 `workflow_dispatch` is intentionally absent from all official publish workflows.
 
@@ -61,17 +66,21 @@ All build logic lives in this repository. Official and compatible builds use the
 
 | Workflow | File | Runner | Trigger |
 |---|---|---|---|
-| Airgap Platform | `.github/workflows/airgap-platform.yml` | `[self-hosted, official-heavy, airgap-builder]` | Push to `main` (source-filtered) |
-| Airgap Platform Promote Release | `.github/workflows/airgap-platform-promote.yml` | `ubuntu-latest` | Candidate completion or release publication; promotes only when both candidate success and matching GitHub Release `published` authorization are present |
+| Airgap Platform | `.github/workflows/airgap-platform.yml` | `[self-hosted, official-heavy, airgap-builder]` | Push to `main` (source-filtered) + scheduled nightly integration publish |
+| Airgap Platform Promote Release | `.github/workflows/airgap-platform-promote.yml` | `ubuntu-latest` | Candidate completion or release publication; promotes only when both candidate success and matching GitHub Release `published` or `prereleased` authorization are present |
 | Platform Contract | `.github/workflows/platform-contract.yml` | `ubuntu-latest` | Push to `main` (source-filtered) + release |
 | Install Defaults | `.github/workflows/install-defaults.yml` | `ubuntu-latest` | Push to `main` (source-filtered) + release |
 | Install Defaults Promote Stable | `.github/workflows/install-defaults-promote.yml` | `ubuntu-latest` | `workflow_run` after successful `Install Defaults` release publication for a matching non-prerelease `v*` tag |
 
 `airgap-platform.yml` runs on organization-controlled build infrastructure in the
-`official-heavy-artifacts` runner group and publishes one immutable candidate digest per
-source revision, then tags `edge-<arch>` from that digest. `airgap-platform-promote.yml`
-is lightweight and promotes the exact candidate digest into `v*-<arch>` only after both the
-candidate run and a matching GitHub Release exist; whichever arrives second wakes promotion. `platform-contract.yml` and
+`official-heavy-artifacts` runner group, publishes the bound platform-contract
+artifact first, then publishes one immutable candidate digest per source revision
+and tags either `beta-<arch>` or `nightly-<arch>` from that digest. It appends
+catalog rows only from those official channel moves. `airgap-platform-promote.yml`
+is lightweight and promotes the exact push-main candidate digest into
+`stable-<arch>`, `exp-labs-<arch>`, and `v*-<arch>` only after both the
+candidate run and a matching GitHub Release authorization exist; whichever
+arrives second wakes promotion. `platform-contract.yml` and
 `install-defaults.yml` run on GitHub-hosted runners (they are lightweight and do not require
 dedicated hardware).
 

@@ -143,7 +143,7 @@ The tagged ref published during this invocation.
 
 Examples:
 - `ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge`
-- `ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-arm64`
+- `ghcr.io/techofourown/sw-ourbox-os/airgap-platform:main-93e087a67142-arm64`
 - `ghcr.io/techofourown/sw-ourbox-os/install-defaults:edge`
 
 #### `artifact_pinned_ref`
@@ -252,8 +252,14 @@ This record should describe the artifact that was actually published, not every 
 - `K3S_VERSION`
 - `OURBOX_PLATFORM_PROFILE`
 - `OURBOX_PLATFORM_IMAGES_LOCK_SHA256`
+- `OURBOX_PLATFORM_CONTRACT_DIGEST`
 
-If the build can truthfully surface additional contract-input metadata, it should include it here.
+For official publication, `OURBOX_PLATFORM_CONTRACT_DIGEST` is mandatory because
+the airgap bundle is contract-bound to the exact published platform-contract
+artifact identity.
+
+If the build can truthfully surface additional contract-input metadata, it
+should include it here.
 
 #### Required `dist_files` keys
 - `payload`
@@ -359,7 +365,7 @@ These examples are illustrative. The real records must be produced from actual b
   "artifact_family": "airgap-platform",
   "artifact_type": "application/vnd.techofourown.ourbox.airgap-platform.v1.tar+gzip",
   "artifact_repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
-  "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-arm64",
+  "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:main-93e087a67142-arm64",
   "artifact_pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:fc445baf0258f73400e27a20f4f411ad267d8722171dff566c5aeb00f41b918c",
   "artifact_digest": "sha256:fc445baf0258f73400e27a20f4f411ad267d8722171dff566c5aeb00f41b918c",
   "source_repo": "https://github.com/techofourown/sw-ourbox-os",
@@ -375,6 +381,7 @@ These examples are illustrative. The real records must be produced from actual b
   },
   "input_metadata": {
     "K3S_VERSION": "v1.35.0+k3s1",
+    "OURBOX_PLATFORM_CONTRACT_DIGEST": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "OURBOX_PLATFORM_PROFILE": "demo-apps",
     "OURBOX_PLATFORM_IMAGES_LOCK_SHA256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
@@ -430,4 +437,3 @@ This repository now publishes three classes of machine-readable publication surf
 3. the canonical publish record JSON.
 
 The JSON record is the stable automation contract.
-

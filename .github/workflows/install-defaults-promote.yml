@@ -92,15 +92,19 @@ jobs:
           # shellcheck disable=SC1091
           source ./release/install-defaults-stable.env
           MATCHBOX_REF="${MATCHBOX_OS_DEFAULT_REF_OVERRIDE:-}"
+          MATCHBOX_AIRGAP_REF="${MATCHBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE:-}"
           WOODBOX_REF="${WOODBOX_OS_DEFAULT_REF_OVERRIDE:-}"
+          WOODBOX_AIRGAP_REF="${WOODBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE:-}"
           TINDERBOX_REF="${TINDERBOX_OS_DEFAULT_REF_OVERRIDE:-}"
 
           mkdir -p dist
 
-          if [[ -n "${MATCHBOX_REF}" || -n "${WOODBOX_REF}" || -n "${TINDERBOX_REF}" ]]; then
+          if [[ -n "${MATCHBOX_REF}" || -n "${MATCHBOX_AIRGAP_REF}" || -n "${WOODBOX_REF}" || -n "${WOODBOX_AIRGAP_REF}" || -n "${TINDERBOX_REF}" ]]; then
             TAG="${TARGET_TAG}" \
             MATCHBOX_OS_DEFAULT_REF_OVERRIDE="${MATCHBOX_REF}" \
+            MATCHBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE="${MATCHBOX_AIRGAP_REF}" \
             WOODBOX_OS_DEFAULT_REF_OVERRIDE="${WOODBOX_REF}" \
+            WOODBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE="${WOODBOX_AIRGAP_REF}" \
             TINDERBOX_OS_DEFAULT_REF_OVERRIDE="${TINDERBOX_REF}" \
               ./tools/install-defaults/publish.sh "${TARGET_TAG}"
 

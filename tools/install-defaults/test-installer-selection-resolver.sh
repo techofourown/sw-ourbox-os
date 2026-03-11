@@ -29,6 +29,15 @@ assert_contains() {
   fi
 }
 
+assert_fails() {
+  local cmd="$1"
+  local message="$2"
+  if bash -lc "${cmd}" >/dev/null 2>&1; then
+    printf 'ASSERTION FAILED: %s\n' "${message}" >&2
+    exit 1
+  fi
+}
+
 make_fake_oras() {
   local bin_dir="$1"
   mkdir -p "${bin_dir}"
@@ -116,6 +125,16 @@ CHANNEL_STABLE_TAG=custom-stable
 CHANNEL_BETA_TAG=custom-beta
 CHANNEL_NIGHTLY_TAG=custom-nightly
 CHANNEL_EXP_LABS_TAG=custom-exp-labs
+AIRGAP_PLATFORM_REPO=ghcr.io/example/custom-airgap-platform
+AIRGAP_PLATFORM_ARCH=amd64
+AIRGAP_PLATFORM_CHANNEL=stable
+AIRGAP_PLATFORM_DEFAULT_REF=
+AIRGAP_PLATFORM_CATALOG_ENABLED=1
+AIRGAP_PLATFORM_CATALOG_TAG=catalog-amd64
+AIRGAP_PLATFORM_CHANNEL_STABLE_TAG=stable-amd64
+AIRGAP_PLATFORM_CHANNEL_BETA_TAG=beta-amd64
+AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG=nightly-amd64
+AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG=exp-labs-amd64
 EOF_PROFILE
   tar -C "${defaults_src}" -czf "${defaults_src}/dist/install-defaults.tar.gz" install-defaults
   export FAKE_ORAS_INSTALL_DEFAULTS_DIR="${defaults_src}"
@@ -131,6 +150,7 @@ EOF_OVERRIDE
   INSTALLER_ID="woodbox"
   INSTALL_DEFAULTS_REF="ghcr.io/example/install-defaults:edge"
   OS_DEFAULT_REF="ghcr.io/example/woodbox-os@sha256:${digest64}"
+  AIRGAP_PLATFORM_DEFAULT_REF="ghcr.io/example/airgap-platform@sha256:${digest64}"
   OS_REPO="ghcr.io/techofourown/ourbox-woodbox-os"
   OS_TARGET="x86"
   OS_CHANNEL="stable"
@@ -146,6 +166,8 @@ EOF_OVERRIDE
   assert_eq "${OS_REPO}" "ghcr.io/example/custom-woodbox-os" "remote defaults should override repo"
   assert_eq "${OS_CATALOG_TAG}" "custom-catalog" "remote defaults should override catalog tag"
   assert_eq "${OS_DEFAULT_REF}" "ghcr.io/example/woodbox-os@sha256:${digest64}" "baked pinned default should survive empty remote OS_DEFAULT_REF"
+  assert_eq "${AIRGAP_PLATFORM_REPO}" "ghcr.io/example/custom-airgap-platform" "remote defaults should override airgap-platform repo"
+  assert_eq "${AIRGAP_PLATFORM_DEFAULT_REF}" "ghcr.io/example/airgap-platform@sha256:${digest64}" "baked pinned airgap default should survive empty remote AIRGAP_PLATFORM_DEFAULT_REF"
   assert_eq "${OS_CHANNEL}" "nightly" "override env should win after remote defaults"
 
   rm -rf "${tmp}"
@@ -661,6 +683,463 @@ test_finalize_registry_ref_fails_closed_without_dev_override() {
   rm -rf "${tmp}"
 }
 
+test_airgap_platform_default_precedence_prefers_exact_ref_then_default_ref() {
+  local tmp contract_digest ref_digest default_digest
+  tmp="$(mktemp -d)"
+  contract_digest="sha256:1111111111111111111111111111111111111111111111111111111111111111"
+  ref_digest="2222222222222222222222222222222222222222222222222222222222222222"
+  default_digest="3333333333333333333333333333333333333333333333333333333333333333"
+
+  # shellcheck disable=SC1090
+  source "${RESOLVER}"
+
+  AIRGAP_PLATFORM_REPO="ghcr.io/techofourown/sw-ourbox-os/airgap-platform"
+  AIRGAP_PLATFORM_ARCH="arm64"
+  AIRGAP_PLATFORM_CHANNEL="stable"
+  AIRGAP_PLATFORM_CATALOG_ENABLED="1"
+  AIRGAP_PLATFORM_CATALOG_TAG="catalog-arm64"
+  AIRGAP_PLATFORM_CHANNEL_STABLE_TAG="stable-arm64"
+  AIRGAP_PLATFORM_CHANNEL_BETA_TAG="beta-arm64"
+  AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG="nightly-arm64"
+  AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG="exp-labs-arm64"
+
+  AIRGAP_PLATFORM_REF="ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${ref_digest}"
+  AIRGAP_PLATFORM_DEFAULT_REF="ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${default_digest}"
+  ourbox_airgap_platform_selection_reset_state
+  ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${contract_digest}"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "airgap-platform-ref" "AIRGAP_PLATFORM_REF should have highest precedence"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${ref_digest}" "AIRGAP_PLATFORM_REF should be selected directly"
+
+  AIRGAP_PLATFORM_REF=""
+  ourbox_airgap_platform_selection_reset_state
+  ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${contract_digest}"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "airgap-platform-default-ref" "AIRGAP_PLATFORM_DEFAULT_REF should outrank catalog resolution"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${default_digest}" "AIRGAP_PLATFORM_DEFAULT_REF should be selected directly"
+
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_catalog_resolution_uses_newest_matching_created_timestamp() {
+  local tmp fake_oras_dir catalog_src contract_a contract_b expected
+  tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  catalog_src="${tmp}/catalog-src"
+  contract_a="sha256:4444444444444444444444444444444444444444444444444444444444444444"
+  contract_b="sha256:5555555555555555555555555555555555555555555555555555555555555555"
+  expected="ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:7777777777777777777777777777777777777777777777777777777777777777"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+
+  mkdir -p "${catalog_src}"
+  cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
+channel	tag	created	version	revision	arch	platform_contract_digest	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
+stable	stable-arm64	2026-03-08T00:00:00Z	v0.14.0	aaaa1111	arm64	${contract_a}	demo-apps	v1.35.0+k3s1	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	sha256:6666666666666666666666666666666666666666666666666666666666666666	ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:6666666666666666666666666666666666666666666666666666666666666666
+stable	stable-arm64	2026-03-09T00:00:00Z	v0.15.0	bbbb2222	arm64	${contract_a}	demo-apps	v1.35.0+k3s1	bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb	sha256:7777777777777777777777777777777777777777777777777777777777777777	${expected}
+stable	stable-arm64	2026-03-10T00:00:00Z	v0.16.0	cccc3333	amd64	${contract_a}	demo-apps	v1.35.0+k3s1	cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc	sha256:8888888888888888888888888888888888888888888888888888888888888888	ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:8888888888888888888888888888888888888888888888888888888888888888
+stable	stable-arm64	2026-03-11T00:00:00Z	v0.17.0	dddd4444	arm64	${contract_b}	demo-apps	v1.35.0+k3s1	dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd	sha256:9999999999999999999999999999999999999999999999999999999999999999	ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:9999999999999999999999999999999999999999999999999999999999999999
+EOF_CATALOG
+  export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
+
+  # shellcheck disable=SC1090
+  source "${RESOLVER}"
+
+  AIRGAP_PLATFORM_REPO="ghcr.io/techofourown/sw-ourbox-os/airgap-platform"
+  AIRGAP_PLATFORM_ARCH="arm64"
+  AIRGAP_PLATFORM_CHANNEL="stable"
+  AIRGAP_PLATFORM_REF=""
+  AIRGAP_PLATFORM_DEFAULT_REF=""
+  AIRGAP_PLATFORM_CATALOG_ENABLED="1"
+  AIRGAP_PLATFORM_CATALOG_TAG="catalog-arm64"
+  AIRGAP_PLATFORM_CHANNEL_STABLE_TAG="stable-arm64"
+  AIRGAP_PLATFORM_CHANNEL_BETA_TAG="beta-arm64"
+  AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG="nightly-arm64"
+  AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG="exp-labs-arm64"
+
+  ourbox_airgap_platform_selection_reset_state
+  ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${contract_a}"
+
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "catalog" "airgap resolver should prefer catalog rows when a matching digest-pinned row exists"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL}" "stable" "airgap catalog resolution should preserve the selected release channel"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "${expected}" "airgap catalog resolution should choose the newest matching row by created timestamp"
+
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_channel_falls_back_to_tag_when_catalog_unavailable() {
+  local tmp fake_oras_dir contract_digest
+  tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  contract_digest="sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+  export FAKE_ORAS_CATALOG_DIR="${tmp}/missing-catalog"
+
+  # shellcheck disable=SC1090
+  source "${RESOLVER}"
+
+  AIRGAP_PLATFORM_REPO="ghcr.io/techofourown/sw-ourbox-os/airgap-platform"
+  AIRGAP_PLATFORM_ARCH="amd64"
+  AIRGAP_PLATFORM_CHANNEL="beta"
+  AIRGAP_PLATFORM_REF=""
+  AIRGAP_PLATFORM_DEFAULT_REF=""
+  AIRGAP_PLATFORM_CATALOG_ENABLED="1"
+  AIRGAP_PLATFORM_CATALOG_TAG="catalog-amd64"
+  AIRGAP_PLATFORM_CHANNEL_STABLE_TAG="stable-amd64"
+  AIRGAP_PLATFORM_CHANNEL_BETA_TAG="beta-amd64"
+  AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG="nightly-amd64"
+  AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG="exp-labs-amd64"
+
+  ourbox_airgap_platform_selection_reset_state
+  ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${contract_digest}"
+
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "channel-tag" "airgap selection should fall back to channel tag when the catalog is unavailable"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL}" "beta" "airgap channel fallback should preserve the selected release channel"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:beta-amd64" "airgap channel fallback should use the arch-specific channel tag"
+
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_catalog_filters_non_matching_contract_digest() {
+  local tmp fake_oras_dir catalog_src required_contract other_contract
+  tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  catalog_src="${tmp}/catalog-src"
+  required_contract="sha256:1212121212121212121212121212121212121212121212121212121212121212"
+  other_contract="sha256:3434343434343434343434343434343434343434343434343434343434343434"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+
+  mkdir -p "${catalog_src}"
+  cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
+channel	tag	created	version	revision	arch	platform_contract_digest	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
+stable	stable-arm64	2026-03-09T00:00:00Z	v0.15.0	aaaa1111	arm64	${other_contract}	demo-apps	v1.35.0+k3s1	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	sha256:5656565656565656565656565656565656565656565656565656565656565656	ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:5656565656565656565656565656565656565656565656565656565656565656
+EOF_CATALOG
+  export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
+
+  # shellcheck disable=SC1090
+  source "${RESOLVER}"
+
+  AIRGAP_PLATFORM_REPO="ghcr.io/techofourown/sw-ourbox-os/airgap-platform"
+  AIRGAP_PLATFORM_ARCH="arm64"
+  AIRGAP_PLATFORM_CHANNEL="stable"
+  AIRGAP_PLATFORM_REF=""
+  AIRGAP_PLATFORM_DEFAULT_REF=""
+  AIRGAP_PLATFORM_CATALOG_ENABLED="1"
+  AIRGAP_PLATFORM_CATALOG_TAG="catalog-arm64"
+  AIRGAP_PLATFORM_CHANNEL_STABLE_TAG="stable-arm64"
+  AIRGAP_PLATFORM_CHANNEL_BETA_TAG="beta-arm64"
+  AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG="nightly-arm64"
+  AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG="exp-labs-arm64"
+
+  ourbox_airgap_platform_selection_reset_state
+  ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${required_contract}"
+
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "channel-tag" "airgap resolver should reject catalog rows whose platform contract digest does not match the selected OS payload"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:stable-arm64" "airgap resolver should fall back to the configured channel tag when no contract-matching row exists"
+
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_interactive_repo_override_clears_pinned_default() {
+  local tmp captured contract_digest default_digest
+  tmp="$(mktemp -d)"
+  contract_digest="sha256:7878787878787878787878787878787878787878787878787878787878787878"
+  default_digest="9090909090909090909090909090909090909090909090909090909090909090"
+
+  captured="$(
+    printf 'o\nlocalhost:5000/custom/airgap-platform\ncustom-catalog\n\n' | bash -lc "
+      set -euo pipefail
+      source '${RESOLVER}'
+      AIRGAP_PLATFORM_REPO='ghcr.io/techofourown/sw-ourbox-os/airgap-platform'
+      AIRGAP_PLATFORM_ARCH='arm64'
+      AIRGAP_PLATFORM_CHANNEL='stable'
+      AIRGAP_PLATFORM_REF=''
+      AIRGAP_PLATFORM_DEFAULT_REF='ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${default_digest}'
+      AIRGAP_PLATFORM_CATALOG_ENABLED='0'
+      AIRGAP_PLATFORM_CATALOG_TAG='catalog-arm64'
+      AIRGAP_PLATFORM_CHANNEL_STABLE_TAG='stable-arm64'
+      AIRGAP_PLATFORM_CHANNEL_BETA_TAG='beta-arm64'
+      AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG='nightly-arm64'
+      AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG='exp-labs-arm64'
+      ourbox_airgap_platform_selection_reset_state
+      ourbox_airgap_platform_selection_interactive_select_ref '${tmp}/catalog' '${contract_digest}' >/dev/null
+      printf '%s\t%s\t%s\t%s\t%s\n' \"\$OURBOX_AIRGAP_PLATFORM_SELECTED_REF\" \"\$OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL:-}\" \"\$AIRGAP_PLATFORM_REPO\" \"\$AIRGAP_PLATFORM_CATALOG_TAG\"
+    " 2>/dev/null
+  )"
+
+  assert_eq "${captured}" $'localhost:5000/custom/airgap-platform:stable-arm64\tchannel-tag\tstable\tlocalhost:5000/custom/airgap-platform\tcustom-catalog' "airgap repo override should clear pinned defaults and rederive the default from the overridden repo"
+
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_interactive_channel_pick_prefers_catalog_row_over_baked_default() {
+  local tmp fake_oras_dir catalog_src captured contract_digest default_digest beta_digest
+  tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  catalog_src="${tmp}/catalog-src"
+  contract_digest="sha256:5656565656565656565656565656565656565656565656565656565656565656"
+  default_digest="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  beta_digest="bcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbc"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+
+  mkdir -p "${catalog_src}"
+  cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
+channel	tag	created	version	revision	arch	platform_contract_digest	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
+stable	stable-arm64	2026-03-08T01:00:00Z	v0.9.0	aaaa1111	arm64	${contract_digest}	demo-apps	v1.35.0+k3s1	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	sha256:1111111111111111111111111111111111111111111111111111111111111111	ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:1111111111111111111111111111111111111111111111111111111111111111
+beta	beta-arm64	2026-03-08T02:00:00Z	v0.9.1	bbbb2222	arm64	${contract_digest}	demo-apps	v1.35.0+k3s1	bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb	sha256:${beta_digest}	ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${beta_digest}
+EOF_CATALOG
+  export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
+
+  captured="$(
+    printf 'c\n2\n' | bash -lc "
+      set -euo pipefail
+      PATH='${fake_oras_dir}':\"\$PATH\"
+      export FAKE_ORAS_CATALOG_DIR='${catalog_src}'
+      source '${RESOLVER}'
+      AIRGAP_PLATFORM_REPO='ghcr.io/techofourown/sw-ourbox-os/airgap-platform'
+      AIRGAP_PLATFORM_ARCH='arm64'
+      AIRGAP_PLATFORM_CHANNEL='stable'
+      AIRGAP_PLATFORM_REF=''
+      AIRGAP_PLATFORM_DEFAULT_REF='ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${default_digest}'
+      AIRGAP_PLATFORM_CATALOG_ENABLED='1'
+      AIRGAP_PLATFORM_CATALOG_TAG='catalog-arm64'
+      AIRGAP_PLATFORM_CHANNEL_STABLE_TAG='stable-arm64'
+      AIRGAP_PLATFORM_CHANNEL_BETA_TAG='beta-arm64'
+      AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG='nightly-arm64'
+      AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG='exp-labs-arm64'
+      ourbox_airgap_platform_selection_reset_state
+      ourbox_airgap_platform_selection_interactive_select_ref '${tmp}/catalog' '${contract_digest}' >/dev/null
+      printf '%s\t%s\t%s\n' \"\$OURBOX_AIRGAP_PLATFORM_SELECTED_REF\" \"\$OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL:-}\"
+    " 2>/dev/null
+  )"
+
+  assert_eq "${captured}" $'ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:'"${beta_digest}"$'\tcatalog\tbeta' "interactive airgap channel choice should bypass baked defaults and prefer the selected lane's catalog row"
+
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_finalize_registry_ref_resolves_digest() {
+  local tmp fake_oras_dir digest
+  tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  digest="sha256:abababababababababababababababababababababababababababababababab"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+  export FAKE_ORAS_RESOLVE_REF="ghcr.io/techofourown/sw-ourbox-os/airgap-platform:stable-arm64"
+  export FAKE_ORAS_RESOLVE_DIGEST="${digest}"
+
+  # shellcheck disable=SC1090
+  source "${RESOLVER}"
+
+  ourbox_airgap_platform_selection_reset_state
+  ourbox_airgap_platform_selection_finalize_registry_ref "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:stable-arm64"
+
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_ARTIFACT_REF}" "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:stable-arm64" "airgap artifact ref should preserve the operator-facing ref"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_ARTIFACT_DIGEST}" "${digest}" "airgap artifact digest should come from oras resolve"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_PULL_REF}" "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@${digest}" "airgap pull ref should be immutable"
+
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_finalize_registry_ref_dev_override_marks_unresolved() {
+  local tmp fake_oras_dir
+  tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+  export FAKE_ORAS_RESOLVE_REF="ghcr.io/techofourown/sw-ourbox-os/airgap-platform:nightly-amd64"
+  export FAKE_ORAS_RESOLVE_DIGEST=""
+  export OURBOX_ALLOW_UNRESOLVED_PULL="1"
+
+  # shellcheck disable=SC1090
+  source "${RESOLVER}"
+
+  ourbox_airgap_platform_selection_reset_state
+  ourbox_airgap_platform_selection_finalize_registry_ref "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:nightly-amd64"
+
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_ARTIFACT_DIGEST}" "unresolved" "airgap dev override should mark unresolved digest explicitly"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_PULL_REF}" "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:nightly-amd64" "airgap dev override should pull the original floating ref"
+
+  unset OURBOX_ALLOW_UNRESOLVED_PULL
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_validate_extracted_bundle_rejects_invalid_manifest_contract_digest() {
+  local tmp bundle_dir required_contract
+  tmp="$(mktemp -d)"
+  bundle_dir="${tmp}/bundle"
+  required_contract="sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+
+  mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
+  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/app.tar"
+  cat > "${bundle_dir}/manifest.env" <<'EOF_MANIFEST'
+OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
+OURBOX_AIRGAP_PLATFORM_REVISION=6472fb5919d187daf832082eeaef6086b336a632
+OURBOX_AIRGAP_PLATFORM_VERSION=v0.15.1
+OURBOX_AIRGAP_PLATFORM_CREATED=2026-03-11T04:59:06Z
+OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:1111111111111111111111111111111111111111111111111111111111111111
+OURBOX_PLATFORM_CONTRACT_DIGEST=invalid-digest
+AIRGAP_PLATFORM_ARCH=arm64
+K3S_VERSION=v1.35.0+k3s1
+OURBOX_PLATFORM_PROFILE=demo-apps
+OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
+OURBOX_PLATFORM_IMAGES_LOCK_SHA256=f6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118
+EOF_MANIFEST
+  printf '#!/bin/sh\nexit 0\n' > "${bundle_dir}/k3s/k3s"
+  chmod +x "${bundle_dir}/k3s/k3s"
+
+  assert_fails "set -euo pipefail; source '${RESOLVER}'; ourbox_airgap_platform_selection_validate_extracted_bundle '${bundle_dir}' '${required_contract}' 'arm64'" \
+    "airgap manifest validation should reject an invalid platform contract digest"
+
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_validate_extracted_bundle_exports_manifest_metadata() {
+  local tmp bundle_dir required_contract
+  tmp="$(mktemp -d)"
+  bundle_dir="${tmp}/bundle"
+  required_contract="sha256:abababababababababababababababababababababababababababababababab"
+
+  mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
+  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/app.tar"
+  cat > "${bundle_dir}/manifest.env" <<EOF_MANIFEST
+OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
+OURBOX_AIRGAP_PLATFORM_REVISION=6472fb5919d187daf832082eeaef6086b336a632
+OURBOX_AIRGAP_PLATFORM_VERSION=v0.15.1
+OURBOX_AIRGAP_PLATFORM_CREATED=2026-03-11T04:59:06Z
+OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@${required_contract}
+OURBOX_PLATFORM_CONTRACT_DIGEST=${required_contract}
+AIRGAP_PLATFORM_ARCH=arm64
+K3S_VERSION=v1.35.0+k3s1
+OURBOX_PLATFORM_PROFILE=demo-apps
+OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
+OURBOX_PLATFORM_IMAGES_LOCK_SHA256=f6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118
+EOF_MANIFEST
+  printf '#!/bin/sh\nexit 0\n' > "${bundle_dir}/k3s/k3s"
+  chmod +x "${bundle_dir}/k3s/k3s"
+
+  # shellcheck disable=SC1090
+  source "${RESOLVER}"
+
+  OURBOX_AIRGAP_PLATFORM_SOURCE="stale-source"
+  OURBOX_AIRGAP_PLATFORM_REVISION="stale-revision"
+  OURBOX_AIRGAP_PLATFORM_VERSION="stale-version"
+  OURBOX_AIRGAP_PLATFORM_CREATED="stale-created"
+  OURBOX_AIRGAP_PLATFORM_ARCH="stale-arch"
+  OURBOX_AIRGAP_PLATFORM_PROFILE="stale-profile"
+  OURBOX_AIRGAP_PLATFORM_K3S_VERSION="stale-k3s"
+  OURBOX_AIRGAP_PLATFORM_IMAGES_LOCK_SHA256="stale-lock"
+
+  ourbox_airgap_platform_selection_validate_extracted_bundle "${bundle_dir}" "${required_contract}" "arm64"
+
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_SOURCE}" "https://github.com/techofourown/sw-ourbox-os" "validated bundle should export airgap source"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_REVISION}" "6472fb5919d187daf832082eeaef6086b336a632" "validated bundle should export airgap revision"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_VERSION}" "v0.15.1" "validated bundle should export airgap version"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_CREATED}" "2026-03-11T04:59:06Z" "validated bundle should export airgap created timestamp"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_ARCH}" "arm64" "validated bundle should export airgap arch"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_PROFILE}" "demo-apps" "validated bundle should export platform profile"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_K3S_VERSION}" "v1.35.0+k3s1" "validated bundle should export k3s version"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_IMAGES_LOCK_SHA256}" "f6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118" "validated bundle should export images lock sha"
+
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_validate_extracted_bundle_rejects_missing_contract_digest_hidden_by_ambient_env() {
+  local tmp bundle_dir required_contract
+  tmp="$(mktemp -d)"
+  bundle_dir="${tmp}/bundle"
+  required_contract="sha256:5656565656565656565656565656565656565656565656565656565656565656"
+
+  mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
+  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/app.tar"
+  cat > "${bundle_dir}/manifest.env" <<'EOF_MANIFEST'
+OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
+OURBOX_AIRGAP_PLATFORM_REVISION=6472fb5919d187daf832082eeaef6086b336a632
+OURBOX_AIRGAP_PLATFORM_VERSION=v0.15.1
+OURBOX_AIRGAP_PLATFORM_CREATED=2026-03-11T04:59:06Z
+OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:5656565656565656565656565656565656565656565656565656565656565656
+AIRGAP_PLATFORM_ARCH=arm64
+K3S_VERSION=v1.35.0+k3s1
+OURBOX_PLATFORM_PROFILE=demo-apps
+OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
+OURBOX_PLATFORM_IMAGES_LOCK_SHA256=f6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118
+EOF_MANIFEST
+  printf '#!/bin/sh\nexit 0\n' > "${bundle_dir}/k3s/k3s"
+  chmod +x "${bundle_dir}/k3s/k3s"
+
+  assert_fails "set -euo pipefail; source '${RESOLVER}'; export OURBOX_PLATFORM_CONTRACT_DIGEST='${required_contract}'; ourbox_airgap_platform_selection_validate_extracted_bundle '${bundle_dir}' '${required_contract}' 'arm64'" \
+    "ambient shell variables must not satisfy missing airgap manifest fields"
+
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_validate_extracted_bundle_rejects_missing_k3s_airgap_images_tar() {
+  local tmp bundle_dir required_contract
+  tmp="$(mktemp -d)"
+  bundle_dir="${tmp}/bundle"
+  required_contract="sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef"
+
+  mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
+  touch "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/app.tar"
+  cat > "${bundle_dir}/manifest.env" <<EOF_MANIFEST
+OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
+OURBOX_AIRGAP_PLATFORM_REVISION=6472fb5919d187daf832082eeaef6086b336a632
+OURBOX_AIRGAP_PLATFORM_VERSION=v0.15.1
+OURBOX_AIRGAP_PLATFORM_CREATED=2026-03-11T04:59:06Z
+OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@${required_contract}
+OURBOX_PLATFORM_CONTRACT_DIGEST=${required_contract}
+AIRGAP_PLATFORM_ARCH=arm64
+K3S_VERSION=v1.35.0+k3s1
+OURBOX_PLATFORM_PROFILE=demo-apps
+OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
+OURBOX_PLATFORM_IMAGES_LOCK_SHA256=f6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118
+EOF_MANIFEST
+  printf '#!/bin/sh\nexit 0\n' > "${bundle_dir}/k3s/k3s"
+  chmod +x "${bundle_dir}/k3s/k3s"
+
+  assert_fails "set -euo pipefail; source '${RESOLVER}'; ourbox_airgap_platform_selection_validate_extracted_bundle '${bundle_dir}' '${required_contract}' 'arm64'" \
+    "airgap bundle validation should reject a missing k3s airgap images tar"
+
+  rm -rf "${tmp}"
+}
+
+test_airgap_platform_validate_extracted_bundle_rejects_missing_platform_image_tars() {
+  local tmp bundle_dir required_contract
+  tmp="$(mktemp -d)"
+  bundle_dir="${tmp}/bundle"
+  required_contract="sha256:1212121212121212121212121212121212121212121212121212121212121212"
+
+  mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
+  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env"
+  cat > "${bundle_dir}/manifest.env" <<EOF_MANIFEST
+OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
+OURBOX_AIRGAP_PLATFORM_REVISION=6472fb5919d187daf832082eeaef6086b336a632
+OURBOX_AIRGAP_PLATFORM_VERSION=v0.15.1
+OURBOX_AIRGAP_PLATFORM_CREATED=2026-03-11T04:59:06Z
+OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@${required_contract}
+OURBOX_PLATFORM_CONTRACT_DIGEST=${required_contract}
+AIRGAP_PLATFORM_ARCH=arm64
+K3S_VERSION=v1.35.0+k3s1
+OURBOX_PLATFORM_PROFILE=demo-apps
+OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
+OURBOX_PLATFORM_IMAGES_LOCK_SHA256=f6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118
+EOF_MANIFEST
+  printf '#!/bin/sh\nexit 0\n' > "${bundle_dir}/k3s/k3s"
+  chmod +x "${bundle_dir}/k3s/k3s"
+
+  assert_fails "set -euo pipefail; source '${RESOLVER}'; ourbox_airgap_platform_selection_validate_extracted_bundle '${bundle_dir}' '${required_contract}' 'arm64'" \
+    "airgap bundle validation should reject missing platform image tar payloads"
+
+  rm -rf "${tmp}"
+}
+
 main() {
   test_remote_defaults_bundle_shape
   test_precedence_prefers_os_ref_then_os_default_ref
@@ -678,6 +1157,19 @@ main() {
   test_finalize_registry_ref_handles_registry_ports_without_tags
   test_finalize_registry_ref_dev_override_marks_unresolved
   test_finalize_registry_ref_fails_closed_without_dev_override
+  test_airgap_platform_default_precedence_prefers_exact_ref_then_default_ref
+  test_airgap_platform_catalog_resolution_uses_newest_matching_created_timestamp
+  test_airgap_platform_channel_falls_back_to_tag_when_catalog_unavailable
+  test_airgap_platform_catalog_filters_non_matching_contract_digest
+  test_airgap_platform_interactive_repo_override_clears_pinned_default
+  test_airgap_platform_interactive_channel_pick_prefers_catalog_row_over_baked_default
+  test_airgap_platform_finalize_registry_ref_resolves_digest
+  test_airgap_platform_finalize_registry_ref_dev_override_marks_unresolved
+  test_airgap_platform_validate_extracted_bundle_rejects_invalid_manifest_contract_digest
+  test_airgap_platform_validate_extracted_bundle_exports_manifest_metadata
+  test_airgap_platform_validate_extracted_bundle_rejects_missing_contract_digest_hidden_by_ambient_env
+  test_airgap_platform_validate_extracted_bundle_rejects_missing_k3s_airgap_images_tar
+  test_airgap_platform_validate_extracted_bundle_rejects_missing_platform_image_tars
   printf 'installer-selection resolver tests: PASS\n'
 }
 

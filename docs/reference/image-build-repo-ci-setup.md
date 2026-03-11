@@ -286,7 +286,7 @@ PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
 To resolve current digests:
 ```bash
 oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
-oras resolve ghcr.io/techofourown/sw-ourbox-os/airgap-platform:edge-<arch>
+oras resolve ghcr.io/techofourown/sw-ourbox-os/airgap-platform:beta-<arch>
 ```
 
 Do not hand-edit downstream approval pins after every upstream release.

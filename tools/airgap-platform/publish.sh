@@ -20,6 +20,10 @@ esac
 
 command -v oras >/dev/null 2>&1 || die "oras is required (https://oras.land/)"
 command -v node >/dev/null 2>&1 || die "node is required for schema validation of publish records"
+: "${OURBOX_PLATFORM_CONTRACT_REF:?OURBOX_PLATFORM_CONTRACT_REF is required}"
+: "${OURBOX_PLATFORM_CONTRACT_DIGEST:?OURBOX_PLATFORM_CONTRACT_DIGEST is required}"
+[[ "${OURBOX_PLATFORM_CONTRACT_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] \
+  || die "OURBOX_PLATFORM_CONTRACT_DIGEST must be a sha256 digest"
 
 log "Building bundle for ${ARCH}"
 ARCH="${ARCH}" "${ROOT}/tools/airgap-platform/build.sh"
@@ -76,6 +80,7 @@ python3 "${ROOT}/tools/publish-records/write-publish-record.py" \
   --artifact-metadata-env "${DIST_DIR}/airgap-platform.meta.env" \
   --input K3S_VERSION="${K3S_VERSION}" \
   --input OURBOX_PLATFORM_PROFILE="${OURBOX_PLATFORM_PROFILE}" \
+  --input OURBOX_PLATFORM_CONTRACT_DIGEST="${OURBOX_PLATFORM_CONTRACT_DIGEST}" \
   --input OURBOX_PLATFORM_IMAGES_LOCK_SHA256="${OURBOX_PLATFORM_IMAGES_LOCK_SHA256}" \
   --dist-file payload=dist/airgap-platform.tar.gz \
   --dist-file meta_env=dist/airgap-platform.meta.env \

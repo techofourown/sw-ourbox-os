@@ -305,7 +305,7 @@ def build_candidate_provenance(
     write_json(output_path, payload)
 
 
-def build_catalog_header(sha_column: str) -> str:
+def build_os_catalog_header(sha_column: str) -> str:
     if sha_column not in {"img_sha256", "payload_sha256"}:
         fail("sha-column must be img_sha256 or payload_sha256")
     return "\t".join(
@@ -321,6 +321,25 @@ def build_catalog_header(sha_column: str) -> str:
             "platform_contract_digest",
             "k3s_version",
             sha_column,
+            "artifact_digest",
+            "pinned_ref",
+        ]
+    )
+
+
+def build_airgap_catalog_header() -> str:
+    return "\t".join(
+        [
+            "channel",
+            "tag",
+            "created",
+            "version",
+            "revision",
+            "arch",
+            "platform_contract_digest",
+            "platform_profile",
+            "k3s_version",
+            "platform_images_lock_sha256",
             "artifact_digest",
             "pinned_ref",
         ]
@@ -347,7 +366,63 @@ def find_catalog_file(catalog_dir: Path) -> Path:
     return direct
 
 
-def update_catalog_from_record(
+def validate_upstream_airgap_publish_record(record: Any) -> dict[str, Any]:
+    if not isinstance(record, dict):
+        fail("artifact record must be an object")
+    if record.get("schema") != 1:
+        fail("artifact record schema must be 1")
+    if record.get("artifact_family") != "airgap-platform":
+        fail("artifact_family must be airgap-platform")
+
+    artifact_repo = ensure_non_empty_string(record.get("artifact_repo"), "artifact_repo")
+    artifact_ref = ensure_non_empty_string(record.get("artifact_ref"), "artifact_ref")
+    artifact_pinned_ref = ensure_non_empty_string(record.get("artifact_pinned_ref"), "artifact_pinned_ref")
+    artifact_digest = ensure_digest(record.get("artifact_digest"), "artifact_digest")
+    ensure_non_empty_string(record.get("artifact_type"), "artifact_type")
+    ensure_non_empty_string(record.get("source_repo"), "source_repo")
+    ensure_full_sha(record.get("source_commit"), "source_commit")
+    ensure_known_string(record.get("source_version"), "source_version")
+    ensure_non_empty_string(record.get("created"), "created")
+
+    if not artifact_ref.startswith(f"{artifact_repo}:"):
+        fail("artifact_ref must be in the artifact_repo namespace")
+    if not artifact_pinned_ref.startswith(f"{artifact_repo}@"):
+        fail("artifact_pinned_ref must be in the artifact_repo namespace")
+    if extract_digest_from_pinned_ref(artifact_pinned_ref, "artifact_pinned_ref") != artifact_digest:
+        fail("artifact_pinned_ref digest does not match artifact_digest")
+
+    artifact_metadata = validate_flat_string_map(record.get("artifact_metadata"), "artifact_metadata")
+    input_metadata = validate_flat_string_map(record.get("input_metadata"), "input_metadata")
+    validate_flat_string_map(record.get("dist_files"), "dist_files")
+
+    for key in (
+        "OURBOX_AIRGAP_PLATFORM_SOURCE",
+        "OURBOX_AIRGAP_PLATFORM_REVISION",
+        "OURBOX_AIRGAP_PLATFORM_VERSION",
+        "OURBOX_AIRGAP_PLATFORM_CREATED",
+        "AIRGAP_PLATFORM_ARCH",
+    ):
+        ensure_non_empty_string(artifact_metadata.get(key), f"artifact_metadata.{key}")
+
+    arch = artifact_metadata["AIRGAP_PLATFORM_ARCH"]
+    if arch not in {"arm64", "amd64"}:
+        fail("artifact_metadata.AIRGAP_PLATFORM_ARCH must be arm64 or amd64")
+
+    ensure_known_string(input_metadata.get("K3S_VERSION"), "input_metadata.K3S_VERSION")
+    ensure_known_string(input_metadata.get("OURBOX_PLATFORM_PROFILE"), "input_metadata.OURBOX_PLATFORM_PROFILE")
+    ensure_sha_hex(
+        input_metadata.get("OURBOX_PLATFORM_IMAGES_LOCK_SHA256"),
+        "input_metadata.OURBOX_PLATFORM_IMAGES_LOCK_SHA256",
+    )
+    ensure_digest(
+        input_metadata.get("OURBOX_PLATFORM_CONTRACT_DIGEST"),
+        "input_metadata.OURBOX_PLATFORM_CONTRACT_DIGEST",
+    )
+
+    return record
+
+
+def update_os_catalog_from_record(
     artifact_record: dict[str, Any],
     *,
     artifact_repo: str,
@@ -363,7 +438,7 @@ def update_catalog_from_record(
     if record["artifact_repo"] != artifact_repo:
         fail(f"artifact record repo {record['artifact_repo']} does not match {artifact_repo}")
 
-    header = build_catalog_header(sha_column)
+    header = build_os_catalog_header(sha_column)
     immutable_tag = immutable_tag_override or extract_tag_from_ref(record["artifact_repo"], record["artifact_ref"])
     channel = normalize_channel(channel_tag, record["control_fields"]["target"], channel_mode)
     pinned_ref = record["artifact_pinned_ref"]
@@ -409,6 +484,128 @@ def update_catalog_from_record(
         )
         catalog_file.write_text("\n".join([header, *rows]) + "\n", encoding="utf-8")
         oras_push_catalog(catalog_ref, catalog_artifact_type, catalog_file.parent)
+
+
+def update_airgap_catalog_from_record(
+    artifact_record: dict[str, Any],
+    *,
+    artifact_repo: str,
+    catalog_tag: str,
+    catalog_artifact_type: str,
+    channel_tag: str,
+    channel_mode: str,
+    timestamp: str,
+    immutable_tag_override: str | None = None,
+    version_override: str | None = None,
+) -> None:
+    if channel_mode != "short":
+        fail("airgap-platform catalogs require channel-mode short")
+
+    record = validate_upstream_airgap_publish_record(artifact_record)
+    if record["artifact_repo"] != artifact_repo:
+        fail(f"artifact record repo {record['artifact_repo']} does not match {artifact_repo}")
+
+    header = build_airgap_catalog_header()
+    immutable_tag = immutable_tag_override or extract_tag_from_ref(record["artifact_repo"], record["artifact_ref"])
+    version = version_override or record["source_version"]
+    channel = normalize_channel(channel_tag, "", channel_mode)
+    pinned_ref = record["artifact_pinned_ref"]
+    artifact_digest = record["artifact_digest"]
+    artifact_metadata = record["artifact_metadata"]
+    input_metadata = record["input_metadata"]
+
+    with tempfile.TemporaryDirectory(prefix="release-control-catalog-") as tmpdir:
+        catalog_dir = Path(tmpdir)
+        catalog_ref = f"{artifact_repo}:{catalog_tag}"
+        pull_result = oras_pull(catalog_ref, catalog_dir)
+        if pull_result.returncode == 0:
+            catalog_file = find_catalog_file(catalog_dir)
+        elif oras_pull_is_not_found(pull_result):
+            catalog_file = catalog_dir / "catalog.tsv"
+        else:
+            detail = (pull_result.stderr or pull_result.stdout).strip() or f"exit code {pull_result.returncode}"
+            fail(f"oras pull failed for {catalog_ref}: {detail}")
+
+        existing_rows: list[str] = []
+        if catalog_file.is_file():
+            existing_rows = catalog_file.read_text(encoding="utf-8").splitlines()
+        rows = [line for line in existing_rows[1:] if line]
+        rows.append(
+            "\t".join(
+                [
+                    channel,
+                    immutable_tag,
+                    timestamp,
+                    version,
+                    record["source_commit"],
+                    artifact_metadata["AIRGAP_PLATFORM_ARCH"],
+                    input_metadata["OURBOX_PLATFORM_CONTRACT_DIGEST"],
+                    input_metadata["OURBOX_PLATFORM_PROFILE"],
+                    input_metadata["K3S_VERSION"],
+                    input_metadata["OURBOX_PLATFORM_IMAGES_LOCK_SHA256"],
+                    artifact_digest,
+                    pinned_ref,
+                ]
+            )
+        )
+        catalog_file.write_text("\n".join([header, *rows]) + "\n", encoding="utf-8")
+        oras_push_catalog(catalog_ref, catalog_artifact_type, catalog_file.parent)
+
+
+def update_catalog_from_record(
+    artifact_record: dict[str, Any],
+    *,
+    artifact_repo: str,
+    catalog_tag: str,
+    catalog_artifact_type: str,
+    channel_tag: str,
+    channel_mode: str,
+    timestamp: str,
+    catalog_family: str | None = None,
+    sha_column: str | None = None,
+    immutable_tag_override: str | None = None,
+    version_override: str | None = None,
+) -> None:
+    detected_family = catalog_family
+    if detected_family is None:
+        if isinstance(artifact_record, dict) and artifact_record.get("artifact_role") == "os":
+            detected_family = "os"
+        elif isinstance(artifact_record, dict) and artifact_record.get("artifact_family") == "airgap-platform":
+            detected_family = "airgap-platform"
+        else:
+            fail("unable to infer catalog family from artifact record")
+
+    if detected_family == "os":
+        if sha_column is None:
+            fail("sha-column is required for OS catalogs")
+        update_os_catalog_from_record(
+            artifact_record,
+            artifact_repo=artifact_repo,
+            catalog_tag=catalog_tag,
+            catalog_artifact_type=catalog_artifact_type,
+            channel_tag=channel_tag,
+            channel_mode=channel_mode,
+            sha_column=sha_column,
+            timestamp=timestamp,
+            immutable_tag_override=immutable_tag_override,
+        )
+        return
+
+    if detected_family == "airgap-platform":
+        update_airgap_catalog_from_record(
+            artifact_record,
+            artifact_repo=artifact_repo,
+            catalog_tag=catalog_tag,
+            catalog_artifact_type=catalog_artifact_type,
+            channel_tag=channel_tag,
+            channel_mode=channel_mode,
+            timestamp=timestamp,
+            immutable_tag_override=immutable_tag_override,
+            version_override=version_override,
+        )
+        return
+
+    fail(f"unsupported catalog family: {detected_family}")
 
 
 def now_utc() -> str:
@@ -661,8 +858,11 @@ def cmd_update_catalog(args: argparse.Namespace) -> int:
         catalog_artifact_type=args.catalog_artifact_type,
         channel_tag=args.channel_tag,
         channel_mode=args.channel_mode,
-        sha_column=args.sha_column,
         timestamp=args.timestamp,
+        catalog_family=args.catalog_family,
+        sha_column=args.sha_column,
+        immutable_tag_override=args.immutable_tag_override,
+        version_override=args.version_override,
     )
     return 0
 
@@ -746,7 +946,10 @@ def build_parser() -> argparse.ArgumentParser:
     update_catalog_parser.add_argument("--catalog-artifact-type", required=True)
     update_catalog_parser.add_argument("--channel-tag", required=True)
     update_catalog_parser.add_argument("--channel-mode", required=True)
-    update_catalog_parser.add_argument("--sha-column", required=True)
+    update_catalog_parser.add_argument("--catalog-family", choices=["os", "airgap-platform"])
+    update_catalog_parser.add_argument("--sha-column")
+    update_catalog_parser.add_argument("--immutable-tag-override")
+    update_catalog_parser.add_argument("--version-override")
     update_catalog_parser.add_argument("--timestamp", required=True)
     update_catalog_parser.set_defaults(func=cmd_update_catalog)
 

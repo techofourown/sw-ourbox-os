@@ -13,6 +13,7 @@
 - [`docs/decisions/ADR-0012-centralize-installer-selection-contract-above-the-hardware-seam.md`](../decisions/ADR-0012-centralize-installer-selection-contract-above-the-hardware-seam.md)
 - [`docs/reference/target-integration-contract.md`](../reference/target-integration-contract.md)
 - [`docs/reference/installer-selection-contract.md`](../reference/installer-selection-contract.md)
+- [`docs/reference/airgap-platform-selection-contract.md`](../reference/airgap-platform-selection-contract.md)
 - `org-techofourown/docs/decisions/ADR-0007-adopt-oci-artifacts-for-app-distribution.md`
 - `org-techofourown/docs/rfcs/RFC-0001-oci-artifacts-trust-and-attestations.md`
 - `org-techofourown/docs/decisions/ADR-0008-adopt-organization-controlled-build-infrastructure-for-heavy-artifacts.md`
@@ -128,13 +129,17 @@ The target integration contract is the place where that seam becomes concrete.
 
 ### 4.1 `sw-ourbox-os`
 
-`sw-ourbox-os` is the upstream producer of the platform contract and the install-defaults control plane.
+`sw-ourbox-os` is the upstream producer of the platform contract and the
+install-defaults control plane.
 
 It is responsible for:
 
 - defining the deployment baseline and platform integration contract
 - packaging the platform contract as an OCI artifact
-- publishing install-defaults bundles that tell installers where to look by default
+- publishing install-defaults bundles that tell installers where to look by
+  default for both:
+  - OS payload discovery
+  - airgap-platform discovery
 - documenting the public artifact model and consumer expectations
 
 `sw-ourbox-os` does not directly define every hardware-specific flashing path.
@@ -192,7 +197,8 @@ A catalog is not the payload itself. It is the discovery and metadata surface th
 
 ### 4.5 Install-defaults bundles
 
-An install-defaults bundle is the upstream control-plane artifact that tells an installer profile where it should look by default.
+An install-defaults bundle is the upstream control-plane artifact that tells an
+installer profile where it should look by default.
 
 It is intentionally small. It does not contain the whole OS payload.
 
@@ -202,6 +208,8 @@ Its job is to answer questions like:
 - which catalog tag should be consulted?
 - is there a pinned default artifact reference?
 - what are the current stable, beta, nightly, or experimental channel tags?
+- which airgap-platform repo, catalog tag, pinned default ref, and moving
+  channel tags should be used after OS selection?
 
 ### 4.6 Installer media or flashing tools
 
@@ -250,7 +258,8 @@ It is not itself the thing most end users flash directly.
 
 ### 5.2 Install-defaults bundle
 
-The install-defaults bundle is an upstream-maintained control-plane bundle that maps an installer profile to default payload locations and selection rules.
+The install-defaults bundle is an upstream-maintained control-plane bundle that
+maps an installer profile to default payload locations and selection rules.
 
 Typical fields include:
 
@@ -262,6 +271,13 @@ Typical fields include:
 - `CHANNEL_BETA_TAG`
 - `CHANNEL_NIGHTLY_TAG`
 - `CHANNEL_EXP_LABS_TAG`
+- `AIRGAP_PLATFORM_REPO`
+- `AIRGAP_PLATFORM_CATALOG_TAG`
+- `AIRGAP_PLATFORM_DEFAULT_REF`
+- `AIRGAP_PLATFORM_CHANNEL_STABLE_TAG`
+- `AIRGAP_PLATFORM_CHANNEL_BETA_TAG`
+- `AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG`
+- `AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG`
 
 This bundle is small and separately publishable so the recommended default artifact can change without requiring every installer image to be rebuilt for every recommendation change.
 
@@ -447,7 +463,9 @@ This is important: custom builders should not need a separate special installer 
 
 ### 8.1 Why install-defaults exists
 
-Install-defaults exists so that "where should the installer look?" is a small upstream control-plane question, not something welded forever into every installer image.
+Install-defaults exists so that "where should the installer look?" is a small
+upstream control-plane question, not something welded forever into every
+installer image.
 
 That gives TOOO a way to change recommended official refs or channels without requiring the installer mechanics themselves to change every time.
 
@@ -461,6 +479,9 @@ A profile can answer:
 - which catalog tag should be consulted?
 - is there a pinned preferred default ref?
 - which moving channel tags are available?
+- which airgap-platform repo and catalog should be used after OS selection?
+- is there a pinned preferred airgap-platform ref?
+- which airgap-platform moving channel tags are available?
 
 ### 8.3 Current intended precedence
 
@@ -485,13 +506,19 @@ Failure to refresh remote defaults should not make the installer unable to funct
 
 This is the intended public model even if specific targets may realize parts of it incrementally.
 
-The normative contract for this resolver behavior now lives in
-`docs/reference/installer-selection-contract.md`, including:
+The normative contracts for this resolver behavior now live in:
+
+- `docs/reference/installer-selection-contract.md`
+- `docs/reference/airgap-platform-selection-contract.md`
+
+They define, among other things:
 
 - the remote install-defaults bundle shape,
 - the rule that baked pinned defaults stay authoritative unless explicitly replaced,
 - row-order-independent catalog resolution by `created`,
 - fail-closed digest resolution,
+- the rule that airgap catalog rows and extracted bundles must match the
+  selected OS payload's `OURBOX_PLATFORM_CONTRACT_DIGEST`,
 - and the standard provenance vocabulary recorded on installed systems.
 
 ### 8.4 Why catalogs exist
@@ -694,6 +721,8 @@ For example, a directly flashed embedded target may have a very different host-s
 The public OurBox image model is:
 
 - `sw-ourbox-os` defines the upstream platform contract and install-defaults control plane
+- `install-defaults` controls both OS payload discovery and contract-bound
+  airgap-platform discovery
 - `img-*` repos turn that upstream contract into target-specific OS payloads and installer media
 - payload repos publish immutable artifacts, moving channels, and catalogs
 - install-defaults tells a given installer profile where to look by default
@@ -715,3 +744,5 @@ This keeps the system:
 
 - [Downstream consumer surfaces](../reference/downstream-consumer-surfaces.md)
 - [Artifact publish record contract](../reference/artifact-publish-record-contract.md)
+- [Installer selection contract](../reference/installer-selection-contract.md)
+- [Airgap-platform selection contract](../reference/airgap-platform-selection-contract.md)
