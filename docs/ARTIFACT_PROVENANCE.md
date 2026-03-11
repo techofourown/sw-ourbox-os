@@ -204,6 +204,10 @@ The single approved upstream snapshot now lives in
 - each pinned ref embeds the same digest
 - the approved platform contract still contains the launcher marker
 - the rendered `verification/http-routes.tsv` inside the published contract still advertises that launcher marker for `landing-root`
+- each approved airgap artifact's embedded `OURBOX_PLATFORM_CONTRACT_REF` and
+  `OURBOX_PLATFORM_CONTRACT_DIGEST` match the approved platform-contract entry
+- each approved airgap artifact's embedded version and arch match the approved
+  release tuple
 
 When the approved snapshot changes on `main`, `.github/workflows/approved-upstream-inputs-sync.yml`
 automatically opens downstream PRs that refresh `release/official-inputs.env` in the image repos.
