@@ -52,6 +52,10 @@ The upstream shell reference resolver lives at:
 Targets may vendor or otherwise carry that file into installer media, but the normative behavior is
 defined here and owned by `sw-ourbox-os`.
 
+The reference resolver also exposes reusable interactive browsing helpers for installers that want
+the shared default/channel/catalog/custom-ref menu. Surrounding installer screens and confirmation
+flow remain target-specific.
+
 ## 4. Inputs
 
 The shared selection contract is defined in terms of the following inputs:
@@ -118,6 +122,11 @@ This contract defines the default selection path. Hardware-specific operator pro
 the user to choose a different exact ref, but those overrides must be recorded distinctly in
 provenance.
 
+If an operator explicitly chooses a release lane (`stable`, `beta`, `nightly`, or `exp-labs`), that
+lane choice should reuse the same channel-resolution rule as steps 3-4: prefer the newest valid
+digest-pinned catalog row for that lane, then fall back to the configured channel tag only if the
+catalog is unavailable or lacks a valid row.
+
 ## 7. Catalog Resolution Rules
 
 Catalog resolution must be explicit and row-order independent.
@@ -128,6 +137,13 @@ Rules:
 2. require a valid digest-pinned `pinned_ref`,
 3. choose the newest matching row by explicit `created` timestamp,
 4. if no valid matching row exists, fall back to the configured channel tag.
+
+The `channel` column stores the short release channel vocabulary:
+
+- `stable`
+- `beta`
+- `nightly`
+- `exp-labs`
 
 Append order is not the contract.
 

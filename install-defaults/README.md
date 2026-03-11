@@ -44,6 +44,13 @@ target. Current official examples:
 - Matchbox: `rpi-catalog`
 - Woodbox: `x86-catalog`
 
+Catalog rows store the short release channel names in the `channel` column:
+
+- `stable`
+- `beta`
+- `nightly`
+- `exp-labs`
+
 Channel tags must follow the same published target lanes:
 
 - Matchbox: `rpi-stable`, `rpi-beta`, `rpi-nightly`, `rpi-exp-labs`
