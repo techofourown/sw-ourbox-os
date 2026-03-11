@@ -147,6 +147,9 @@ The `channel` column stores the short release channel vocabulary:
 
 During the channel-name migration, consumers should also accept legacy target-qualified catalog
 values such as `rpi-stable` or `x86-beta`, but new publishers must emit the short form above.
+If a consumer accepts one of those legacy rows for compatibility, it should normalize provenance and
+operator-facing summaries back to the short vocabulary above. For example, selecting `rpi-stable`
+still records `OURBOX_RELEASE_CHANNEL=stable`.
 
 Append order is not the contract.
 
@@ -213,6 +216,9 @@ Shared value expectations:
 
 `OURBOX_RELEASE_CHANNEL` should be populated only when channel semantics actually participated in
 selection, typically for `catalog` or `channel-tag`.
+When populated, it should use the short release-channel vocabulary (`stable`, `beta`, `nightly`,
+`exp-labs`). Compatibility acceptance of legacy catalog row names does not widen the recorded
+provenance vocabulary.
 
 ## 10. Local Responsibilities That Stay Out Of Scope
 

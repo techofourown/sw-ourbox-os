@@ -3,6 +3,9 @@
 These profiles are bundled into the `install-defaults` OCI artifact and consumed by installer
 runtimes.
 
+This directory owns published profile data only. It does not own executable browsing logic; that
+shared code surface lives in `tools/install-defaults/installer-selection-resolver.sh`.
+
 The shared installer-selection contract for consuming these profiles is defined in:
 
 - `docs/reference/installer-selection-contract.md`
@@ -54,6 +57,8 @@ Catalog rows store the short release channel names in the `channel` column:
 Consumers should continue accepting legacy target-qualified catalog rows (for example
 `rpi-stable` or `x86-beta`) during the transition, but official publishers now emit only the short
 channel names above.
+That compatibility rule does not widen the canonical provenance vocabulary: if a consumer reads a
+legacy row such as `rpi-stable`, it should still record `OURBOX_RELEASE_CHANNEL=stable`.
 
 Channel tags must follow the same published target lanes:
 
