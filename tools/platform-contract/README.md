@@ -18,6 +18,9 @@ Published artifact:
 - `publish.sh`
   - pushes the tarball to GHCR with OCI annotations
   - records the digest-pinned ref in `dist/platform-contract.ref`
+- `promote.sh`
+  - retags an already-published digest into a release version tag
+  - records the source, digest, and target refs in `dist/platform-contract.promote.*.ref`
 - `validate.sh`
   - local validation entrypoint used by CI
 - `render-contract.py`
@@ -60,6 +63,7 @@ From the repo root:
 ```bash
 ./tools/platform-contract/build.sh
 ./tools/platform-contract/publish.sh edge
+PROMOTE_SOURCE_PINNED_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... ./tools/platform-contract/promote.sh v0.16.2
 ./tools/platform-contract/validate.sh
 ```
 
@@ -70,12 +74,17 @@ Key outputs:
 - `dist/platform-contract.push.log`
 - `dist/platform-contract.ref`
 - `dist/platform-contract.publish-record.json` (canonical machine-readable publish record)
+- `dist/platform-contract.promote.source.ref`
+- `dist/platform-contract.promote.digest.ref`
+- `dist/platform-contract.promote.target.ref`
 
 ## Official workflows
 
 - `.github/workflows/platform-contract.yml`
   - publishes `edge` from `main`
-  - publishes `v*` from release/tag context
+- `.github/workflows/platform-contract-promote.yml`
+  - promotes the exact bound digest from the successful `Airgap Platform` candidate into `v*`
+  - waits for both candidate success and matching published release authorization
 
 This is a lightweight lane and runs on GitHub-hosted runners.
 
@@ -89,4 +98,3 @@ See also:
 
 - [platform-contract/README.md](../../platform-contract/README.md)
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)
-

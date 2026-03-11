@@ -44,6 +44,9 @@ jobs:
       - name: Validate rendered platform contract
         run: bash tools/platform-contract/validate.sh
 
+      - name: Run platform-contract promote tests
+        run: bash tools/platform-contract/test-promote.sh
+
   approved-upstream-inputs:
     name: Approved upstream input snapshot
     runs-on: ubuntu-latest

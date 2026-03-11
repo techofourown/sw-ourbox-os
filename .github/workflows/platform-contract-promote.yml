@@ -1,0 +1,111 @@
+name: Platform Contract Promote Release
+
+on:
+  workflow_run:
+    workflows: ["Airgap Platform"]
+    types: [completed]
+  release:
+    types: [published]
+
+permissions:
+  actions: read
+  contents: read
+  packages: write
+
+concurrency:
+  group: platform-contract-promote-${{ github.event.release.tag_name || github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: >
+      (github.event_name == 'workflow_run' &&
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.head_branch == 'main' &&
+       github.event.workflow_run.event == 'push') ||
+      github.event_name == 'release'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout candidate revision
+        if: github.event_name == 'workflow_run'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Checkout release tag
+        if: github.event_name == 'release'
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ github.event.release.tag_name }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Resolve promotion context
+        id: context
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_IS_DRAFT: ${{ github.event.release.draft }}
+          RELEASE_IS_PRERELEASE: ${{ github.event.release.prerelease }}
+          PROMOTION_CONTEXT: versioned
+          CANDIDATE_WORKFLOW_NAME: Airgap Platform
+        run: |
+          set -euo pipefail
+          ./tools/release-control/resolve-promotion-context.sh \
+            "${PROMOTION_CONTEXT}" \
+            "${CANDIDATE_WORKFLOW_NAME}" \
+            "${GITHUB_OUTPUT}"
+
+      - name: Download bound platform-contract publish outputs
+        if: steps.context.outputs.skip != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: platform-contract-for-airgap-${{ steps.context.outputs.candidate_run_id }}
+          path: dist/candidate-platform-contract
+          run-id: ${{ steps.context.outputs.candidate_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote candidate digest into release tag
+        if: steps.context.outputs.skip != 'true'
+        env:
+          RELEASE_TAG: ${{ steps.context.outputs.release_tag }}
+        run: |
+          set -euo pipefail
+
+          source_ref_file="$(find dist/candidate-platform-contract -type f -name 'platform-contract.ref' | head -n1 || true)"
+          [[ -f "${source_ref_file}" ]] || {
+            echo "Missing platform-contract.ref in downloaded Airgap Platform candidate outputs" >&2
+            exit 1
+          }
+
+          mkdir -p dist/promote
+          export PROMOTE_SOURCE_REF="$(cat "${source_ref_file}")"
+          export PROMOTE_SOURCE_PINNED_REF="${PROMOTE_SOURCE_REF}"
+
+          ./tools/platform-contract/promote.sh "${RELEASE_TAG}"
+          cp dist/platform-contract.promote.source.ref dist/promote/versioned.source.ref
+          cp dist/platform-contract.promote.digest.ref dist/promote/versioned.digest.ref
+          cp dist/platform-contract.promote.target.ref dist/promote/versioned.target.ref
+
+      - name: Upload promote outputs
+        uses: actions/upload-artifact@v4
+        if: steps.context.outputs.skip != 'true' && always()
+        with:
+          name: platform-contract-promote-${{ steps.context.outputs.release_tag || github.run_id }}
+          path: |
+            dist/promote/versioned.source.ref
+            dist/promote/versioned.digest.ref
+            dist/promote/versioned.target.ref
+          if-no-files-found: warn
