@@ -44,6 +44,17 @@ target. Current official examples:
 - Matchbox: `rpi-catalog`
 - Woodbox: `x86-catalog`
 
+Catalog rows store the short release channel names in the `channel` column:
+
+- `stable`
+- `beta`
+- `nightly`
+- `exp-labs`
+
+Consumers should continue accepting legacy target-qualified catalog rows (for example
+`rpi-stable` or `x86-beta`) during the transition, but official publishers now emit only the short
+channel names above.
+
 Channel tags must follow the same published target lanes:
 
 - Matchbox: `rpi-stable`, `rpi-beta`, `rpi-nightly`, `rpi-exp-labs`
