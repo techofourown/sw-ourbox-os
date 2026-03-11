@@ -145,6 +145,9 @@ The `channel` column stores the short release channel vocabulary:
 - `nightly`
 - `exp-labs`
 
+During the channel-name migration, consumers should also accept legacy target-qualified catalog
+values such as `rpi-stable` or `x86-beta`, but new publishers must emit the short form above.
+
 Append order is not the contract.
 
 Expected minimum columns used by the resolver:

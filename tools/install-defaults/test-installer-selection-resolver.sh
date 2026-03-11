@@ -232,6 +232,47 @@ EOF_CATALOG
   rm -rf "${tmp}"
 }
 
+test_catalog_resolution_accepts_legacy_target_qualified_channel_rows() {
+  local tmp fake_oras_dir catalog_src expected
+  tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  catalog_src="${tmp}/catalog-src"
+  expected="ghcr.io/techofourown/ourbox-matchbox-os@sha256:9999999999999999999999999999999999999999999999999999999999999999"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+
+  mkdir -p "${catalog_src}"
+  cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
+channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+rpi-stable	v0.9.9-rpi	2026-03-09T01:23:45Z	v0.9.9	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:9999999999999999999999999999999999999999999999999999999999999999	legacy-channel-row
+EOF_CATALOG
+  export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
+
+  # shellcheck disable=SC1090
+  source "${RESOLVER}"
+  OS_REPO="ghcr.io/techofourown/ourbox-matchbox-os"
+  OS_TARGET="rpi"
+  OS_CHANNEL="stable"
+  OS_CATALOG_ENABLED="1"
+  OS_CATALOG_TAG="rpi-catalog"
+  OS_REF=""
+  OS_DEFAULT_REF=""
+  CHANNEL_STABLE_TAG="rpi-stable"
+  CHANNEL_BETA_TAG="rpi-beta"
+  CHANNEL_NIGHTLY_TAG="rpi-nightly"
+  CHANNEL_EXP_LABS_TAG="rpi-exp-labs"
+
+  ourbox_selection_reset_state
+  ourbox_selection_determine_default_ref "${tmp}/catalog"
+
+  assert_eq "${OURBOX_INSTALL_SELECTION_SOURCE}" "catalog" "legacy target-qualified catalog rows should remain selectable during channel-name migration"
+  assert_eq "${OURBOX_RELEASE_CHANNEL}" "stable" "legacy catalog channel names should normalize back to the short release channel"
+  assert_eq "${OURBOX_SELECTED_REF}" "${expected}" "legacy target-qualified catalog rows should resolve to their pinned ref"
+
+  rm -rf "${tmp}"
+}
+
 test_missing_channel_tags_fall_back_to_target_defaults() {
   local tmp
   tmp="$(mktemp -d)"
@@ -580,6 +621,7 @@ main() {
   test_remote_defaults_bundle_shape
   test_precedence_prefers_os_ref_then_os_default_ref
   test_catalog_resolution_uses_newest_valid_created_timestamp
+  test_catalog_resolution_accepts_legacy_target_qualified_channel_rows
   test_missing_channel_tags_fall_back_to_target_defaults
   test_catalog_falls_back_to_channel_tag_without_valid_digest_row
   test_matchbox_style_command_substitution_keeps_stdout_clean_on_catalog_fallback
