@@ -39,6 +39,20 @@ That means:
 This is why the data artifact lives in `install-defaults/`, while the shared
 resolver lives here in `tools/install-defaults/`.
 
+## Stable seam in this area
+
+The stable ownership split is:
+
+- `install-defaults/`
+  - authoritative published profile data
+- `tools/install-defaults/installer-selection-resolver.sh`
+  - authoritative shared code surface vendored by installers
+- target-specific `img-*` installer entrypoints
+  - local UX, destructive confirmation flow, and payload install mechanics
+
+This directory owns the upstream shared code side of that seam. The remote
+artifact does not deliver executable browsing logic.
+
 ## Outputs
 
 Build output:
@@ -77,4 +91,6 @@ bash ./tools/install-defaults/test-installer-selection-resolver.sh
 
 - [install-defaults/README.md](../../install-defaults/README.md)
 - [installer-selection-contract.md](../../docs/reference/installer-selection-contract.md)
+- [downstream-consumer-surfaces.md](../../docs/reference/downstream-consumer-surfaces.md)
+- [repository-layout-and-authority.md](../../docs/reference/repository-layout-and-authority.md)
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)

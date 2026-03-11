@@ -529,6 +529,50 @@ EOF_CATALOG
   rm -rf "${tmp}"
 }
 
+test_interactive_catalog_pick_normalizes_legacy_channel_name() {
+  local tmp fake_oras_dir catalog_src captured
+  tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  catalog_src="${tmp}/catalog-src"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+
+  mkdir -p "${catalog_src}"
+  cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
+channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+rpi-stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111	legacy-stable-row
+EOF_CATALOG
+  export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
+
+  captured="$(
+    printf 'l\n1\n' | bash -lc "
+      set -euo pipefail
+      PATH='${fake_oras_dir}':\"\$PATH\"
+      export FAKE_ORAS_CATALOG_DIR='${catalog_src}'
+      source '${RESOLVER}'
+      OS_REPO='ghcr.io/techofourown/ourbox-matchbox-os'
+      OS_TARGET='rpi'
+      OS_CHANNEL='stable'
+      OS_CATALOG_ENABLED='1'
+      OS_CATALOG_TAG='rpi-catalog'
+      OS_REF=''
+      OS_DEFAULT_REF=''
+      CHANNEL_STABLE_TAG='rpi-stable'
+      CHANNEL_BETA_TAG='rpi-beta'
+      CHANNEL_NIGHTLY_TAG='rpi-nightly'
+      CHANNEL_EXP_LABS_TAG='rpi-exp-labs'
+      ourbox_selection_reset_state
+      ourbox_selection_interactive_select_ref '${tmp}/catalog' >/dev/null
+      printf '%s\t%s\t%s\n' \"\$OURBOX_SELECTED_REF\" \"\$OURBOX_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_RELEASE_CHANNEL:-}\"
+    " 2>/dev/null
+  )"
+
+  assert_eq "${captured}" $'ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111\tcatalog\tstable' "interactive catalog browsing should normalize legacy target-qualified channel names back to the short release-channel provenance"
+
+  rm -rf "${tmp}"
+}
+
 test_finalize_registry_ref_resolves_digest() {
   local tmp fake_oras_dir
   tmp="$(mktemp -d)"
@@ -629,6 +673,7 @@ main() {
   test_interactive_repo_override_clears_pinned_default
   test_interactive_channel_pick_prefers_catalog_row_over_baked_default
   test_interactive_catalog_pick_returns_pinned_ref
+  test_interactive_catalog_pick_normalizes_legacy_channel_name
   test_finalize_registry_ref_resolves_digest
   test_finalize_registry_ref_handles_registry_ports_without_tags
   test_finalize_registry_ref_dev_override_marks_unresolved
