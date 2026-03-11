@@ -5,7 +5,7 @@ on:
     workflows: ["Airgap Platform"]
     types: [completed]
   release:
-    types: [published]
+    types: [published, prereleased]
 
 permissions:
   actions: read
@@ -13,7 +13,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: airgap-platform-promote-release
+  group: airgap-platform-promote-${{ github.event.release.tag_name || github.event.workflow_run.id || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -29,6 +29,7 @@ jobs:
       fail-fast: false
       matrix:
         arch: [arm64, amd64]
+        promotion_context: [stable, exp-labs]
 
     steps:
       - name: Checkout candidate revision
@@ -58,77 +59,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          PROMOTION_CONTEXT: versioned
+          WORKFLOW_RUN_HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+          WORKFLOW_RUN_ID: ${{ github.event.workflow_run.id }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          RELEASE_IS_DRAFT: ${{ github.event.release.draft }}
+          RELEASE_IS_PRERELEASE: ${{ github.event.release.prerelease }}
+          PROMOTION_CONTEXT: ${{ matrix.promotion_context }}
           CANDIDATE_WORKFLOW_NAME: Airgap Platform
         run: |
           set -euo pipefail
-
-          resolve_source_commit() {
-            local release_ref="$1"
-            local commit subject
-
-            commit="$(git rev-parse "${release_ref}^{commit}" 2>/dev/null)" \
-              || {
-                echo "Unable to resolve commit for release ref ${release_ref}" >&2
-                exit 1
-              }
-            subject="$(git log -1 --format=%s "${commit}" 2>/dev/null || true)"
-
-            if [[ "${subject}" == chore\(release\):* ]]; then
-              git rev-parse "${commit}^" 2>/dev/null \
-                || {
-                  echo "Unable to resolve source commit behind release commit ${commit}" >&2
-                  exit 1
-                }
-            else
-              printf '%s\n' "${commit}"
-            fi
-          }
-
-          if [[ "${GITHUB_EVENT_NAME}" == "workflow_run" ]]; then
-            source_commit="${{ github.event.workflow_run.head_sha }}"
-            candidate_run_id="${{ github.event.workflow_run.id }}"
-            if release_tag="$(./tools/resolve-promotable-release.sh "${PROMOTION_CONTEXT}" "${source_commit}")"; then
-              :
-            else
-              status=$?
-              if [[ "${status}" -eq 3 ]]; then
-                echo "No published release authorization yet for source commit ${source_commit}; skipping."
-                echo "skip=true" >> "${GITHUB_OUTPUT}"
-                exit 0
-              fi
-              exit "${status}"
-            fi
-          elif [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
-            if [[ "${{ github.event.release.draft }}" == "true" || "${{ github.event.release.prerelease }}" == "true" ]]; then
-              echo "Release ${GITHUB_REF_NAME} is not a versioned published authorization; skipping."
-              echo "skip=true" >> "${GITHUB_OUTPUT}"
-              exit 0
-            fi
-
-            release_tag="${{ github.event.release.tag_name }}"
-            source_commit="$(resolve_source_commit "refs/tags/${release_tag}")"
-
-            if candidate_run_id="$(./tools/find-successful-candidate-run.sh "${CANDIDATE_WORKFLOW_NAME}" "${source_commit}")"; then
-              :
-            else
-              status=$?
-              if [[ "${status}" -eq 3 ]]; then
-                echo "No successful candidate run yet for source commit ${source_commit}; skipping."
-                echo "skip=true" >> "${GITHUB_OUTPUT}"
-                exit 0
-              fi
-              exit "${status}"
-            fi
-          else
-            echo "Unsupported event: ${GITHUB_EVENT_NAME}" >&2
-            exit 1
-          fi
-
-          echo "skip=false" >> "${GITHUB_OUTPUT}"
-          echo "source_commit=${source_commit}" >> "${GITHUB_OUTPUT}"
-          echo "candidate_run_id=${candidate_run_id}" >> "${GITHUB_OUTPUT}"
-          echo "release_tag=${release_tag}" >> "${GITHUB_OUTPUT}"
+          ./tools/release-control/resolve-promotion-context.sh \
+            "${PROMOTION_CONTEXT}" \
+            "${CANDIDATE_WORKFLOW_NAME}" \
+            "${GITHUB_OUTPUT}"
 
       - name: Download candidate provenance
         if: steps.context.outputs.skip != 'true'
@@ -144,6 +87,7 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}
           RELEASE_TAG: ${{ steps.context.outputs.release_tag }}
+          PROMOTION_CONTEXT: ${{ matrix.promotion_context }}
         run: |
           set -euo pipefail
           source_ref_file="$(find "dist/candidate-provenance/${ARCH}" -type f -name "airgap-platform.${ARCH}.ref" | head -n1 || true)"
@@ -151,17 +95,43 @@ jobs:
             echo "Missing airgap-platform.${ARCH}.ref in downloaded candidate provenance" >&2
             exit 1
           }
+          publish_record_file="$(find "dist/candidate-provenance/${ARCH}" -type f -name "airgap-platform.${ARCH}.publish-record.json" | head -n1 || true)"
+          [[ -f "${publish_record_file}" ]] || {
+            echo "Missing airgap-platform.${ARCH}.publish-record.json in downloaded candidate provenance" >&2
+            exit 1
+          }
+
+          mkdir -p "dist/promote/${ARCH}"
           export PROMOTE_SOURCE_REF="$(cat "${source_ref_file}")"
           export PROMOTE_SOURCE_PINNED_REF="${PROMOTE_SOURCE_REF}"
+
+          ./tools/airgap-platform/promote.sh "${ARCH}" "${PROMOTION_CONTEXT}"
+          cp "dist/airgap-platform.${ARCH}.promote.source.ref" "dist/promote/${ARCH}/${PROMOTION_CONTEXT}.source.ref"
+          cp "dist/airgap-platform.${ARCH}.promote.digest.ref" "dist/promote/${ARCH}/${PROMOTION_CONTEXT}.digest.ref"
+          cp "dist/airgap-platform.${ARCH}.promote.target.ref" "dist/promote/${ARCH}/${PROMOTION_CONTEXT}.target.ref"
+
           ./tools/airgap-platform/promote.sh "${ARCH}" "${RELEASE_TAG}"
+          cp "dist/airgap-platform.${ARCH}.promote.source.ref" "dist/promote/${ARCH}/versioned.source.ref"
+          cp "dist/airgap-platform.${ARCH}.promote.digest.ref" "dist/promote/${ARCH}/versioned.digest.ref"
+          cp "dist/airgap-platform.${ARCH}.promote.target.ref" "dist/promote/${ARCH}/versioned.target.ref"
+
+          ./tools/airgap-platform/update-catalog.sh \
+            "${publish_record_file}" \
+            "${PROMOTION_CONTEXT}" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            "${RELEASE_TAG}-${ARCH}" \
+            "${RELEASE_TAG}"
 
       - name: Upload promote outputs
         uses: actions/upload-artifact@v4
         if: steps.context.outputs.skip != 'true' && always()
         with:
-          name: airgap-platform-promote-${{ matrix.arch }}-${{ steps.context.outputs.release_tag }}
+          name: airgap-platform-promote-${{ matrix.arch }}-${{ matrix.promotion_context }}-${{ steps.context.outputs.release_tag || github.run_id }}
           path: |
-            dist/airgap-platform.${{ matrix.arch }}.promote.source.ref
-            dist/airgap-platform.${{ matrix.arch }}.promote.digest.ref
-            dist/airgap-platform.${{ matrix.arch }}.promote.target.ref
+            dist/promote/${{ matrix.arch }}/${{ matrix.promotion_context }}.source.ref
+            dist/promote/${{ matrix.arch }}/${{ matrix.promotion_context }}.digest.ref
+            dist/promote/${{ matrix.arch }}/${{ matrix.promotion_context }}.target.ref
+            dist/promote/${{ matrix.arch }}/versioned.source.ref
+            dist/promote/${{ matrix.arch }}/versioned.digest.ref
+            dist/promote/${{ matrix.arch }}/versioned.target.ref
           if-no-files-found: warn

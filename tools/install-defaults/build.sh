@@ -34,12 +34,12 @@ set_profile_var() {
 }
 
 apply_profile_override() {
-  local installer_id="$1" override_value="$2"
+  local installer_id="$1" key="$2" override_value="$3"
   local profile="${BUILD_DIR}/install-defaults/defaults/${installer_id}.env"
   [[ -n "${override_value}" ]] || return 0
   [[ -f "${profile}" ]] || die "Missing profile for override: ${profile}"
-  set_profile_var "${profile}" "OS_DEFAULT_REF" "${override_value}"
-  log "Applied curated OS_DEFAULT_REF for ${installer_id}"
+  set_profile_var "${profile}" "${key}" "${override_value}"
+  log "Applied curated ${key} for ${installer_id}"
 }
 
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
@@ -55,9 +55,11 @@ trap 'rm -rf "${BUILD_DIR}"' EXIT
 mkdir -p "${BUILD_DIR}/install-defaults"
 cp -a "${SRC_DIR}/." "${BUILD_DIR}/install-defaults/"
 
-apply_profile_override "matchbox" "${MATCHBOX_OS_DEFAULT_REF_OVERRIDE:-}"
-apply_profile_override "woodbox" "${WOODBOX_OS_DEFAULT_REF_OVERRIDE:-}"
-apply_profile_override "tinderbox" "${TINDERBOX_OS_DEFAULT_REF_OVERRIDE:-}"
+apply_profile_override "matchbox" "OS_DEFAULT_REF" "${MATCHBOX_OS_DEFAULT_REF_OVERRIDE:-}"
+apply_profile_override "matchbox" "AIRGAP_PLATFORM_DEFAULT_REF" "${MATCHBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE:-}"
+apply_profile_override "woodbox" "OS_DEFAULT_REF" "${WOODBOX_OS_DEFAULT_REF_OVERRIDE:-}"
+apply_profile_override "woodbox" "AIRGAP_PLATFORM_DEFAULT_REF" "${WOODBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE:-}"
+apply_profile_override "tinderbox" "OS_DEFAULT_REF" "${TINDERBOX_OS_DEFAULT_REF_OVERRIDE:-}"
 
 bash "${ROOT}/tools/install-defaults/validate-assignment-only.sh" \
   "${BUILD_DIR}/install-defaults/schema.env" \

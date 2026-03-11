@@ -127,6 +127,7 @@ The following documents are stable human-readable contract surfaces for downstre
 |---|---|
 | `docs/reference/target-integration-contract.md` | Stable seam between `sw-ourbox-os` and hardware-specific `img-*` repos |
 | `docs/reference/installer-selection-contract.md` | Shared policy for choosing installable OS payloads |
+| `docs/reference/airgap-platform-selection-contract.md` | Shared policy for choosing a contract-bound airgap-platform bundle after OS selection |
 | `docs/reference/installer-ssh-contract.md` | Shared policy for installer SSH posture |
 | `docs/architecture/official-image-production-and-consumption.md` | High-level public model for official and custom image flows |
 | `docs/architecture/artifact-distribution-and-integration.md` | Artifact-distribution and integration model |

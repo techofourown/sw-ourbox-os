@@ -15,16 +15,99 @@ on:
       - 'CLAUDE.md'
       - 'package.json'
       - 'package-lock.json'
+  schedule:
+    - cron: '0 3 * * *'
 permissions:
   contents: read
   packages: write
 
 concurrency:
-  group: airgap-platform-${{ github.ref_name || github.run_id }}
+  group: airgap-platform-${{ github.event_name }}-${{ github.ref_name || github.run_id }}
   cancel-in-progress: false
 
 jobs:
+  context:
+    runs-on: ubuntu-latest
+    outputs:
+      channel: ${{ steps.context.outputs.channel }}
+      immutable_tag: ${{ steps.context.outputs.immutable_tag }}
+      platform_contract_tag: ${{ steps.context.outputs.platform_contract_tag }}
+    steps:
+      - name: Resolve publication context
+        id: context
+        run: |
+          set -euo pipefail
+
+          short_sha="${GITHUB_SHA:0:12}"
+          if [[ "${GITHUB_EVENT_NAME}" == "schedule" ]]; then
+            stamp="$(date -u +'%Y%m%d%H%M%S')"
+            echo "channel=nightly" >> "${GITHUB_OUTPUT}"
+            echo "immutable_tag=nightly-${stamp}-${short_sha}" >> "${GITHUB_OUTPUT}"
+            echo "platform_contract_tag=nightly-${stamp}-${short_sha}" >> "${GITHUB_OUTPUT}"
+          else
+            echo "channel=beta" >> "${GITHUB_OUTPUT}"
+            echo "immutable_tag=main-${short_sha}" >> "${GITHUB_OUTPUT}"
+            echo "platform_contract_tag=main-${short_sha}" >> "${GITHUB_OUTPUT}"
+          fi
+
+  publish-platform-contract:
+    needs: context
+    runs-on: ubuntu-latest
+    outputs:
+      pinned_ref: ${{ steps.contract.outputs.pinned_ref }}
+      digest: ${{ steps.contract.outputs.digest }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Install platform-contract build deps
+        run: python3 -m pip install --disable-pip-version-check pyyaml
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Publish bound platform-contract artifact
+        run: |
+          set -euo pipefail
+          ./tools/platform-contract/publish.sh "${{ needs.context.outputs.platform_contract_tag }}"
+
+      - name: Capture platform-contract identity
+        id: contract
+        run: |
+          set -euo pipefail
+          pinned_ref="$(cat dist/platform-contract.ref)"
+          digest="${pinned_ref##*@}"
+          echo "pinned_ref=${pinned_ref}" >> "${GITHUB_OUTPUT}"
+          echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
+
+      - name: Upload platform-contract publish outputs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: platform-contract-for-airgap-${{ github.run_id }}
+          path: |
+            dist/platform-contract.ref
+            dist/platform-contract.push.log
+            dist/platform-contract.publish-record.json
+          if-no-files-found: warn
+
   publish:
+    needs: [context, publish-platform-contract]
     runs-on: [self-hosted, official-heavy, airgap-builder]
     strategy:
       fail-fast: false
@@ -52,13 +135,18 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
+          OURBOX_PLATFORM_CONTRACT_REF: ${{ needs.publish-platform-contract.outputs.pinned_ref }}
+          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest }}
         run: |
           set -euo pipefail
-          TAG="main-${GITHUB_SHA:0:12}" ARCH="${ARCH}" ./tools/airgap-platform/publish.sh "${ARCH}" "main-${GITHUB_SHA:0:12}"
+          TAG="${{ needs.context.outputs.immutable_tag }}" \
+            ARCH="${ARCH}" \
+            ./tools/airgap-platform/publish.sh "${ARCH}" "${{ needs.context.outputs.immutable_tag }}"
 
-      - name: Tag edge channel from candidate digest
+      - name: Tag official channel from candidate digest
         env:
           ARCH: ${{ matrix.arch }}
+          CHANNEL: ${{ needs.context.outputs.channel }}
         run: |
           set -euo pipefail
           REF_FILE="dist/airgap-platform.${ARCH}.ref"
@@ -66,7 +154,19 @@ jobs:
             echo "Missing ${REF_FILE}" >&2
             exit 1
           }
-          oras tag "$(cat "${REF_FILE}")" "edge-${ARCH}" >/dev/null
+          oras tag "$(cat "${REF_FILE}")" "${CHANNEL}-${ARCH}" >/dev/null
+
+      - name: Update official airgap catalog
+        env:
+          ARCH: ${{ matrix.arch }}
+          CHANNEL: ${{ needs.context.outputs.channel }}
+        run: |
+          set -euo pipefail
+          ./tools/airgap-platform/update-catalog.sh \
+            "dist/airgap-platform.${ARCH}.publish-record.json" \
+            "${CHANNEL}" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            "${{ needs.context.outputs.immutable_tag }}-${ARCH}"
 
       - name: Smoke pull published digest and verify layout
         if: always()
@@ -100,6 +200,7 @@ jobs:
           grep -q '^k3s/k3s-airgap-images-'${ARCH}'\.tar$' "${TAR_LIST}"
           grep -q '^manifest.env$' "${TAR_LIST}"
           grep -q '^platform/images/' "${TAR_LIST}"
+          tar -xOzf /tmp/airgap-platform/dist/airgap-platform.tar.gz manifest.env | grep -q '^OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:'
 
       - name: Upload publish outputs
         uses: actions/upload-artifact@v4
