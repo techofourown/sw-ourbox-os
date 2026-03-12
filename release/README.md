@@ -1,7 +1,7 @@
 # Release Control Files
 
 This directory contains small release-control inputs used by the official
-publication and downstream synchronization workflows.
+publication workflows and by manual downstream refresh steps.
 
 These files are intentionally lightweight, human-reviewable control surfaces.
 
@@ -26,8 +26,9 @@ Validated by:
 
 Consumed by:
 
-- `.github/workflows/approved-upstream-inputs-sync.yml`
-- downstream lockfile sync PR automation
+- maintainers validating the approved tuple in place
+- manual downstream lockfile refreshes, optionally via
+  `tools/approved-upstream-inputs/sync_downstream_official_inputs.py`
 
 Purpose:
 

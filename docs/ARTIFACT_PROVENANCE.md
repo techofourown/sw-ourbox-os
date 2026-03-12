@@ -209,10 +209,12 @@ The single approved upstream snapshot now lives in
 - each approved airgap artifact's embedded version and arch match the approved
   release tuple
 
-When the approved snapshot changes on `main`, `.github/workflows/approved-upstream-inputs-sync.yml`
-automatically opens downstream PRs that refresh `release/official-inputs.env` in the image repos.
-That keeps official builds digest-pinned while eliminating duplicate hand-maintained approval ledgers
-across the downstream repos.
+When the approved snapshot changes, maintainers may refresh downstream
+`release/official-inputs.env` in a normal manually opened PR. The helper at
+`tools/approved-upstream-inputs/sync_downstream_official_inputs.py` exists to
+render those lockfiles, but the approval ledger does not auto-mutate downstream
+repos. That keeps official builds digest-pinned without introducing a standing
+cross-repo write path.
 
 The recommended downstream heavy-artifact model is now promote-first:
 
