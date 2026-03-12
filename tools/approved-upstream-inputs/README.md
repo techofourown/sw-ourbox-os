@@ -45,16 +45,21 @@ This replaced duplicated hand-maintained approval ledgers in downstream repos.
     snapshot
   - currently knows how to map Matchbox to `arm64` and Woodbox to `amd64`
 
-## Official workflow
+## Manual downstream refresh
 
-`.github/workflows/approved-upstream-inputs-sync.yml` is the automation around
-this directory.
+This directory intentionally does not auto-open downstream PRs or push
+cross-repo changes.
 
-When the approved snapshot changes on `main`, the workflow:
+When the approved snapshot changes and a downstream repo should adopt it,
+maintainers should:
 
-1. validates the snapshot with `validate.py`
-2. regenerates downstream `release/official-inputs.env`
-3. opens downstream PRs with the refreshed lockfiles
+1. validate the snapshot with `validate.py`
+2. regenerate the target repo's `release/official-inputs.env`
+3. open a normal human-reviewed downstream PR if they want that repo to move now
+
+Stale downstream lockfiles are acceptable by design. The approved snapshot is the
+upstream approval ledger; it is not a standing instruction to mutate downstream
+repos immediately.
 
 ## What this is not
 
@@ -78,6 +83,9 @@ python3 tools/approved-upstream-inputs/sync_downstream_official_inputs.py \
   --target matchbox \
   --file /path/to/img-ourbox-matchbox/release/official-inputs.env
 ```
+
+The helper is optional. Maintainers may also update the downstream lockfile by
+hand if they prefer, as long as the resulting refs match the approved snapshot.
 
 ## Related docs
 

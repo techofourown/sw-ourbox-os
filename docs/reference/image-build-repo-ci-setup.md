@@ -294,7 +294,8 @@ Instead:
 
 1. update `sw-ourbox-os/release/approved-upstream-inputs.json`
 2. validate it with `tools/approved-upstream-inputs/validate.py`
-3. let `.github/workflows/approved-upstream-inputs-sync.yml` open the downstream lockfile PRs
+3. refresh the downstream lockfile in a normal PR, preferably by rendering it with
+   `tools/approved-upstream-inputs/sync_downstream_official_inputs.py`
 
 ### `release/official-artifacts.env` — publication targets
 
