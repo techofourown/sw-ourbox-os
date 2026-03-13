@@ -99,11 +99,17 @@ Recommended repository family:
 Examples:
 
 - `sw-ourbox-catalog-demo`
+- `sw-ourbox-catalog-hello-world`
 - `sw-ourbox-catalog-core`
 
 Expected upstream inputs:
 
 - published images from one or more `sw-ourbox-apps-*` repositories
+
+Current concrete repos:
+
+- `sw-ourbox-catalog-demo`
+- `sw-ourbox-catalog-hello-world`
 
 Avoid using:
 

@@ -82,12 +82,19 @@ Recommended repository family:
 Examples:
 
 - `sw-ourbox-apps-demo`
+- `sw-ourbox-apps-hello-world`
 - `sw-ourbox-apps-core`
 
 OCI examples:
 
 - `ghcr.io/techofourown/sw-ourbox-apps-demo/todo-bloom`
+- `ghcr.io/techofourown/sw-ourbox-apps-hello-world/hello-world`
 - `ghcr.io/techofourown/sw-ourbox-apps-core/contacts`
+
+Current concrete repos:
+
+- `sw-ourbox-apps-demo`
+- `sw-ourbox-apps-hello-world`
 
 Avoid using:
 
