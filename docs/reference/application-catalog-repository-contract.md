@@ -6,8 +6,8 @@ application distribution model: the application catalog repository.
 ## Purpose
 
 An application catalog repository consumes published OCI images from one or
-more application repositories and publishes the artifact currently transported
-as `airgap-platform`.
+more apps repositories and publishes the artifact currently transported as
+`airgap-platform`.
 
 User-facing meaning:
 
@@ -35,6 +35,7 @@ An application catalog repository owns:
 An application catalog repository does not own:
 
 - per-application source code
+- apps-repository source code and image-build logic
 - OS payload publication
 - installer media composition
 - target-side install/runtime logic
@@ -90,6 +91,19 @@ Recommended user-facing terms:
 - `application catalog`
 - `application catalog bundle`
 - `selected applications`
+
+Recommended repository family:
+
+- `sw-ourbox-catalog-<catalog>`
+
+Examples:
+
+- `sw-ourbox-catalog-demo`
+- `sw-ourbox-catalog-core`
+
+Expected upstream inputs:
+
+- published images from one or more `sw-ourbox-apps-*` repositories
 
 Avoid using:
 

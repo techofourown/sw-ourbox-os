@@ -1,9 +1,0 @@
-{
-  "schema": 1,
-  "kind": "ourbox-application",
-  "app_id": "example-app",
-  "display_name": "Example App",
-  "image_repo": "ghcr.io/example/example-app",
-  "default_tag": "latest",
-  "notes": "Replace this file with the real application identity and image repo."
-}

@@ -1,4 +1,4 @@
-name: Publish Application Image
+name: Publish Application Images
 
 on:
   push:
@@ -14,9 +14,9 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
-      - name: Build image
+      - name: Build images
         run: |
-          echo "Replace with application-specific build steps"
-      - name: Publish image
+          echo "Replace with repo-specific build steps for one or more apps"
+      - name: Publish images
         run: |
           echo "Replace with OCI publish steps and publish-record output"
