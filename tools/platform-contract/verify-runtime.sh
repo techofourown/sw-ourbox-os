@@ -15,6 +15,7 @@ TRAEFIK_NAMESPACE="kube-system"
 TRAEFIK_SELECTOR="app.kubernetes.io/name=traefik"
 TRAEFIK_LOG_SINCE="10m"
 SKIP_TRAEFIK_LOG_CHECK=0
+ROUTE_BASE_URL="http://127.0.0.1"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -71,6 +72,11 @@ while [[ $# -gt 0 ]]; do
     --skip-traefik-log-check)
       SKIP_TRAEFIK_LOG_CHECK=1
       shift
+      ;;
+    --route-base-url)
+      [[ $# -ge 2 ]] || die "--route-base-url requires a value"
+      ROUTE_BASE_URL="$2"
+      shift 2
       ;;
     *)
       die "unknown argument: $1"
@@ -162,6 +168,7 @@ wait_for_contract_services() {
 verify_contract_routes() {
   local routes_file="$1"
   local host path expected_status body_marker description status body_file
+  local request_base="${ROUTE_BASE_URL%/}"
   body_file="$(mktemp)"
   trap 'rm -f "${body_file}"' RETURN
   while IFS=$'\t' read -r host path expected_status body_marker description; do
@@ -171,15 +178,15 @@ verify_contract_routes() {
     for _ in $(seq 1 60); do
       : > "${body_file}"
       status="$(
-        python3 - <<'PY' "${host}" "${path}" "${body_file}"
+        python3 - <<'PY' "${request_base}" "${host}" "${path}" "${body_file}"
 import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
 
-host, path, body_path = sys.argv[1:]
+base_url, host, path, body_path = sys.argv[1:]
 request = urllib.request.Request(
-    f"http://127.0.0.1{path}",
+    f"{base_url}{path}",
     headers={"Host": host},
 )
 target = Path(body_path)
