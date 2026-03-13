@@ -24,6 +24,7 @@ An application catalog repository owns:
 
 - the catalog definition (`catalog.json`)
 - the default app set for that catalog
+- stable app identity for each app entry (`app_uid`)
 - the mapping from app ids to published OCI images
 - the rendered bundle inputs:
   - `catalog.json`
@@ -57,14 +58,41 @@ Each published application catalog bundle should:
 The installer now has three distinct host-side choices:
 
 1. OS artifact
-2. application catalog bundle
-3. selected applications from that catalog
+2. one or more application catalog bundles
+3. selected applications from the merged effective catalog
 
 The low-friction default path remains:
 
 - default OS lane
-- default application catalog lane
-- default app set from that catalog
+- default application catalog set
+- default app set from the merged effective catalog
+
+## Stable app identity and multi-catalog merge
+
+Application catalogs are expected to support host-side multi-catalog selection.
+That means each app entry should carry a stable machine identity:
+
+- `app_uid`
+
+Recommended shape:
+
+- `<publisher>/<app>`
+
+Examples:
+
+- `techofourown/todo-bloom`
+- `techofourown/hello-world`
+- `thirdparty/dufs`
+
+Why this matters:
+
+- the host installer merges one or more selected catalogs into one effective
+  catalog before prompting for app selection
+- deconfliction happens by stable app identity, not by display name
+- identical `app_uid` entries with identical metadata and image refs are
+  deduped
+- identical `app_uid` entries with conflicting metadata are treated as
+  conflicts and resolved deterministically by source-catalog order
 
 ## Expected outputs
 

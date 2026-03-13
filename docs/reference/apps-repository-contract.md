@@ -47,6 +47,25 @@ Each apps repository should publish:
 The important downstream truth surface is the pinned image digest, not a moving
 tag.
 
+## Stable app identity
+
+An apps repository should publish enough metadata for downstream application
+catalog repositories to assign a stable app identity to each application they
+consume.
+
+Recommended shape:
+
+- `app_uid=<publisher>/<app>`
+
+Examples:
+
+- `techofourown/todo-bloom`
+- `techofourown/hello-world`
+- `thirdparty/dufs`
+
+This is what lets the host-side installer merge multiple selected application
+catalogs into one effective catalog without relying on display-name matching.
+
 ## Consumer
 
 Apps repositories are consumed by the second new repo class:
