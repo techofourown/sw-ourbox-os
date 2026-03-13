@@ -87,6 +87,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Lint a rendered platform contract bundle.")
     parser.add_argument("--contract-root", required=True)
     parser.add_argument("--render-dir", required=True)
+    parser.add_argument("--selected-apps-file", help="Optional selected-applications JSON; defaults to render-dir/selected-apps.json when present")
     args = parser.parse_args()
 
     contract_root = Path(args.contract_root).resolve()
@@ -95,6 +96,15 @@ def main() -> int:
     if not manifests_dir.is_dir():
         raise SystemExit(f"Missing manifests directory: {manifests_dir}")
 
+    selected_apps_file = Path(args.selected_apps_file).resolve() if args.selected_apps_file else render_dir / "selected-apps.json"
+    if selected_apps_file.is_file():
+        selected_apps = json.loads(selected_apps_file.read_text(encoding="utf-8"))
+        selected_app_ids = set(selected_apps.get("selected_app_ids", []))
+        if not selected_app_ids:
+            raise SystemExit(f"selected-apps file does not declare selected_app_ids: {selected_apps_file}")
+    else:
+        selected_app_ids = {"landing", "todo-bloom", "dufs", "flatnotes"}
+
     resources = load_resources(manifests_dir)
     resources_by_key = {resource_key(resource): resource for resource in resources}
     deployments = [resource for resource in resources if resource["kind"] == "Deployment"]
@@ -102,7 +112,11 @@ def main() -> int:
     pvcs = [resource for resource in resources if resource["kind"] == "PersistentVolumeClaim"]
     configmaps = [resource for resource in resources if resource["kind"] == "ConfigMap"]
     images_lock = json.loads((render_dir / "images.lock.json").read_text(encoding="utf-8"))
-    lock_refs = {item["ref"] for item in images_lock["images"]}
+    lock_refs = {
+        item["ref"]
+        for item in images_lock["images"]
+        if selected_app_ids.intersection(set(item.get("used_by", [])))
+    }
     manifest_image_refs: set[str] = set()
     service_by_ns_name = {
         (svc["metadata"].get("namespace", ""), svc["metadata"]["name"]): svc
@@ -150,10 +164,15 @@ def main() -> int:
         )
 
     configmap_names = {(resource["metadata"].get("namespace", ""), resource["metadata"]["name"]) for resource in configmaps}
-    expected_asset_maps = {
-        ("ourbox-system", "landing-assets"): {path.name for path in sorted((contract_root / "landing").iterdir()) if path.is_file()},
-        ("ourbox-system", "todo-bloom-assets"): {path.name for path in sorted((contract_root / "todo-bloom").iterdir()) if path.is_file()},
-    }
+    expected_asset_maps = {}
+    if "landing" in selected_app_ids:
+        expected_asset_maps[("ourbox-system", "landing-assets")] = {
+            path.name for path in sorted((contract_root / "landing").iterdir()) if path.is_file()
+        }
+    if "todo-bloom" in selected_app_ids:
+        expected_asset_maps[("ourbox-system", "todo-bloom-assets")] = {
+            path.name for path in sorted((contract_root / "todo-bloom").iterdir()) if path.is_file()
+        }
     for key, expected_files in expected_asset_maps.items():
         if key not in configmap_names:
             errors.append(f"Missing asset ConfigMap {key[1]}")
@@ -255,7 +274,17 @@ def main() -> int:
                             f"verification marker '{expected['body_marker']}' for route {description} "
                             f"not found in source file {source_file}"
                         )
-            missing_descriptions = sorted(set(EXPECTED_ROUTE_MARKERS) - seen_descriptions)
+            expected_route_descriptions = {
+                description
+                for description, app_id in (
+                    ("landing-root", "landing"),
+                    ("dufs-root", "dufs"),
+                    ("flatnotes-root", "flatnotes"),
+                    ("todo-bloom-root", "todo-bloom"),
+                )
+                if app_id in selected_app_ids
+            }
+            missing_descriptions = sorted(expected_route_descriptions - seen_descriptions)
             if missing_descriptions:
                 errors.append(
                     "verification/http-routes.tsv is missing expected routes "

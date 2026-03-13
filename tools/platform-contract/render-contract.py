@@ -89,6 +89,108 @@ def load_assets(path: Path) -> dict[str, LiteralStr]:
     return assets
 
 
+def load_application_catalog(profile_dir: Path, catalog_override: str | None) -> dict | None:
+    catalog_path = Path(catalog_override).resolve() if catalog_override else profile_dir / "catalog.json"
+    if not catalog_path.exists():
+        return None
+
+    catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+    if catalog.get("schema") != 1:
+        raise SystemExit(f"application catalog at {catalog_path} must declare schema=1")
+    if catalog.get("kind") != "ourbox-application-catalog":
+        raise SystemExit(f"application catalog at {catalog_path} must declare kind=ourbox-application-catalog")
+
+    apps = catalog.get("apps")
+    if not isinstance(apps, list) or not apps:
+        raise SystemExit(f"application catalog at {catalog_path} must declare a non-empty apps list")
+
+    app_ids: list[str] = []
+    for app in apps:
+        app_id = str(app.get("id", "")).strip()
+        if not app_id:
+            raise SystemExit(f"application catalog at {catalog_path} contains an app without an id")
+        if app_id in app_ids:
+            raise SystemExit(f"application catalog at {catalog_path} contains a duplicate app id: {app_id}")
+        app_ids.append(app_id)
+
+    default_app_ids = catalog.get("default_app_ids", [])
+    if not isinstance(default_app_ids, list) or not default_app_ids:
+        raise SystemExit(f"application catalog at {catalog_path} must declare non-empty default_app_ids")
+    unknown_defaults = sorted(set(default_app_ids) - set(app_ids))
+    if unknown_defaults:
+        raise SystemExit(
+            f"application catalog at {catalog_path} declares unknown default_app_ids: {', '.join(unknown_defaults)}"
+        )
+
+    catalog["_catalog_path"] = str(catalog_path)
+    return catalog
+
+
+def resolve_selected_apps(catalog: dict, selected_apps_path: str | None) -> tuple[str, list[str], dict[str, dict]]:
+    app_entries = catalog["apps"]
+    app_by_id = {str(app["id"]): app for app in app_entries}
+    default_app_ids = [str(app_id) for app_id in catalog["default_app_ids"]]
+
+    if not selected_apps_path:
+        return "catalog-defaults", default_app_ids, app_by_id
+
+    selected_path = Path(selected_apps_path).resolve()
+    data = json.loads(selected_path.read_text(encoding="utf-8"))
+    if data.get("schema") != 1:
+        raise SystemExit(f"selected-apps file at {selected_path} must declare schema=1")
+    if data.get("kind") != "ourbox-selected-applications":
+        raise SystemExit(f"selected-apps file at {selected_path} must declare kind=ourbox-selected-applications")
+
+    catalog_id = str(data.get("catalog_id", "")).strip()
+    if catalog_id != str(catalog.get("catalog_id", "")).strip():
+        raise SystemExit(
+            f"selected-apps file at {selected_path} targets catalog_id={catalog_id!r}, expected {catalog.get('catalog_id')!r}"
+        )
+
+    selection_mode = str(data.get("selection_mode", "")).strip()
+    if not selection_mode:
+        raise SystemExit(f"selected-apps file at {selected_path} must declare selection_mode")
+
+    selected_app_ids = data.get("selected_app_ids")
+    if not isinstance(selected_app_ids, list) or not selected_app_ids:
+        raise SystemExit(f"selected-apps file at {selected_path} must declare a non-empty selected_app_ids list")
+
+    normalized_ids: list[str] = []
+    seen_ids: set[str] = set()
+    for raw_app_id in selected_app_ids:
+        app_id = str(raw_app_id).strip()
+        if not app_id:
+            raise SystemExit(f"selected-apps file at {selected_path} contains an empty app id")
+        if app_id in seen_ids:
+            raise SystemExit(f"selected-apps file at {selected_path} contains duplicate app id {app_id}")
+        if app_id not in app_by_id:
+            raise SystemExit(f"selected-apps file at {selected_path} references unknown app id {app_id}")
+        normalized_ids.append(app_id)
+        seen_ids.add(app_id)
+
+    return selection_mode, normalized_ids, app_by_id
+
+
+def selected_application_route_specs(catalog: dict, selected_app_ids: list[str], box_host: str) -> list[dict]:
+    app_by_id = {str(app["id"]): app for app in catalog["apps"]}
+    route_specs: list[dict] = []
+    for app_id in selected_app_ids:
+        app = app_by_id[app_id]
+        route_specs.append(
+            {
+                "host": str(app["host_template"]).format(box_host=box_host),
+                "path": str(app.get("path", "/")),
+                "service_name": str(app["service_name"]),
+                "service_port": int(app["service_port"]),
+                "expected_status": int(app["expected_status"]),
+                "body_marker": str(app["body_marker"]),
+                "description": str(app["route_description"]),
+                "default_backend": bool(app.get("default_backend", False)),
+            }
+        )
+    return route_specs
+
+
 def common_labels(metadata: dict[str, str], profile_env: dict[str, str], component: str) -> dict[str, str]:
     return {
         "app.kubernetes.io/name": component,
@@ -293,41 +395,46 @@ def ingress(
     tls_mode: str,
     ingress_class: str,
     storage_class: str,
+    *,
+    name: str,
+    route_specs: list[dict],
+    default_backend: dict,
 ) -> dict:
+    rules_by_host: dict[str, list[dict]] = {}
+    for route in route_specs:
+        rules_by_host.setdefault(route["host"], []).append(
+            {
+                "path": route["path"],
+                "pathType": "Prefix",
+                "backend": {
+                    "service": {
+                        "name": route["service_name"],
+                        "port": {"number": route["service_port"]},
+                    }
+                },
+            }
+        )
+
     return {
         "apiVersion": "networking.k8s.io/v1",
         "kind": "Ingress",
         "metadata": resource_metadata(
             metadata,
             profile_env,
-            "demo-apps-ingress",
+            name,
             box_host,
             tls_mode,
             ingress_class,
             storage_class,
-            name="ourbox-demo-apps",
+            name=name,
             readiness_required=True,
         ),
         "spec": {
             "ingressClassName": ingress_class,
-            "defaultBackend": {"service": {"name": "landing", "port": {"number": 80}}},
+            "defaultBackend": {"service": {"name": default_backend["service_name"], "port": {"number": default_backend["service_port"]}}},
             "rules": [
-                {
-                    "host": box_host,
-                    "http": {"paths": [{"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "landing", "port": {"number": 80}}}}]},
-                },
-                {
-                    "host": f"files.{box_host}",
-                    "http": {"paths": [{"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "dufs", "port": {"number": 5000}}}}]},
-                },
-                {
-                    "host": f"notes.{box_host}",
-                    "http": {"paths": [{"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "flatnotes", "port": {"number": 8080}}}}]},
-                },
-                {
-                    "host": f"todo.{box_host}",
-                    "http": {"paths": [{"path": "/", "pathType": "Prefix", "backend": {"service": {"name": "todo-bloom", "port": {"number": 80}}}}]},
-                },
+                {"host": host, "http": {"paths": paths}}
+                for host, paths in rules_by_host.items()
             ],
         },
     }
@@ -362,14 +469,12 @@ def configmap(
     }
 
 
-def write_routes(path: Path, box_host: str) -> None:
-    lines = [
-        "host\tpath\texpected_status\tbody_marker\tdescription",
-        f"{box_host}\t/\t200\tYour apps, served by your machine, to your phone.\tlanding-root",
-        f"files.{box_host}\t/\t200\tUpload files\tdufs-root",
-        f"notes.{box_host}\t/\t200\tflatnotes\tflatnotes-root",
-        f"todo.{box_host}\t/\t200\tTodo Bloom\ttodo-bloom-root",
-    ]
+def write_routes(path: Path, route_specs: list[dict]) -> None:
+    lines = ["host\tpath\texpected_status\tbody_marker\tdescription"]
+    for route in route_specs:
+        lines.append(
+            f"{route['host']}\t{route['path']}\t{route['expected_status']}\t{route['body_marker']}\t{route['description']}"
+        )
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -378,6 +483,8 @@ def main() -> int:
     parser.add_argument("--contract-root", required=True, help="Path to the contract root")
     parser.add_argument("--output-dir", required=True, help="Destination for the rendered bundle")
     parser.add_argument("--profile", default=os.environ.get("OURBOX_PLATFORM_PROFILE", "demo-apps"))
+    parser.add_argument("--application-catalog", help="Optional override path for the application catalog JSON")
+    parser.add_argument("--selected-apps-file", help="Optional selected-applications JSON written by the host-side composer")
     parser.add_argument("--box-host", default=os.environ.get("BOX_HOST", ""))
     parser.add_argument("--tls-mode", default=os.environ.get("TLS_MODE", ""))
     parser.add_argument("--ingress-class", default=os.environ.get("INGRESS_CLASS", ""))
@@ -400,6 +507,61 @@ def main() -> int:
     metadata = load_metadata(contract_root)
     images_lock = json.loads((profile_dir / "images.lock.json").read_text(encoding="utf-8"))
     image_refs = {item["name"]: item["ref"] for item in images_lock["images"]}
+    application_catalog = load_application_catalog(profile_dir, args.application_catalog)
+    if application_catalog is not None:
+        selection_mode, selected_app_ids, _app_by_id = resolve_selected_apps(application_catalog, args.selected_apps_file)
+        route_specs = selected_application_route_specs(application_catalog, selected_app_ids, args.box_host)
+        application_catalog_id = str(application_catalog["catalog_id"])
+        application_catalog_name = str(application_catalog["catalog_name"])
+    else:
+        selection_mode = "legacy-defaults"
+        selected_app_ids = ["landing", "todo-bloom", "dufs", "flatnotes"]
+        route_specs = [
+            {
+                "host": args.box_host,
+                "path": "/",
+                "service_name": "landing",
+                "service_port": 80,
+                "expected_status": 200,
+                "body_marker": "Your apps, served by your machine, to your phone.",
+                "description": "landing-root",
+                "default_backend": True,
+            },
+            {
+                "host": f"files.{args.box_host}",
+                "path": "/",
+                "service_name": "dufs",
+                "service_port": 5000,
+                "expected_status": 200,
+                "body_marker": "Upload files",
+                "description": "dufs-root",
+                "default_backend": False,
+            },
+            {
+                "host": f"notes.{args.box_host}",
+                "path": "/",
+                "service_name": "flatnotes",
+                "service_port": 8080,
+                "expected_status": 200,
+                "body_marker": "flatnotes",
+                "description": "flatnotes-root",
+                "default_backend": False,
+            },
+            {
+                "host": f"todo.{args.box_host}",
+                "path": "/",
+                "service_name": "todo-bloom",
+                "service_port": 80,
+                "expected_status": 200,
+                "body_marker": "Todo Bloom",
+                "description": "todo-bloom-root",
+                "default_backend": False,
+            },
+        ]
+        application_catalog_id = profile_env["OURBOX_PLATFORM_PROFILE"]
+        application_catalog_name = profile_env["OURBOX_PLATFORM_PROFILE_DESCRIPTION"]
+
+    default_backend = next((route for route in route_specs if route["default_backend"]), route_specs[0])
 
     if output_dir.exists():
         shutil.rmtree(output_dir)
@@ -453,192 +615,204 @@ def main() -> int:
                 "tls_mode": tls_mode,
                 "ingress_class": ingress_class,
                 "storage_class": storage_class,
+                "application_catalog_id": application_catalog_id,
+                "application_catalog_name": application_catalog_name,
+                "application_selection_mode": selection_mode,
+                "selected_app_ids": ",".join(selected_app_ids),
                 "images_lock.json": LiteralStr(json.dumps(images_lock, indent=2, sort_keys=True)),
             },
         ),
     )
-    yaml_dump(
-        manifests_dir / "10-landing-configmap.yaml",
-        configmap(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="landing-assets",
-            component="landing-assets",
-            data=landing_assets,
-        ),
-    )
-    yaml_dump(
-        manifests_dir / "11-todo-bloom-configmap.yaml",
-        configmap(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="todo-bloom-assets",
-            component="todo-bloom-assets",
-            data=todo_assets,
-        ),
-    )
-    yaml_dump(
-        manifests_dir / "20-landing-deployment.yaml",
-        deployment(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="landing",
-            image=image_refs["nginx"],
-            container_port=80,
-            container_name="nginx",
-            volumes=[{"name": "assets", "configMap": {"name": "landing-assets"}}],
-            volume_mounts=[{"name": "assets", "mountPath": "/usr/share/nginx/html", "readOnly": True}],
-        ),
-    )
-    yaml_dump(
-        manifests_dir / "21-landing-service.yaml",
-        service(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="landing",
-            port=80,
-        ),
-    )
-    yaml_dump(
-        manifests_dir / "22-todo-bloom-deployment.yaml",
-        deployment(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="todo-bloom",
-            image=image_refs["nginx"],
-            container_port=80,
-            container_name="nginx",
-            volumes=[{"name": "assets", "configMap": {"name": "todo-bloom-assets"}}],
-            volume_mounts=[{"name": "assets", "mountPath": "/usr/share/nginx/html", "readOnly": True}],
-        ),
-    )
-    yaml_dump(
-        manifests_dir / "23-todo-bloom-service.yaml",
-        service(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="todo-bloom",
-            port=80,
-        ),
-    )
-    yaml_dump(
-        manifests_dir / "30-dufs-pvc.yaml",
-        pvc(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="dufs-data",
-        ),
-    )
-    yaml_dump(
-        manifests_dir / "31-dufs-deployment.yaml",
-        deployment(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="dufs",
-            image=image_refs["dufs"],
-            container_port=5000,
-            container_name="dufs",
-            args=["/data", "--bind", "0.0.0.0", "--port", "5000", "--allow-all"],
-            readiness_probe={"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 5, "periodSeconds": 5},
-            liveness_probe={"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 15, "periodSeconds": 15},
-            volumes=[{"name": "data", "persistentVolumeClaim": {"claimName": "dufs-data"}}],
-            volume_mounts=[{"name": "data", "mountPath": "/data"}],
-            storage_required=True,
-        ),
-    )
-    yaml_dump(
-        manifests_dir / "32-dufs-service.yaml",
-        service(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="dufs",
-            port=5000,
-        ),
-    )
-    yaml_dump(
-        manifests_dir / "40-flatnotes-pvc.yaml",
-        pvc(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="flatnotes-data",
-        ),
-    )
-    yaml_dump(
-        manifests_dir / "41-flatnotes-deployment.yaml",
-        deployment(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="flatnotes",
-            image=image_refs["flatnotes"],
-            container_port=8080,
-            container_name="flatnotes",
-            env=[
-                {"name": "FLATNOTES_AUTH_TYPE", "value": "none"},
-                {"name": "FLATNOTES_PATH", "value": "/data"},
-                {"name": "FLATNOTES_PORT", "value": "8080"},
-            ],
-            volumes=[{"name": "data", "persistentVolumeClaim": {"claimName": "flatnotes-data"}}],
-            volume_mounts=[{"name": "data", "mountPath": "/data"}],
-            storage_required=True,
-        ),
-    )
-    yaml_dump(
-        manifests_dir / "42-flatnotes-service.yaml",
-        service(
-            metadata,
-            profile_env,
-            args.box_host,
-            tls_mode,
-            ingress_class,
-            storage_class,
-            name="flatnotes",
-            port=8080,
-        ),
-    )
+    if "landing" in selected_app_ids:
+        yaml_dump(
+            manifests_dir / "10-landing-configmap.yaml",
+            configmap(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="landing-assets",
+                component="landing-assets",
+                data=landing_assets,
+            ),
+        )
+        yaml_dump(
+            manifests_dir / "20-landing-deployment.yaml",
+            deployment(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="landing",
+                image=image_refs["nginx"],
+                container_port=80,
+                container_name="nginx",
+                volumes=[{"name": "assets", "configMap": {"name": "landing-assets"}}],
+                volume_mounts=[{"name": "assets", "mountPath": "/usr/share/nginx/html", "readOnly": True}],
+            ),
+        )
+        yaml_dump(
+            manifests_dir / "21-landing-service.yaml",
+            service(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="landing",
+                port=80,
+            ),
+        )
+
+    if "todo-bloom" in selected_app_ids:
+        yaml_dump(
+            manifests_dir / "11-todo-bloom-configmap.yaml",
+            configmap(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="todo-bloom-assets",
+                component="todo-bloom-assets",
+                data=todo_assets,
+            ),
+        )
+        yaml_dump(
+            manifests_dir / "22-todo-bloom-deployment.yaml",
+            deployment(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="todo-bloom",
+                image=image_refs["nginx"],
+                container_port=80,
+                container_name="nginx",
+                volumes=[{"name": "assets", "configMap": {"name": "todo-bloom-assets"}}],
+                volume_mounts=[{"name": "assets", "mountPath": "/usr/share/nginx/html", "readOnly": True}],
+            ),
+        )
+        yaml_dump(
+            manifests_dir / "23-todo-bloom-service.yaml",
+            service(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="todo-bloom",
+                port=80,
+            ),
+        )
+
+    if "dufs" in selected_app_ids:
+        yaml_dump(
+            manifests_dir / "30-dufs-pvc.yaml",
+            pvc(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="dufs-data",
+            ),
+        )
+        yaml_dump(
+            manifests_dir / "31-dufs-deployment.yaml",
+            deployment(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="dufs",
+                image=image_refs["dufs"],
+                container_port=5000,
+                container_name="dufs",
+                args=["/data", "--bind", "0.0.0.0", "--port", "5000", "--allow-all"],
+                readiness_probe={"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 5, "periodSeconds": 5},
+                liveness_probe={"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 15, "periodSeconds": 15},
+                volumes=[{"name": "data", "persistentVolumeClaim": {"claimName": "dufs-data"}}],
+                volume_mounts=[{"name": "data", "mountPath": "/data"}],
+                storage_required=True,
+            ),
+        )
+        yaml_dump(
+            manifests_dir / "32-dufs-service.yaml",
+            service(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="dufs",
+                port=5000,
+            ),
+        )
+
+    if "flatnotes" in selected_app_ids:
+        yaml_dump(
+            manifests_dir / "40-flatnotes-pvc.yaml",
+            pvc(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="flatnotes-data",
+            ),
+        )
+        yaml_dump(
+            manifests_dir / "41-flatnotes-deployment.yaml",
+            deployment(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="flatnotes",
+                image=image_refs["flatnotes"],
+                container_port=8080,
+                container_name="flatnotes",
+                env=[
+                    {"name": "FLATNOTES_AUTH_TYPE", "value": "none"},
+                    {"name": "FLATNOTES_PATH", "value": "/data"},
+                    {"name": "FLATNOTES_PORT", "value": "8080"},
+                ],
+                volumes=[{"name": "data", "persistentVolumeClaim": {"claimName": "flatnotes-data"}}],
+                volume_mounts=[{"name": "data", "mountPath": "/data"}],
+                storage_required=True,
+            ),
+        )
+        yaml_dump(
+            manifests_dir / "42-flatnotes-service.yaml",
+            service(
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name="flatnotes",
+                port=8080,
+            ),
+        )
+
     yaml_dump(
         manifests_dir / "50-demo-apps-ingress.yaml",
         ingress(
@@ -648,6 +822,9 @@ def main() -> int:
             tls_mode,
             ingress_class,
             storage_class,
+            name="ourbox-demo-apps",
+            route_specs=route_specs,
+            default_backend=default_backend,
         ),
     )
 
@@ -661,12 +838,32 @@ def main() -> int:
             "TLS_MODE": tls_mode,
             "INGRESS_CLASS": ingress_class,
             "STORAGE_CLASS": storage_class,
+            "APPLICATION_CATALOG_ID": application_catalog_id,
+            "APPLICATION_SELECTION_MODE": selection_mode,
+            "SELECTED_APP_IDS": ",".join(selected_app_ids),
             "READINESS_LABEL_SELECTOR": f"ourbox.techofourown.io/contract-profile={profile_env['OURBOX_PLATFORM_PROFILE']},ourbox.techofourown.io/readiness-required=true",
             "HTTP_ROUTES_FILE": "verification/http-routes.tsv",
         },
     )
     (output_dir / "images.lock.json").write_text(json.dumps(images_lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    write_routes(verification_dir / "http-routes.tsv", args.box_host)
+    if application_catalog is not None:
+        (output_dir / "catalog.json").write_text(json.dumps(application_catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        (output_dir / "selected-apps.json").write_text(
+            json.dumps(
+                {
+                    "schema": 1,
+                    "kind": "ourbox-selected-applications",
+                    "catalog_id": application_catalog_id,
+                    "selection_mode": selection_mode,
+                    "selected_app_ids": selected_app_ids,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+    write_routes(verification_dir / "http-routes.tsv", route_specs)
     return 0
 
 

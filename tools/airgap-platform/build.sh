@@ -172,6 +172,9 @@ EOF_MANIFEST
 
 cp -a "${render_dir}/images.lock.json" "${build_dir}/platform/images.lock.json"
 cp -a "${ROOT}/platform-contract/profiles/demo-apps/profile.env" "${build_dir}/platform/profile.env"
+if [[ -f "${ROOT}/platform-contract/profiles/demo-apps/catalog.json" ]]; then
+  cp -a "${ROOT}/platform-contract/profiles/demo-apps/catalog.json" "${build_dir}/platform/catalog.json"
+fi
 
 cat > "${DIST_DIR}/airgap-platform.meta.env" <<EOF_META
 OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os

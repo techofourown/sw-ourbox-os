@@ -16,6 +16,8 @@ It is called an "OS" because it behaves like a cohesive operating environment:
 ## Repository quick map
 
 - [Downstream consumer surfaces](docs/reference/downstream-consumer-surfaces.md)
+- [Application repository contract](docs/reference/application-repository-contract.md)
+- [Application catalog repository contract](docs/reference/application-catalog-repository-contract.md)
 - [Repository layout and authority](docs/reference/repository-layout-and-authority.md)
 - [Artifact publish record contract](docs/reference/artifact-publish-record-contract.md)
 - [Requirements management guide](docs/01-Requirements/Requirements-Management-Guide.md)
