@@ -89,10 +89,10 @@ def load_assets(path: Path) -> dict[str, LiteralStr]:
     return assets
 
 
-def load_application_catalog(profile_dir: Path, catalog_override: str | None) -> dict | None:
+def load_application_catalog(profile_dir: Path, catalog_override: str | None) -> tuple[dict | None, Path | None]:
     catalog_path = Path(catalog_override).resolve() if catalog_override else profile_dir / "catalog.json"
     if not catalog_path.exists():
-        return None
+        return None, None
 
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     if catalog.get("schema") != 1:
@@ -122,8 +122,7 @@ def load_application_catalog(profile_dir: Path, catalog_override: str | None) ->
             f"application catalog at {catalog_path} declares unknown default_app_ids: {', '.join(unknown_defaults)}"
         )
 
-    catalog["_catalog_path"] = str(catalog_path)
-    return catalog
+    return catalog, catalog_path
 
 
 def resolve_selected_apps(catalog: dict, selected_apps_path: str | None) -> tuple[str, list[str], dict[str, dict]]:
@@ -171,11 +170,27 @@ def resolve_selected_apps(catalog: dict, selected_apps_path: str | None) -> tupl
     return selection_mode, normalized_ids, app_by_id
 
 
-def selected_application_route_specs(catalog: dict, selected_app_ids: list[str], box_host: str) -> list[dict]:
+def selected_application_route_specs(
+    catalog: dict,
+    selected_app_ids: list[str],
+    box_host: str,
+    *,
+    catalog_path: Path | None = None,
+) -> list[dict]:
     app_by_id = {str(app["id"]): app for app in catalog["apps"]}
     route_specs: list[dict] = []
     for app_id in selected_app_ids:
         app = app_by_id[app_id]
+        missing_keys = [
+            key
+            for key in ("host_template", "service_name", "service_port", "expected_status", "body_marker", "route_description")
+            if key not in app
+        ]
+        if missing_keys:
+            location = f" at {catalog_path}" if catalog_path else ""
+            raise SystemExit(
+                f"application catalog{location} app {app_id!r} is missing required route keys: {', '.join(missing_keys)}"
+            )
         route_specs.append(
             {
                 "host": str(app["host_template"]).format(box_host=box_host),
@@ -507,10 +522,15 @@ def main() -> int:
     metadata = load_metadata(contract_root)
     images_lock = json.loads((profile_dir / "images.lock.json").read_text(encoding="utf-8"))
     image_refs = {item["name"]: item["ref"] for item in images_lock["images"]}
-    application_catalog = load_application_catalog(profile_dir, args.application_catalog)
+    application_catalog, application_catalog_path = load_application_catalog(profile_dir, args.application_catalog)
     if application_catalog is not None:
         selection_mode, selected_app_ids, _app_by_id = resolve_selected_apps(application_catalog, args.selected_apps_file)
-        route_specs = selected_application_route_specs(application_catalog, selected_app_ids, args.box_host)
+        route_specs = selected_application_route_specs(
+            application_catalog,
+            selected_app_ids,
+            args.box_host,
+            catalog_path=application_catalog_path,
+        )
         application_catalog_id = str(application_catalog["catalog_id"])
         application_catalog_name = str(application_catalog["catalog_name"])
     else:
