@@ -532,6 +532,7 @@ def write_routes(path: Path, route_specs: list[dict]) -> None:
 
 def emit_static_http_app(
     manifests_dir: Path,
+    contract_root: Path,
     metadata: dict[str, str],
     profile_env: dict[str, str],
     box_host: str,
@@ -544,9 +545,37 @@ def emit_static_http_app(
     catalog_path: Path | None,
 ) -> None:
     app_id = str(app["id"])
+    renderer = str(app.get("renderer", "")).strip()
     service_name = str(app["service_name"])
     service_port = int(app["service_port"])
     image_ref = resolve_primary_image_ref(app, image_refs, catalog_path=catalog_path)
+    asset_dir_name = str(app.get("asset_dir", "")).strip()
+    if not asset_dir_name and renderer in {"landing", "todo-bloom"}:
+        asset_dir_name = renderer
+
+    volumes = None
+    volume_mounts = None
+    if asset_dir_name:
+        asset_dir = contract_root / asset_dir_name
+        if asset_dir.is_dir():
+            configmap_name = f"{service_name}-assets"
+            yaml_dump(
+                manifests_dir / f"{service_name}-configmap.yaml",
+                configmap(
+                    metadata,
+                    profile_env,
+                    box_host,
+                    tls_mode,
+                    ingress_class,
+                    storage_class,
+                    name=configmap_name,
+                    component=configmap_name,
+                    data=load_assets(asset_dir),
+                ),
+            )
+            volumes = [{"name": "assets", "configMap": {"name": configmap_name}}]
+            volume_mounts = [{"name": "assets", "mountPath": "/usr/share/nginx/html", "readOnly": True}]
+
     yaml_dump(
         manifests_dir / f"{service_name}-deployment.yaml",
         deployment(
@@ -560,6 +589,8 @@ def emit_static_http_app(
             image=image_ref,
             container_port=service_port,
             container_name=app_id.replace("/", "-"),
+            volumes=volumes,
+            volume_mounts=volume_mounts,
         ),
     )
     yaml_dump(
@@ -709,6 +740,7 @@ def emit_flatnotes_app(
 
 def emit_application_manifests(
     manifests_dir: Path,
+    contract_root: Path,
     metadata: dict[str, str],
     profile_env: dict[str, str],
     box_host: str,
@@ -727,6 +759,7 @@ def emit_application_manifests(
         if renderer in {"landing", "todo-bloom", "hello-world", "static-http"}:
             emit_static_http_app(
                 manifests_dir,
+                contract_root,
                 metadata,
                 profile_env,
                 box_host,
@@ -922,6 +955,7 @@ def main() -> int:
     if application_catalog is not None:
         emit_application_manifests(
             manifests_dir,
+            contract_root,
             metadata,
             profile_env,
             args.box_host,
