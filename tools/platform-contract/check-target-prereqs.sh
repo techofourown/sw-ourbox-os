@@ -9,10 +9,9 @@ need_cmd() {
 }
 
 need_cmd python3
-need_cmd curl
 
 python3 - <<'PY' || die "python3 yaml module is missing (install PyYAML on the target image)"
 import yaml  # noqa: F401
 PY
 
-echo "Target prerequisites present: python3, python3 yaml module, curl"
+echo "Target prerequisites present: python3, python3 yaml module"

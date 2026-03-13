@@ -84,7 +84,7 @@ done
 [[ -f "${KUBECONFIG_PATH}" ]] || die "kubeconfig not found: ${KUBECONFIG_PATH}"
 [[ -f "${RENDER_DIR}/render.env" ]] || die "render.env not found in ${RENDER_DIR}"
 [[ -f "${CONTRACT_DIR}/contract.env" ]] || die "contract.env not found in ${CONTRACT_DIR}"
-command -v curl >/dev/null 2>&1 || die "curl is required for route verification"
+command -v python3 >/dev/null 2>&1 || die "python3 is required for route verification"
 
 kubectl_cmd() {
   "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG_PATH}" "$@"
@@ -170,7 +170,36 @@ verify_contract_routes() {
     status=""
     for _ in $(seq 1 60); do
       : > "${body_file}"
-      status="$(curl -sS --max-time 5 -o "${body_file}" -w '%{http_code}' -H "Host: ${host}" "http://127.0.0.1${path}" || true)"
+      status="$(
+        python3 - <<'PY' "${host}" "${path}" "${body_file}"
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+host, path, body_path = sys.argv[1:]
+request = urllib.request.Request(
+    f"http://127.0.0.1{path}",
+    headers={"Host": host},
+)
+target = Path(body_path)
+
+try:
+    with urllib.request.urlopen(request, timeout=5) as response:
+        body = response.read()
+        status = response.getcode()
+except urllib.error.HTTPError as error:
+    body = error.read()
+    status = error.code
+except Exception:
+    target.write_bytes(b"")
+    print("000")
+    raise SystemExit(0)
+
+target.write_bytes(body)
+print(status)
+PY
+      )"
       if [[ "${status}" == "${expected_status}" ]] && grep -Fqi -- "${body_marker}" "${body_file}"; then
         break
       fi
