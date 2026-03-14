@@ -84,11 +84,7 @@ elif [[ "${GITHUB_EVENT_NAME:-}" == "release" ]]; then
   else
     status=$?
     if [[ "${status}" -eq 3 ]]; then
-      write_output skip true
-      write_output source_commit "${source_commit}"
-      write_output candidate_run_id ""
-      write_output release_tag "${release_tag}"
-      exit 0
+      die "No successful ${CANDIDATE_WORKFLOW_NAME} candidate run found for release ${release_tag} (${source_commit}); refusing silent promotion skip"
     fi
     exit "${status}"
   fi

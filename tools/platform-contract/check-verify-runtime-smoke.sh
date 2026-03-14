@@ -48,7 +48,16 @@ OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_PLATFORM_CONTRACT_REVISION=smoke-revision
 OURBOX_PLATFORM_CONTRACT_VERSION=smoke-version
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:0000000000000000000000000000000000000000000000000000000000000000
+OURBOX_APPLICATION_CATALOG_NAME="Merged Application Catalog"
 EOF_RELEASE
+
+cat > "${TMP_ROOT}/bad-release.env" <<'EOF_BAD_RELEASE'
+OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os
+OURBOX_PLATFORM_CONTRACT_REVISION=smoke-revision
+OURBOX_PLATFORM_CONTRACT_VERSION=smoke-version
+OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:0000000000000000000000000000000000000000000000000000000000000000
+OURBOX_APPLICATION_CATALOG_NAME=Merged Application Catalog
+EOF_BAD_RELEASE
 
 cat > "${TMP_ROOT}/http-server.py" <<'EOF_SERVER'
 #!/usr/bin/env python3
@@ -152,5 +161,30 @@ bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
   --contract-dir "${CONTRACT_DIR}" \
   --release-file "${TMP_ROOT}/release.env" \
   --route-base-url "http://127.0.0.1:${PORT}"
+
+set +e
+bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
+  --kubeconfig "${TMP_ROOT}/kubeconfig" \
+  --k3s-bin "${BIN_DIR}/k3s" \
+  --render-dir "${RENDER_DIR}" \
+  --contract-dir "${CONTRACT_DIR}" \
+  --release-file "${TMP_ROOT}/bad-release.env" \
+  --route-base-url "http://127.0.0.1:${PORT}" \
+  >"${TMP_ROOT}/bad-release.log" 2>&1
+status=$?
+set -e
+
+[[ "${status}" -ne 0 ]] || {
+  echo "verify-runtime should reject malformed release metadata" >&2
+  exit 1
+}
+grep -F "failed to parse release metadata file" "${TMP_ROOT}/bad-release.log" >/dev/null || {
+  cat "${TMP_ROOT}/bad-release.log" >&2
+  exit 1
+}
+grep -F "malformed release metadata line" "${TMP_ROOT}/bad-release.log" >/dev/null || {
+  cat "${TMP_ROOT}/bad-release.log" >&2
+  exit 1
+}
 
 printf '[%s] verify-runtime smoke passed\n' "$(date -Is)"
