@@ -25,12 +25,14 @@ trap 'rm -rf "${BUILD_DIR}"' EXIT
 mkdir -p "${BUILD_DIR}/platform-contract"
 mkdir -p \
   "${BUILD_DIR}/platform-contract/landing" \
+  "${BUILD_DIR}/platform-contract/landing-status" \
   "${BUILD_DIR}/platform-contract/todo-bloom" \
   "${BUILD_DIR}/platform-contract/profiles" \
   "${BUILD_DIR}/platform-contract/tools" \
   "${BUILD_DIR}/platform-contract/rendered/defaults"
 
 cp -a "${CONTRACT_DIR}/landing/." "${BUILD_DIR}/platform-contract/landing/"
+cp -a "${CONTRACT_DIR}/landing-status/." "${BUILD_DIR}/platform-contract/landing-status/"
 cp -a "${CONTRACT_DIR}/todo-bloom/." "${BUILD_DIR}/platform-contract/todo-bloom/"
 cp -a "${CONTRACT_DIR}/profiles/." "${BUILD_DIR}/platform-contract/profiles/"
 cp -a "${ROOT}/tools/platform-contract/render-contract.py" "${BUILD_DIR}/platform-contract/tools/"

@@ -353,4 +353,15 @@ identity_after_images_lock="$(identity_output)"
   exit 1
 }
 
+(
+  cd "${ROOT}"
+  ./tools/platform-contract/build.sh >/dev/null
+)
+tar -tzf "${ROOT}/dist/platform-contract.tar.gz" \
+  | grep -Fx 'platform-contract/landing-status/app.py' >/dev/null \
+  || {
+    echo "built platform-contract tarball is missing landing-status/app.py" >&2
+    exit 1
+  }
+
 echo "Validated deterministic rendered platform contract: ${OUT_DIR_A}"
