@@ -82,42 +82,42 @@ from pathlib import Path
 
 demo_catalog = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 demo_lock = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-woodbox_chat_app = {
-    "id": "woodbox-chat",
-    "app_uid": "techofourown/woodbox-chat",
-    "display_name": "Woodbox Chat",
+ourbox_chat_app = {
+    "id": "ourbox-chat",
+    "app_uid": "techofourown/ourbox-chat",
+    "display_name": "OurBox Chat",
     "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
     "renderer": "static-http",
-    "service_name": "woodbox-chat",
+    "service_name": "ourbox-chat",
     "service_port": 8080,
     "host_template": "chat.{box_host}",
     "path": "/",
     "expected_status": 200,
-    "body_marker": "llama.cpp",
-    "route_description": "woodbox-chat-root",
+    "body_marker": "OurBox Chat",
+    "route_description": "ourbox-chat-root",
     "default_backend": False,
-    "image_names": ["woodbox-chat"],
+    "image_names": ["ourbox-chat"],
 }
-woodbox_chat_image = {
-    "name": "woodbox-chat",
-    "ref": "ghcr.io/techofourown/sw-ourbox-apps-chat/woodbox-chat@sha256:" + ("7" * 64),
-    "used_by": ["woodbox-chat"],
+ourbox_chat_image = {
+    "name": "ourbox-chat",
+    "ref": "ghcr.io/techofourown/sw-ourbox-apps-chat/ourbox-chat@sha256:" + ("7" * 64),
+    "used_by": ["ourbox-chat"],
 }
 
 merged_catalog = dict(demo_catalog)
 merged_catalog["catalog_id"] = "merged-smoke"
 merged_catalog["catalog_name"] = "Merged Smoke Catalog"
-merged_catalog["catalog_description"] = "Validation-only merged catalog including Woodbox Chat."
-merged_catalog["apps"] = list(demo_catalog["apps"]) + [woodbox_chat_app]
+merged_catalog["catalog_description"] = "Validation-only merged catalog including OurBox Chat."
+merged_catalog["apps"] = list(demo_catalog["apps"]) + [ourbox_chat_app]
 merged_catalog["default_app_ids"] = [
     "landing",
     "todo-bloom",
     "dufs",
     "flatnotes",
-    "woodbox-chat",
+    "ourbox-chat",
 ]
 
-merged_lock = {"schema": demo_lock["schema"], "profile": "merged-smoke", "images": list(demo_lock["images"]) + [woodbox_chat_image]}
+merged_lock = {"schema": demo_lock["schema"], "profile": "merged-smoke", "images": list(demo_lock["images"]) + [ourbox_chat_image]}
 
 Path(sys.argv[3]).write_text(json.dumps(merged_catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 Path(sys.argv[4]).write_text(json.dumps(merged_lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -134,7 +134,7 @@ cat > "${MERGED_SELECTED_APPS_FILE}" <<'EOF'
     "todo-bloom",
     "dufs",
     "flatnotes",
-    "woodbox-chat"
+    "ourbox-chat"
   ]
 }
 EOF
@@ -213,13 +213,13 @@ path = Path(sys.argv[1])
 config = yaml.safe_load(path.read_text(encoding="utf-8"))
 payload = json.loads(config["data"]["ourbox-apps.json"])
 apps = payload["apps"]
-chat_apps = [app for app in apps if app["id"] == "woodbox-chat"]
+chat_apps = [app for app in apps if app["id"] == "ourbox-chat"]
 if chat_apps != [
     {
         "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
         "host": "chat.validate.ourbox.local",
-        "id": "woodbox-chat",
-        "name": "Woodbox Chat",
+        "id": "ourbox-chat",
+        "name": "OurBox Chat",
         "path": "/",
     }
 ]:
