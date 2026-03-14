@@ -83,6 +83,66 @@ def wildcard_suffix(host: str) -> str | None:
     return None
 
 
+def load_env_file(path: Path) -> dict[str, str]:
+    data: dict[str, str] = {}
+    if not path.is_file():
+        return data
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#"):
+            continue
+        key, value = line.split("=", 1)
+        data[key] = value
+    return data
+
+
+def expected_landing_apps(render_dir: Path, selected_app_ids: list[str], box_host: str) -> list[dict[str, str]]:
+    catalog_path = render_dir / "catalog.json"
+    if catalog_path.is_file():
+        catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
+        app_by_id = {str(app["id"]): app for app in catalog.get("apps", [])}
+        apps: list[dict[str, str]] = []
+        for app_id in selected_app_ids:
+            app = app_by_id.get(app_id)
+            if not app or bool(app.get("default_backend", False)):
+                continue
+            apps.append(
+                {
+                    "id": app_id,
+                    "name": str(app["display_name"]),
+                    "description": str(app["description"]),
+                    "host": str(app["host_template"]).format(box_host=box_host),
+                    "path": str(app.get("path", "/")),
+                }
+            )
+        return apps
+
+    legacy = {
+        "dufs": {
+            "id": "dufs",
+            "name": "Files",
+            "description": "Upload, download, and share files.",
+            "host": f"files.{box_host}",
+            "path": "/",
+        },
+        "flatnotes": {
+            "id": "flatnotes",
+            "name": "Notes",
+            "description": "Write and organize markdown notes.",
+            "host": f"notes.{box_host}",
+            "path": "/",
+        },
+        "todo-bloom": {
+            "id": "todo-bloom",
+            "name": "Todo",
+            "description": "Plan your day with clarity.",
+            "host": f"todo.{box_host}",
+            "path": "/",
+        },
+    }
+    return [legacy[app_id] for app_id in selected_app_ids if app_id in legacy]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Lint a rendered platform contract bundle.")
     parser.add_argument("--contract-root", required=True)
@@ -99,10 +159,12 @@ def main() -> int:
     selected_apps_file = Path(args.selected_apps_file).resolve() if args.selected_apps_file else render_dir / "selected-apps.json"
     if selected_apps_file.is_file():
         selected_apps = json.loads(selected_apps_file.read_text(encoding="utf-8"))
-        selected_app_ids = set(selected_apps.get("selected_app_ids", []))
-        if not selected_app_ids:
+        selected_app_ids_list = list(selected_apps.get("selected_app_ids", []))
+        selected_app_ids = set(selected_app_ids_list)
+        if not selected_app_ids_list:
             raise SystemExit(f"selected-apps file does not declare selected_app_ids: {selected_apps_file}")
     else:
+        selected_app_ids_list = ["landing", "todo-bloom", "dufs", "flatnotes"]
         selected_app_ids = {"landing", "todo-bloom", "dufs", "flatnotes"}
 
     resources = load_resources(manifests_dir)
@@ -169,6 +231,7 @@ def main() -> int:
         expected_asset_maps[("ourbox-system", "landing-assets")] = {
             path.name for path in sorted((contract_root / "landing").iterdir()) if path.is_file()
         }
+        expected_asset_maps[("ourbox-system", "landing-assets")].add("ourbox-apps.json")
     if "todo-bloom" in selected_app_ids:
         expected_asset_maps[("ourbox-system", "todo-bloom-assets")] = {
             path.name for path in sorted((contract_root / "todo-bloom").iterdir()) if path.is_file()
@@ -180,6 +243,26 @@ def main() -> int:
         actual_data = set(resources_by_key[("ConfigMap", key[0], key[1])].get("data", {}).keys())
         if actual_data != expected_files:
             errors.append(f"ConfigMap/{key[1]} does not match asset source files")
+            continue
+        if key == ("ourbox-system", "landing-assets"):
+            render_env = load_env_file(render_dir / "render.env")
+            box_host = render_env.get("BOX_HOST", "")
+            if not box_host:
+                errors.append("render.env is missing BOX_HOST required to validate landing app links")
+                continue
+            expected_payload = json.dumps(
+                {
+                    "schema": 1,
+                    "kind": "ourbox-landing-app-list",
+                    "box_host": box_host,
+                    "apps": expected_landing_apps(render_dir, selected_app_ids_list, box_host),
+                },
+                indent=2,
+                sort_keys=True,
+            ) + "\n"
+            actual_payload = resources_by_key[("ConfigMap", key[0], key[1])].get("data", {}).get("ourbox-apps.json")
+            if actual_payload != expected_payload:
+                errors.append("ConfigMap/landing-assets ourbox-apps.json does not match the selected app set")
 
     for service in services:
         namespace = service["metadata"].get("namespace", "")

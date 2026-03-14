@@ -38,6 +38,13 @@
       .app:hover { border-color: #60a5fa; transform: translateY(-2px); }
       .app h2 { font-size: 1.15rem; margin-bottom: 0.4rem; color: #f8fafc; }
       .app p { font-size: 0.875rem; color: #94a3b8; line-height: 1.4; }
+      .app .host {
+        display: inline-block;
+        margin-top: 0.9rem;
+        font-size: 0.75rem;
+        color: #60a5fa;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
       footer {
         margin-top: 3rem;
         font-size: 0.75rem;
@@ -52,19 +59,57 @@
     <footer id="footer"></footer>
     <script>
       var host = location.hostname;
-      var apps = [
+      var fallbackApps = [
         { name: "Files", desc: "Upload, download, and share files.", sub: "files" },
         { name: "Notes", desc: "Write and organize markdown notes.", sub: "notes" },
         { name: "Todo", desc: "Plan your day with clarity.", sub: "todo" }
       ];
       var container = document.getElementById("apps");
-      apps.forEach(function(app) {
-        var a = document.createElement("a");
-        a.className = "app";
-        a.href = location.protocol + "//" + app.sub + "." + host;
-        a.innerHTML = "<h2>" + app.name + "</h2><p>" + app.desc + "</p>";
-        container.appendChild(a);
-      });
+      function normalizeApp(app) {
+        if (app && app.host) {
+          return {
+            name: app.name,
+            desc: app.description,
+            href: location.protocol + "//" + app.host + (app.path || "/"),
+            host: app.host
+          };
+        }
+        return {
+          name: app.name,
+          desc: app.desc,
+          href: location.protocol + "//" + app.sub + "." + host,
+          host: app.sub + "." + host
+        };
+      }
+      function renderApps(apps) {
+        container.innerHTML = "";
+        apps.map(normalizeApp).forEach(function(app) {
+          var a = document.createElement("a");
+          a.className = "app";
+          a.href = app.href;
+          a.innerHTML =
+            "<h2>" + app.name + "</h2>" +
+            "<p>" + app.desc + "</p>" +
+            "<span class=\"host\">" + app.host + "</span>";
+          container.appendChild(a);
+        });
+      }
+      fetch("/ourbox-apps.json", { cache: "no-store" })
+        .then(function(response) {
+          if (!response.ok) {
+            throw new Error("missing generated app list");
+          }
+          return response.json();
+        })
+        .then(function(payload) {
+          if (!payload || !Array.isArray(payload.apps) || payload.apps.length === 0) {
+            throw new Error("generated app list is empty");
+          }
+          renderApps(payload.apps);
+        })
+        .catch(function() {
+          renderApps(fallbackApps);
+        });
       document.getElementById("footer").textContent = host;
     </script>
   </body>
