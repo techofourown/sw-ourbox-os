@@ -74,8 +74,6 @@ render_demo_apps "${OUT_DIR_SUBSET_B}" "${SELECTED_APPS_FILE}"
 python3 - <<'PY' \
   "${ROOT}/platform-contract/profiles/demo-apps/catalog.json" \
   "${ROOT}/platform-contract/profiles/demo-apps/images.lock.json" \
-  "/techofourown/sw-ourbox-catalog-hello-world/catalog/catalog.json" \
-  "/techofourown/sw-ourbox-catalog-hello-world/catalog/images.lock.json" \
   "${MERGED_CATALOG_FILE}" \
   "${MERGED_IMAGES_LOCK_FILE}"
 import json
@@ -84,11 +82,27 @@ from pathlib import Path
 
 demo_catalog = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 demo_lock = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
-hello_catalog = json.loads(Path(sys.argv[3]).read_text(encoding="utf-8"))
-hello_lock = json.loads(Path(sys.argv[4]).read_text(encoding="utf-8"))
-
-woodbox_chat_app = next(app for app in hello_catalog["apps"] if app["id"] == "woodbox-chat")
-woodbox_chat_image = next(image for image in hello_lock["images"] if image["name"] == "woodbox-chat")
+woodbox_chat_app = {
+    "id": "woodbox-chat",
+    "app_uid": "techofourown/woodbox-chat",
+    "display_name": "Woodbox Chat",
+    "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
+    "renderer": "static-http",
+    "service_name": "woodbox-chat",
+    "service_port": 8080,
+    "host_template": "chat.{box_host}",
+    "path": "/",
+    "expected_status": 200,
+    "body_marker": "llama.cpp",
+    "route_description": "woodbox-chat-root",
+    "default_backend": False,
+    "image_names": ["woodbox-chat"],
+}
+woodbox_chat_image = {
+    "name": "woodbox-chat",
+    "ref": "ghcr.io/techofourown/sw-ourbox-apps-chat/woodbox-chat@sha256:" + ("7" * 64),
+    "used_by": ["woodbox-chat"],
+}
 
 merged_catalog = dict(demo_catalog)
 merged_catalog["catalog_id"] = "merged-smoke"
@@ -105,8 +119,8 @@ merged_catalog["default_app_ids"] = [
 
 merged_lock = {"schema": demo_lock["schema"], "profile": "merged-smoke", "images": list(demo_lock["images"]) + [woodbox_chat_image]}
 
-Path(sys.argv[5]).write_text(json.dumps(merged_catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-Path(sys.argv[6]).write_text(json.dumps(merged_lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+Path(sys.argv[3]).write_text(json.dumps(merged_catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+Path(sys.argv[4]).write_text(json.dumps(merged_lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 
 cat > "${MERGED_SELECTED_APPS_FILE}" <<'EOF'
