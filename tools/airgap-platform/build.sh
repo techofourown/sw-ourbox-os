@@ -63,8 +63,20 @@ podman_graphroot=""
 podman_runroot=""
 build_dir="$(mktemp -d)"
 
+best_effort_remove() {
+  local path="$1"
+  [[ -n "${path}" && -e "${path}" ]] || return 0
+
+  if [[ -n "${CLI}" && "$(cli_base "${CLI}")" == "podman" ]] && command -v podman >/dev/null 2>&1; then
+    podman unshare rm -rf "${path}" >/dev/null 2>&1 || true
+  fi
+  rm -rf "${path}" >/dev/null 2>&1 || true
+}
+
 cleanup() {
-  rm -rf "${build_dir:-}" "${podman_graphroot:-}" "${podman_runroot:-}"
+  best_effort_remove "${build_dir:-}"
+  best_effort_remove "${podman_graphroot:-}"
+  best_effort_remove "${podman_runroot:-}"
 }
 trap cleanup EXIT
 

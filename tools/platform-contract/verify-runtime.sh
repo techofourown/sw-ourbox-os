@@ -13,9 +13,17 @@ METADATA_CONFIGMAP="ourbox-platform-contract"
 METADATA_NAMESPACE="ourbox-system"
 TRAEFIK_NAMESPACE="kube-system"
 TRAEFIK_SELECTOR="app.kubernetes.io/name=traefik"
-TRAEFIK_LOG_SINCE="10m"
+TRAEFIK_LOG_SINCE="30s"
 SKIP_TRAEFIK_LOG_CHECK=0
 ROUTE_BASE_URL="http://127.0.0.1"
+SANITIZED_RELEASE_ENV=""
+
+cleanup() {
+  if [[ -n "${SANITIZED_RELEASE_ENV}" && -f "${SANITIZED_RELEASE_ENV}" ]]; then
+    rm -f "${SANITIZED_RELEASE_ENV}"
+  fi
+}
+trap cleanup EXIT
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -101,6 +109,49 @@ metadata_value() {
   kubectl_cmd get configmap "${METADATA_CONFIGMAP}" -n "${METADATA_NAMESPACE}" -o "jsonpath={.data.${key}}"
 }
 
+sanitize_release_metadata() {
+  local release_file="$1"
+
+  SANITIZED_RELEASE_ENV="$(mktemp "${TMPDIR:-/tmp}/ourbox-release.XXXXXX")"
+  python3 - "${release_file}" > "${SANITIZED_RELEASE_ENV}" <<'PY'
+import re
+import shlex
+import sys
+from pathlib import Path
+
+release_path = Path(sys.argv[1])
+key_pattern = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+for lineno, raw_line in enumerate(release_path.read_text(encoding="utf-8").splitlines(), start=1):
+    stripped = raw_line.strip()
+    if not stripped or stripped.startswith("#"):
+        continue
+    if "=" not in raw_line:
+        raise SystemExit(f"malformed release metadata line {lineno}: missing '='")
+
+    key, value = raw_line.split("=", 1)
+    key = key.strip()
+    if not key_pattern.match(key):
+        raise SystemExit(f"malformed release metadata line {lineno}: invalid key '{key}'")
+
+    value = value.strip()
+    if not value:
+        parsed = ""
+    else:
+        try:
+            tokens = shlex.split(value, posix=True)
+        except ValueError as exc:
+            raise SystemExit(f"malformed release metadata line {lineno}: {exc}") from exc
+        if len(tokens) != 1:
+            raise SystemExit(
+                f"malformed release metadata line {lineno}: values with spaces must be quoted"
+            )
+        parsed = tokens[0]
+
+    print(f"{key}={shlex.quote(parsed)}")
+PY
+}
+
 # shellcheck disable=SC1090,SC1091
 source "${RENDER_DIR}/render.env"
 # shellcheck disable=SC1090,SC1091
@@ -117,8 +168,9 @@ CONTRACT_VERSION_EXPECTED="${OURBOX_PLATFORM_CONTRACT_VERSION:-unknown}"
 CONTRACT_DIGEST_EXPECTED="${CONTRACT_DIGEST}"
 
 if [[ -f "${RELEASE_FILE}" ]]; then
+  sanitize_release_metadata "${RELEASE_FILE}" || die "failed to parse release metadata file: ${RELEASE_FILE}"
   # shellcheck disable=SC1090,SC1091
-  source "${RELEASE_FILE}"
+  source "${SANITIZED_RELEASE_ENV}"
 else
   log "Release metadata file missing; skipping device metadata parity check: ${RELEASE_FILE}"
 fi
