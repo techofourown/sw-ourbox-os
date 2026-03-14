@@ -32,6 +32,10 @@ EXPECTED_ROUTE_MARKERS = {
         "body_marker": "Your apps, served by your machine, to your phone.",
         "source_file": "landing/index.html",
     },
+    "landing-app-status": {
+        "body_marker": "ourbox-landing-status",
+        "source_file": "landing-status/app.py",
+    },
     "dufs-root": {
         "body_marker": "Upload files",
         "source_file": None,
@@ -113,6 +117,7 @@ def expected_landing_apps(render_dir: Path, selected_app_ids: list[str], box_hos
                     "description": str(app["description"]),
                     "host": str(app["host_template"]).format(box_host=box_host),
                     "path": str(app.get("path", "/")),
+                    "service_name": str(app["service_name"]),
                 }
             )
         return apps
@@ -124,6 +129,7 @@ def expected_landing_apps(render_dir: Path, selected_app_ids: list[str], box_hos
             "description": "Upload, download, and share files.",
             "host": f"files.{box_host}",
             "path": "/",
+            "service_name": "dufs",
         },
         "flatnotes": {
             "id": "flatnotes",
@@ -131,6 +137,7 @@ def expected_landing_apps(render_dir: Path, selected_app_ids: list[str], box_hos
             "description": "Write and organize markdown notes.",
             "host": f"notes.{box_host}",
             "path": "/",
+            "service_name": "flatnotes",
         },
         "todo-bloom": {
             "id": "todo-bloom",
@@ -138,9 +145,23 @@ def expected_landing_apps(render_dir: Path, selected_app_ids: list[str], box_hos
             "description": "Plan your day with clarity.",
             "host": f"todo.{box_host}",
             "path": "/",
+            "service_name": "todo-bloom",
         },
     }
     return [legacy[app_id] for app_id in selected_app_ids if app_id in legacy]
+
+
+def public_landing_apps(apps: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [
+        {
+            "id": app["id"],
+            "name": app["name"],
+            "description": app["description"],
+            "host": app["host"],
+            "path": app["path"],
+        }
+        for app in apps
+    ]
 
 
 def main() -> int:
@@ -179,6 +200,9 @@ def main() -> int:
         for item in images_lock["images"]
         if selected_app_ids.intersection(set(item.get("used_by", [])))
     }
+    metadata_config = resources_by_key.get(("ConfigMap", "ourbox-system", "ourbox-platform-contract"), {})
+    platform_images = json.loads(metadata_config.get("data", {}).get("platform_images.json", "{}"))
+    platform_refs = set(platform_images.values())
     manifest_image_refs: set[str] = set()
     service_by_ns_name = {
         (svc["metadata"].get("namespace", ""), svc["metadata"]["name"]): svc
@@ -219,10 +243,10 @@ def main() -> int:
         for container in template.get("spec", {}).get("containers", []):
             manifest_image_refs.add(container["image"])
 
-    if manifest_image_refs != lock_refs:
+    if manifest_image_refs != (lock_refs | platform_refs):
         errors.append(
             "Rendered manifest images do not match images.lock.json "
-            f"(rendered={sorted(manifest_image_refs)}, lock={sorted(lock_refs)})"
+            f"(rendered={sorted(manifest_image_refs)}, lock={sorted(lock_refs)}, platform={sorted(platform_refs)})"
         )
 
     configmap_names = {(resource["metadata"].get("namespace", ""), resource["metadata"]["name"]) for resource in configmaps}
@@ -232,6 +256,10 @@ def main() -> int:
             path.name for path in sorted((contract_root / "landing").iterdir()) if path.is_file()
         }
         expected_asset_maps[("ourbox-system", "landing-assets")].add("ourbox-apps.json")
+        expected_asset_maps[("ourbox-system", "landing-status-assets")] = {
+            path.name for path in sorted((contract_root / "landing-status").iterdir()) if path.is_file()
+        }
+        expected_asset_maps[("ourbox-system", "landing-status-assets")].add("ourbox-app-targets.json")
     if "todo-bloom" in selected_app_ids:
         expected_asset_maps[("ourbox-system", "todo-bloom-assets")] = {
             path.name for path in sorted((contract_root / "todo-bloom").iterdir()) if path.is_file()
@@ -255,7 +283,7 @@ def main() -> int:
                     "schema": 1,
                     "kind": "ourbox-landing-app-list",
                     "box_host": box_host,
-                    "apps": expected_landing_apps(render_dir, selected_app_ids_list, box_host),
+                    "apps": public_landing_apps(expected_landing_apps(render_dir, selected_app_ids_list, box_host)),
                 },
                 indent=2,
                 sort_keys=True,
@@ -263,6 +291,25 @@ def main() -> int:
             actual_payload = resources_by_key[("ConfigMap", key[0], key[1])].get("data", {}).get("ourbox-apps.json")
             if actual_payload != expected_payload:
                 errors.append("ConfigMap/landing-assets ourbox-apps.json does not match the selected app set")
+        if key == ("ourbox-system", "landing-status-assets"):
+            render_env = load_env_file(render_dir / "render.env")
+            box_host = render_env.get("BOX_HOST", "")
+            if not box_host:
+                errors.append("render.env is missing BOX_HOST required to validate landing status targets")
+                continue
+            expected_payload = json.dumps(
+                {
+                    "schema": 1,
+                    "kind": "ourbox-landing-app-targets",
+                    "box_host": box_host,
+                    "apps": expected_landing_apps(render_dir, selected_app_ids_list, box_host),
+                },
+                indent=2,
+                sort_keys=True,
+            ) + "\n"
+            actual_payload = resources_by_key[("ConfigMap", key[0], key[1])].get("data", {}).get("ourbox-app-targets.json")
+            if actual_payload != expected_payload:
+                errors.append("ConfigMap/landing-status-assets ourbox-app-targets.json does not match the selected app set")
 
     for service in services:
         namespace = service["metadata"].get("namespace", "")
@@ -360,6 +407,7 @@ def main() -> int:
             expected_route_descriptions = {
                 description
                 for description, app_id in (
+                    ("landing-app-status", "landing"),
                     ("landing-root", "landing"),
                     ("dufs-root", "dufs"),
                     ("flatnotes-root", "flatnotes"),

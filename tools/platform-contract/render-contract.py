@@ -36,6 +36,13 @@ METADATA_KEYS = (
 
 CATALOG_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SELECTION_MODES = {"catalog-defaults", "all-apps", "custom"}
+LANDING_STATUS_IMAGE_REF = (
+    "docker.io/library/python:3.12-alpine@"
+    "sha256:7747d47f92cfca63a6e2b50275e23dba8407c30d8ae929a88ddd49a5d3f2d331"
+)
+LANDING_STATUS_ROUTE_PATH = "/_ourbox/app-status.json"
+LANDING_STATUS_ROUTE_DESCRIPTION = "landing-app-status"
+LANDING_STATUS_BODY_MARKER = "ourbox-landing-status"
 
 
 def load_env_file(path: Path) -> dict[str, str]:
@@ -280,6 +287,7 @@ def selected_application_landing_specs(
                 "description": str(app["description"]),
                 "host": str(app["host_template"]).format(box_host=box_host),
                 "path": str(app.get("path", "/")),
+                "service_name": str(app["service_name"]),
             }
         )
     return landing_specs
@@ -293,6 +301,7 @@ def legacy_landing_specs(selected_app_ids: list[str], box_host: str) -> list[dic
             "description": "Upload, download, and share files.",
             "host": f"files.{box_host}",
             "path": "/",
+            "service_name": "dufs",
         },
         {
             "id": "flatnotes",
@@ -300,6 +309,7 @@ def legacy_landing_specs(selected_app_ids: list[str], box_host: str) -> list[dic
             "description": "Write and organize markdown notes.",
             "host": f"notes.{box_host}",
             "path": "/",
+            "service_name": "flatnotes",
         },
         {
             "id": "todo-bloom",
@@ -307,10 +317,24 @@ def legacy_landing_specs(selected_app_ids: list[str], box_host: str) -> list[dic
             "description": "Plan your day with clarity.",
             "host": f"todo.{box_host}",
             "path": "/",
+            "service_name": "todo-bloom",
         },
     ]
     selected = set(selected_app_ids)
     return [app for app in app_specs if app["id"] in selected]
+
+
+def public_landing_specs(apps: list[dict[str, str]]) -> list[dict[str, str]]:
+    return [
+        {
+            "id": app["id"],
+            "name": app["name"],
+            "description": app["description"],
+            "host": app["host"],
+            "path": app["path"],
+        }
+        for app in apps
+    ]
 
 
 def landing_assets_data(box_host: str, apps: list[dict[str, str]]) -> dict[str, LiteralStr]:
@@ -320,6 +344,24 @@ def landing_assets_data(box_host: str, apps: list[dict[str, str]]) -> dict[str, 
                 {
                     "schema": 1,
                     "kind": "ourbox-landing-app-list",
+                    "box_host": box_host,
+                    "apps": public_landing_specs(apps),
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n"
+        )
+    }
+
+
+def landing_status_assets_data(box_host: str, apps: list[dict[str, str]]) -> dict[str, LiteralStr]:
+    return {
+        "ourbox-app-targets.json": LiteralStr(
+            json.dumps(
+                {
+                    "schema": 1,
+                    "kind": "ourbox-landing-app-targets",
                     "box_host": box_host,
                     "apps": apps,
                 },
@@ -427,10 +469,12 @@ def deployment(
     volumes: list[dict] | None = None,
     volume_mounts: list[dict] | None = None,
     env: list[dict] | None = None,
+    command: list[str] | None = None,
     args: list[str] | None = None,
     readiness_probe: dict | None = None,
     liveness_probe: dict | None = None,
     storage_required: bool = False,
+    service_account_name: str | None = None,
 ) -> dict:
     pod_labels = {
         "app.kubernetes.io/name": name,
@@ -447,6 +491,8 @@ def deployment(
         "livenessProbe": liveness_probe
         or {"httpGet": {"path": "/", "port": "http"}, "initialDelaySeconds": 15, "periodSeconds": 15},
     }
+    if command:
+        container["command"] = command
     if args:
         container["args"] = args
     if env:
@@ -478,6 +524,8 @@ def deployment(
     }
     if volumes:
         spec["spec"]["template"]["spec"]["volumes"] = volumes
+    if service_account_name:
+        spec["spec"]["template"]["spec"]["serviceAccountName"] = service_account_name
     return spec
 
 
@@ -512,6 +560,100 @@ def service(
                 "ourbox.techofourown.io/contract-profile": profile_env["OURBOX_PLATFORM_PROFILE"],
             },
             "ports": [{"name": "http", "port": port, "targetPort": "http"}],
+        },
+    }
+
+
+def serviceaccount(
+    metadata: dict[str, str],
+    profile_env: dict[str, str],
+    box_host: str,
+    tls_mode: str,
+    ingress_class: str,
+    storage_class: str,
+    *,
+    name: str,
+) -> dict:
+    return {
+        "apiVersion": "v1",
+        "kind": "ServiceAccount",
+        "metadata": resource_metadata(
+            metadata,
+            profile_env,
+            name,
+            box_host,
+            tls_mode,
+            ingress_class,
+            storage_class,
+            name=name,
+        ),
+    }
+
+
+def role(
+    metadata: dict[str, str],
+    profile_env: dict[str, str],
+    box_host: str,
+    tls_mode: str,
+    ingress_class: str,
+    storage_class: str,
+    *,
+    name: str,
+    rules: list[dict],
+) -> dict:
+    return {
+        "apiVersion": "rbac.authorization.k8s.io/v1",
+        "kind": "Role",
+        "metadata": resource_metadata(
+            metadata,
+            profile_env,
+            name,
+            box_host,
+            tls_mode,
+            ingress_class,
+            storage_class,
+            name=name,
+        ),
+        "rules": rules,
+    }
+
+
+def rolebinding(
+    metadata: dict[str, str],
+    profile_env: dict[str, str],
+    box_host: str,
+    tls_mode: str,
+    ingress_class: str,
+    storage_class: str,
+    *,
+    name: str,
+    role_name: str,
+    serviceaccount_name: str,
+) -> dict:
+    return {
+        "apiVersion": "rbac.authorization.k8s.io/v1",
+        "kind": "RoleBinding",
+        "metadata": resource_metadata(
+            metadata,
+            profile_env,
+            name,
+            box_host,
+            tls_mode,
+            ingress_class,
+            storage_class,
+            name=name,
+        ),
+        "subjects": [
+            {
+                "kind": "ServiceAccount",
+                "name": serviceaccount_name,
+                "namespace": "ourbox-system",
+            }
+        ],
+        "roleRef": {
+            "apiGroup": "rbac.authorization.k8s.io",
+            "kind": "Role",
+            "name": role_name,
         },
     }
 
@@ -849,6 +991,119 @@ def emit_flatnotes_app(
     )
 
 
+def emit_landing_status_service(
+    manifests_dir: Path,
+    contract_root: Path,
+    metadata: dict[str, str],
+    profile_env: dict[str, str],
+    box_host: str,
+    tls_mode: str,
+    ingress_class: str,
+    storage_class: str,
+    *,
+    landing_apps: list[dict[str, str]],
+) -> None:
+    assets_dir = contract_root / "landing-status"
+    configmap_name = "landing-status-assets"
+    service_name = "landing-status"
+    serviceaccount_name = "landing-status"
+    role_name = "landing-status"
+    rolebinding_name = "landing-status"
+    asset_data = load_assets(assets_dir)
+    asset_data.update(landing_status_assets_data(box_host, landing_apps))
+
+    yaml_dump(
+        manifests_dir / f"{service_name}-configmap.yaml",
+        configmap(
+            metadata,
+            profile_env,
+            box_host,
+            tls_mode,
+            ingress_class,
+            storage_class,
+            name=configmap_name,
+            component=configmap_name,
+            data=asset_data,
+        ),
+    )
+    yaml_dump(
+        manifests_dir / f"{serviceaccount_name}-serviceaccount.yaml",
+        serviceaccount(
+            metadata,
+            profile_env,
+            box_host,
+            tls_mode,
+            ingress_class,
+            storage_class,
+            name=serviceaccount_name,
+        ),
+    )
+    yaml_dump(
+        manifests_dir / f"{role_name}-role.yaml",
+        role(
+            metadata,
+            profile_env,
+            box_host,
+            tls_mode,
+            ingress_class,
+            storage_class,
+            name=role_name,
+            rules=[
+                {"apiGroups": [""], "resources": ["pods"], "verbs": ["get", "list"]},
+                {"apiGroups": ["apps"], "resources": ["deployments"], "verbs": ["get", "list"]},
+            ],
+        ),
+    )
+    yaml_dump(
+        manifests_dir / f"{rolebinding_name}-rolebinding.yaml",
+        rolebinding(
+            metadata,
+            profile_env,
+            box_host,
+            tls_mode,
+            ingress_class,
+            storage_class,
+            name=rolebinding_name,
+            role_name=role_name,
+            serviceaccount_name=serviceaccount_name,
+        ),
+    )
+    yaml_dump(
+        manifests_dir / f"{service_name}-deployment.yaml",
+        deployment(
+            metadata,
+            profile_env,
+            box_host,
+            tls_mode,
+            ingress_class,
+            storage_class,
+            name=service_name,
+            image=LANDING_STATUS_IMAGE_REF,
+            container_port=8080,
+            container_name=service_name,
+            command=["python3", "/app/app.py"],
+            readiness_probe={"httpGet": {"path": "/healthz", "port": "http"}, "initialDelaySeconds": 2, "periodSeconds": 5},
+            liveness_probe={"httpGet": {"path": "/healthz", "port": "http"}, "initialDelaySeconds": 5, "periodSeconds": 10},
+            volumes=[{"name": "assets", "configMap": {"name": configmap_name}}],
+            volume_mounts=[{"name": "assets", "mountPath": "/app", "readOnly": True}],
+            service_account_name=serviceaccount_name,
+        ),
+    )
+    yaml_dump(
+        manifests_dir / f"{service_name}-service.yaml",
+        service(
+            metadata,
+            profile_env,
+            box_host,
+            tls_mode,
+            ingress_class,
+            storage_class,
+            name=service_name,
+            port=8080,
+        ),
+    )
+
+
 def emit_application_manifests(
     manifests_dir: Path,
     contract_root: Path,
@@ -961,6 +1216,19 @@ def main() -> int:
             args.box_host,
             catalog_path=application_catalog_path,
         )
+        if "landing" in selected_app_ids:
+            route_specs.append(
+                {
+                    "host": args.box_host,
+                    "path": LANDING_STATUS_ROUTE_PATH,
+                    "service_name": "landing-status",
+                    "service_port": 8080,
+                    "expected_status": 200,
+                    "body_marker": LANDING_STATUS_BODY_MARKER,
+                    "description": LANDING_STATUS_ROUTE_DESCRIPTION,
+                    "default_backend": False,
+                }
+            )
         application_catalog_id = str(application_catalog["catalog_id"])
         application_catalog_name = str(application_catalog["catalog_name"])
     else:
@@ -1068,6 +1336,14 @@ def main() -> int:
                 "application_catalog_name": application_catalog_name,
                 "application_selection_mode": selection_mode,
                 "selected_app_ids": ",".join(selected_app_ids),
+                "platform_images.json": LiteralStr(
+                    json.dumps(
+                        {"landing-status": LANDING_STATUS_IMAGE_REF} if "landing" in selected_app_ids else {},
+                        indent=2,
+                        sort_keys=True,
+                    )
+                    + "\n"
+                ),
                 "images_lock.json": LiteralStr(json.dumps(images_lock, indent=2, sort_keys=True)),
             },
         ),
@@ -1088,6 +1364,18 @@ def main() -> int:
             catalog_path=application_catalog_path,
             landing_assets=landing_assets_data(args.box_host, landing_apps),
         )
+        if "landing" in selected_app_ids:
+            emit_landing_status_service(
+                manifests_dir,
+                contract_root,
+                metadata,
+                profile_env,
+                args.box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                landing_apps=landing_apps,
+            )
 
     yaml_dump(
         manifests_dir / "50-demo-apps-ingress.yaml",

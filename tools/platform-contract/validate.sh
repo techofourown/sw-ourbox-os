@@ -202,6 +202,30 @@ if apps != [
     raise SystemExit(f"unexpected landing app list for subset render: {apps!r}")
 PY
 
+python3 - <<'PY' "${OUT_DIR_SUBSET_A}/manifests/landing-status-configmap.yaml"
+import json
+import sys
+from pathlib import Path
+
+import yaml
+
+path = Path(sys.argv[1])
+config = yaml.safe_load(path.read_text(encoding="utf-8"))
+payload = json.loads(config["data"]["ourbox-app-targets.json"])
+apps = payload["apps"]
+if apps != [
+    {
+        "description": "Simple file browser rooted on the shared data volume.",
+        "host": "files.validate.ourbox.local",
+        "id": "dufs",
+        "name": "Dufs",
+        "path": "/",
+        "service_name": "dufs",
+    }
+]:
+    raise SystemExit(f"unexpected landing status targets for subset render: {apps!r}")
+PY
+
 python3 - <<'PY' "${OUT_DIR_MERGED}/manifests/landing-configmap.yaml"
 import json
 import sys
@@ -224,6 +248,46 @@ if chat_apps != [
     }
 ]:
     raise SystemExit(f"unexpected landing chat entry for merged render: {chat_apps!r}")
+PY
+
+python3 - <<'PY' "${OUT_DIR_MERGED}/manifests/landing-status-configmap.yaml"
+import json
+import sys
+from pathlib import Path
+
+import yaml
+
+path = Path(sys.argv[1])
+config = yaml.safe_load(path.read_text(encoding="utf-8"))
+payload = json.loads(config["data"]["ourbox-app-targets.json"])
+apps = payload["apps"]
+chat_apps = [app for app in apps if app["id"] == "ourbox-chat"]
+if chat_apps != [
+    {
+        "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
+        "host": "chat.validate.ourbox.local",
+        "id": "ourbox-chat",
+        "name": "OurBox Chat",
+        "path": "/",
+        "service_name": "ourbox-chat",
+    }
+]:
+    raise SystemExit(f"unexpected landing status chat target for merged render: {chat_apps!r}")
+PY
+
+python3 - <<'PY' "${OUT_DIR_MERGED}/manifests/05-contract-metadata-configmap.yaml"
+import json
+import sys
+from pathlib import Path
+
+import yaml
+
+path = Path(sys.argv[1])
+config = yaml.safe_load(path.read_text(encoding="utf-8"))
+platform_images = json.loads(config["data"]["platform_images.json"])
+image_ref = platform_images.get("landing-status", "")
+if not image_ref.startswith("docker.io/library/python:3.12-alpine@sha256:"):
+    raise SystemExit(f"unexpected landing-status platform image ref: {image_ref!r}")
 PY
 
 mkdir -p "${IDENTITY_CONTRACT_DIR}"
