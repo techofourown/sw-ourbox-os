@@ -78,6 +78,17 @@ jobs:
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
 
+      - name: Install crane
+        run: |
+          set -euo pipefail
+          CRANE_VERSION="v0.20.7"
+          CRANE_DIR="${RUNNER_TEMP}/crane-bin"
+          mkdir -p "${CRANE_DIR}"
+          curl -fsSL \
+            "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_x86_64.tar.gz" \
+            | tar -xz -C "${CRANE_DIR}" crane
+          echo "${CRANE_DIR}" >> "${GITHUB_PATH}"
+
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 

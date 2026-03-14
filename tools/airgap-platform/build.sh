@@ -49,9 +49,15 @@ cli_base() {
   basename "${1%% *}"
 }
 
-CLI="${CONTAINER_CLI:-$(pick_cli || true)}"
-[[ -n "${CLI}" ]] || die "No container CLI found (install docker/nerdctl/podman)"
-log "Using container CLI: ${CLI}"
+CRANE_BIN="$(command -v crane || true)"
+if [[ -n "${CRANE_BIN}" ]]; then
+  log "Using crane for image archive pulls: ${CRANE_BIN}"
+  CLI=""
+else
+  CLI="${CONTAINER_CLI:-$(pick_cli || true)}"
+  [[ -n "${CLI}" ]] || die "No container CLI found (install crane/docker/nerdctl/podman)"
+  log "Using container CLI: ${CLI}"
+fi
 
 podman_graphroot=""
 podman_runroot=""
@@ -138,6 +144,12 @@ pull_and_save_image() {
   local image="$1"
   local tar_path="$2"
   local base
+
+  if [[ -n "${CRANE_BIN}" ]]; then
+    "${CRANE_BIN}" --platform "linux/${ARCH}" pull "${image}" "${tar_path}"
+    return 0
+  fi
+
   base="$(cli_base "${CLI}")"
 
   case "${base}" in
