@@ -5,120 +5,361 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OurBox</title>
     <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body {
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-        background: #0f172a;
-        color: #e2e8f0;
-        min-height: 100vh;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        color-scheme: dark;
+        --page-bg: #07111f;
+        --panel-bg: rgba(15, 23, 42, 0.82);
+        --panel-border: rgba(148, 163, 184, 0.24);
+        --text-main: #e2e8f0;
+        --text-muted: #94a3b8;
+        --accent: #38bdf8;
+        --healthy: #22c55e;
+        --warning: #f59e0b;
+        --error: #f97316;
+        --unknown: #64748b;
       }
-      h1 { font-size: 2rem; margin-bottom: 0.5rem; color: #f8fafc; }
-      .subtitle { color: #94a3b8; margin-bottom: 2.5rem; text-align: center; }
+      body {
+        background:
+          radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 28rem),
+          linear-gradient(180deg, #07111f 0%, #020617 100%);
+        color: var(--text-main);
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        min-height: 100vh;
+        padding: 2rem 1.25rem 3rem;
+      }
+      .shell {
+        margin: 0 auto;
+        max-width: 960px;
+      }
+      .hero {
+        margin-bottom: 1.75rem;
+      }
+      h1 {
+        color: #f8fafc;
+        font-size: clamp(2rem, 5vw, 3rem);
+        letter-spacing: -0.04em;
+        margin-bottom: 0.5rem;
+      }
+      .subtitle {
+        color: var(--text-muted);
+        font-size: 1rem;
+        line-height: 1.5;
+        max-width: 42rem;
+      }
+      .meta {
+        align-items: center;
+        color: var(--text-muted);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem 1rem;
+        margin-top: 1rem;
+      }
+      .meta-chip {
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 999px;
+        padding: 0.4rem 0.7rem;
+      }
+      .meta-chip strong {
+        color: #f8fafc;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.82rem;
+      }
       .apps {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 1.25rem;
-        max-width: 760px;
-        width: 100%;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       }
       .app {
-        background: #1e293b;
-        border: 1px solid #334155;
-        border-radius: 12px;
-        padding: 1.5rem;
+        background: var(--panel-bg);
+        border: 1px solid var(--panel-border);
+        border-radius: 18px;
+        color: inherit;
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+        min-height: 15rem;
+        padding: 1.15rem;
         text-decoration: none;
-        color: #e2e8f0;
-        transition: border-color 0.2s, transform 0.2s;
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
       }
-      .app:hover { border-color: #60a5fa; transform: translateY(-2px); }
-      .app h2 { font-size: 1.15rem; margin-bottom: 0.4rem; color: #f8fafc; }
-      .app p { font-size: 0.875rem; color: #94a3b8; line-height: 1.4; }
-      .app .host {
-        display: inline-block;
-        margin-top: 0.9rem;
-        font-size: 0.75rem;
-        color: #60a5fa;
+      .app:hover {
+        border-color: rgba(56, 189, 248, 0.45);
+        box-shadow: 0 12px 28px rgba(8, 15, 29, 0.32);
+        transform: translateY(-2px);
+      }
+      .app-head {
+        align-items: flex-start;
+        display: flex;
+        gap: 0.75rem;
+        justify-content: space-between;
+      }
+      .app h2 {
+        color: #f8fafc;
+        font-size: 1.15rem;
+        line-height: 1.2;
+      }
+      .app-description {
+        color: var(--text-muted);
+        font-size: 0.94rem;
+        line-height: 1.55;
+      }
+      .status-chip {
+        align-items: center;
+        border-radius: 999px;
+        display: inline-flex;
+        flex-shrink: 0;
+        font-size: 0.8rem;
+        font-weight: 600;
+        gap: 0.45rem;
+        padding: 0.42rem 0.72rem;
+        white-space: nowrap;
+      }
+      .status-dot {
+        border-radius: 999px;
+        height: 0.58rem;
+        width: 0.58rem;
+      }
+      .status-chip.status-healthy {
+        background: rgba(34, 197, 94, 0.14);
+        color: #bbf7d0;
+      }
+      .status-chip.status-healthy .status-dot { background: var(--healthy); }
+      .status-chip.status-warning {
+        background: rgba(245, 158, 11, 0.14);
+        color: #fde68a;
+      }
+      .status-chip.status-warning .status-dot { background: var(--warning); }
+      .status-chip.status-error {
+        background: rgba(249, 115, 22, 0.14);
+        color: #fdba74;
+      }
+      .status-chip.status-error .status-dot { background: var(--error); }
+      .status-chip.status-unknown {
+        background: rgba(100, 116, 139, 0.18);
+        color: #cbd5e1;
+      }
+      .status-chip.status-unknown .status-dot { background: var(--unknown); }
+      .status-summary {
+        color: #cbd5e1;
+        font-size: 0.84rem;
+        line-height: 1.45;
+        min-height: 2.5em;
+      }
+      .host {
+        color: var(--accent);
         font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.82rem;
+        margin-top: auto;
+        word-break: break-all;
+      }
+      .empty {
+        background: var(--panel-bg);
+        border: 1px dashed rgba(148, 163, 184, 0.25);
+        border-radius: 18px;
+        color: var(--text-muted);
+        padding: 1.5rem;
       }
       footer {
-        margin-top: 3rem;
-        font-size: 0.75rem;
         color: #475569;
+        font-size: 0.75rem;
+        margin-top: 2rem;
+      }
+      @media (max-width: 640px) {
+        body { padding: 1.25rem 1rem 2rem; }
+        .app {
+          border-radius: 16px;
+          min-height: 0;
+        }
+        .app-head {
+          flex-direction: column;
+        }
       }
     </style>
   </head>
   <body>
-    <h1>OurBox</h1>
-    <p class="subtitle">Your apps, served by your machine, to your phone.</p>
-    <div class="apps" id="apps"></div>
-    <footer id="footer"></footer>
+    <div class="shell">
+      <header class="hero">
+        <h1>OurBox</h1>
+        <p class="subtitle">Your apps, served by your machine, to your phone.</p>
+        <div class="meta">
+          <span class="meta-chip">Box host <strong id="box-host"></strong></span>
+          <span class="meta-chip" id="refresh-status">Checking app health...</span>
+        </div>
+      </header>
+      <main class="apps" id="apps"></main>
+      <footer id="footer"></footer>
+    </div>
     <script>
-      var host = location.hostname;
+      var boxHost = location.hostname;
+      var appsUrl = "/ourbox-apps.json";
+      var appStatusUrl = "/_ourbox/app-status.json";
+      var pollMs = 15000;
       var fallbackApps = [
-        { name: "Files", desc: "Upload, download, and share files.", sub: "files" },
-        { name: "Notes", desc: "Write and organize markdown notes.", sub: "notes" },
-        { name: "Todo", desc: "Plan your day with clarity.", sub: "todo" }
+        { id: "files", name: "Files", description: "Upload, download, and share files.", host: "files." + boxHost, path: "/" },
+        { id: "notes", name: "Notes", description: "Write and organize markdown notes.", host: "notes." + boxHost, path: "/" },
+        { id: "todo", name: "Todo", description: "Plan your day with clarity.", host: "todo." + boxHost, path: "/" }
       ];
-      var container = document.getElementById("apps");
-      function normalizeApp(app) {
-        if (app && app.host) {
-          return {
-            name: app.name,
-            desc: app.description,
-            href: location.protocol + "//" + app.host + (app.path || "/"),
-            host: app.host
-          };
+      var appContainer = document.getElementById("apps");
+      var refreshStatus = document.getElementById("refresh-status");
+
+      function createNode(tagName, className, text) {
+        var node = document.createElement(tagName);
+        if (className) {
+          node.className = className;
         }
+        if (typeof text === "string") {
+          node.textContent = text;
+        }
+        return node;
+      }
+
+      function hostWithPath(host, path) {
+        var normalizedPath = path || "/";
+        return location.protocol + "//" + host + normalizedPath;
+      }
+
+      function normalizeApp(app) {
         return {
-          name: app.name,
-          desc: app.desc,
-          href: location.protocol + "//" + app.sub + "." + host,
-          host: app.sub + "." + host
+          id: app.id || "",
+          name: app.name || "Unknown app",
+          description: app.description || "",
+          host: app.host || boxHost,
+          path: app.path || "/",
+          href: hostWithPath(app.host || boxHost, app.path || "/"),
+          status: app.status || "unknown",
+          statusLabel: app.status_label || "Unknown",
+          statusSummary: app.status_summary || "Live app status unavailable.",
         };
       }
+
       function renderApps(apps) {
-        container.replaceChildren();
+        appContainer.replaceChildren();
+        if (!apps.length) {
+          appContainer.appendChild(createNode("div", "empty", "No applications are currently selected for this box."));
+          return;
+        }
+
         apps.map(normalizeApp).forEach(function(app) {
-          var a = document.createElement("a");
-          var title = document.createElement("h2");
-          var description = document.createElement("p");
-          var hostLabel = document.createElement("span");
+          var card = document.createElement("a");
+          var header = createNode("div", "app-head");
+          var titleWrap = document.createElement("div");
+          var title = createNode("h2", "", app.name);
+          var badge = createNode("span", "status-chip status-" + app.status);
+          var dot = createNode("span", "status-dot");
+          var badgeText = document.createTextNode(app.statusLabel);
+          var description = createNode("p", "app-description", app.description);
+          var summary = createNode("p", "status-summary", app.statusSummary);
+          var host = createNode("span", "host", app.host + app.path);
 
-          a.className = "app";
-          a.href = app.href;
-          title.textContent = app.name;
-          description.textContent = app.desc;
-          hostLabel.className = "host";
-          hostLabel.textContent = app.host;
+          card.className = "app";
+          card.href = app.href;
 
-          a.appendChild(title);
-          a.appendChild(description);
-          a.appendChild(hostLabel);
-          container.appendChild(a);
+          titleWrap.appendChild(title);
+          badge.appendChild(dot);
+          badge.appendChild(badgeText);
+          header.appendChild(titleWrap);
+          header.appendChild(badge);
+          card.appendChild(header);
+          card.appendChild(description);
+          card.appendChild(summary);
+          card.appendChild(host);
+          appContainer.appendChild(card);
         });
       }
-      fetch("/ourbox-apps.json", { cache: "no-store" })
-        .then(function(response) {
-          if (!response.ok) {
-            throw new Error("missing generated app list");
-          }
-          return response.json();
-        })
-        .then(function(payload) {
-          if (!payload || !Array.isArray(payload.apps) || payload.apps.length === 0) {
-            throw new Error("generated app list is empty");
-          }
-          renderApps(payload.apps);
-        })
-        .catch(function() {
-          renderApps(fallbackApps);
-        });
-      document.getElementById("footer").textContent = host;
+
+      function setRefreshStatus(message) {
+        refreshStatus.textContent = message;
+      }
+
+      function checkedAtLabel(checkedAt) {
+        if (!checkedAt) {
+          return "Live app status unavailable.";
+        }
+        var stamp = new Date(checkedAt);
+        if (Number.isNaN(stamp.getTime())) {
+          return "Live app status refreshed.";
+        }
+        return "Last checked " + stamp.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+      }
+
+      function loadStaticApps() {
+        return fetch(appsUrl, { cache: "no-store" })
+          .then(function(response) {
+            if (!response.ok) {
+              throw new Error("missing generated app list");
+            }
+            return response.json();
+          })
+          .then(function(payload) {
+            if (!payload || !Array.isArray(payload.apps)) {
+              throw new Error("generated app list is invalid");
+            }
+            return payload.apps;
+          });
+      }
+
+      function loadStatusApps() {
+        return fetch(appStatusUrl, { cache: "no-store" })
+          .then(function(response) {
+            if (!response.ok) {
+              throw new Error("missing landing status endpoint");
+            }
+            return response.json();
+          })
+          .then(function(payload) {
+            if (!payload || !Array.isArray(payload.apps)) {
+              throw new Error("landing status payload is invalid");
+            }
+            return payload;
+          });
+      }
+
+      function renderUnknownApps(apps, message) {
+        renderApps(
+          apps.map(function(app) {
+            return {
+              id: app.id,
+              name: app.name,
+              description: app.description,
+              host: app.host,
+              path: app.path,
+              status: "unknown",
+              status_label: "Unknown",
+              status_summary: "Live app status unavailable.",
+            };
+          })
+        );
+        setRefreshStatus(message);
+      }
+
+      function refresh(useFallback) {
+        return loadStatusApps()
+          .then(function(payload) {
+            renderApps(payload.apps);
+            setRefreshStatus(checkedAtLabel(payload.checked_at));
+          })
+          .catch(function() {
+            if (useFallback === false) {
+              return;
+            }
+            return loadStaticApps()
+              .then(function(apps) {
+                renderUnknownApps(apps, "Live app status unavailable.");
+              })
+              .catch(function() {
+                renderUnknownApps(fallbackApps, "Generated app list unavailable.");
+              });
+          });
+      }
+
+      document.getElementById("box-host").textContent = boxHost;
+      document.getElementById("footer").textContent = boxHost;
+      refresh(true);
+      setInterval(function() {
+        refresh(false);
+      }, pollMs);
     </script>
   </body>
 </html>
