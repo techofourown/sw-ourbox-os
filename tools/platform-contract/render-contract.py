@@ -254,6 +254,83 @@ def selected_application_route_specs(
     return route_specs
 
 
+def selected_application_landing_specs(
+    catalog: dict,
+    selected_app_ids: list[str],
+    box_host: str,
+    *,
+    catalog_path: Path | None = None,
+) -> list[dict[str, str]]:
+    app_by_id = {str(app["id"]): app for app in catalog["apps"]}
+    landing_specs: list[dict[str, str]] = []
+    for app_id in selected_app_ids:
+        app = app_by_id[app_id]
+        if bool(app.get("default_backend", False)):
+            continue
+        missing_keys = [key for key in ("display_name", "description", "host_template") if key not in app]
+        if missing_keys:
+            location = f" at {catalog_path}" if catalog_path else ""
+            raise SystemExit(
+                f"application catalog{location} app {app_id!r} is missing required landing keys: {', '.join(missing_keys)}"
+            )
+        landing_specs.append(
+            {
+                "id": app_id,
+                "name": str(app["display_name"]),
+                "description": str(app["description"]),
+                "host": str(app["host_template"]).format(box_host=box_host),
+                "path": str(app.get("path", "/")),
+            }
+        )
+    return landing_specs
+
+
+def legacy_landing_specs(selected_app_ids: list[str], box_host: str) -> list[dict[str, str]]:
+    app_specs = [
+        {
+            "id": "dufs",
+            "name": "Files",
+            "description": "Upload, download, and share files.",
+            "host": f"files.{box_host}",
+            "path": "/",
+        },
+        {
+            "id": "flatnotes",
+            "name": "Notes",
+            "description": "Write and organize markdown notes.",
+            "host": f"notes.{box_host}",
+            "path": "/",
+        },
+        {
+            "id": "todo-bloom",
+            "name": "Todo",
+            "description": "Plan your day with clarity.",
+            "host": f"todo.{box_host}",
+            "path": "/",
+        },
+    ]
+    selected = set(selected_app_ids)
+    return [app for app in app_specs if app["id"] in selected]
+
+
+def landing_assets_data(box_host: str, apps: list[dict[str, str]]) -> dict[str, LiteralStr]:
+    return {
+        "ourbox-apps.json": LiteralStr(
+            json.dumps(
+                {
+                    "schema": 1,
+                    "kind": "ourbox-landing-app-list",
+                    "box_host": box_host,
+                    "apps": apps,
+                },
+                indent=2,
+                sort_keys=True,
+            )
+            + "\n"
+        )
+    }
+
+
 def resolve_primary_image_ref(app: dict, image_refs: dict[str, str], *, catalog_path: Path | None = None) -> str:
     image_names = app.get("image_names")
     if not isinstance(image_names, list) or not image_names:
@@ -573,6 +650,7 @@ def emit_static_http_app(
     app: dict,
     image_refs: dict[str, str],
     catalog_path: Path | None,
+    extra_assets: dict[str, LiteralStr] | None = None,
 ) -> None:
     app_id = str(app["id"])
     renderer = str(app.get("renderer", "")).strip()
@@ -589,6 +667,9 @@ def emit_static_http_app(
         asset_dir = contract_root / asset_dir_name
         if asset_dir.is_dir():
             configmap_name = f"{service_name}-assets"
+            asset_data = load_assets(asset_dir)
+            if extra_assets:
+                asset_data.update(extra_assets)
             yaml_dump(
                 manifests_dir / f"{service_name}-configmap.yaml",
                 configmap(
@@ -600,7 +681,7 @@ def emit_static_http_app(
                     storage_class,
                     name=configmap_name,
                     component=configmap_name,
-                    data=load_assets(asset_dir),
+                    data=asset_data,
                 ),
             )
             volumes = [{"name": "assets", "configMap": {"name": configmap_name}}]
@@ -782,6 +863,7 @@ def emit_application_manifests(
     app_by_id: dict[str, dict],
     image_refs: dict[str, str],
     catalog_path: Path | None,
+    landing_assets: dict[str, LiteralStr] | None = None,
 ) -> None:
     for app_id in selected_app_ids:
         app = app_by_id[app_id]
@@ -799,6 +881,7 @@ def emit_application_manifests(
                 app=app,
                 image_refs=image_refs,
                 catalog_path=catalog_path,
+                extra_assets=landing_assets if app_id == "landing" else None,
             )
             continue
         if renderer == "dufs":
@@ -872,6 +955,12 @@ def main() -> int:
             args.box_host,
             catalog_path=application_catalog_path,
         )
+        landing_apps = selected_application_landing_specs(
+            application_catalog,
+            selected_app_ids,
+            args.box_host,
+            catalog_path=application_catalog_path,
+        )
         application_catalog_id = str(application_catalog["catalog_id"])
         application_catalog_name = str(application_catalog["catalog_name"])
     else:
@@ -919,6 +1008,7 @@ def main() -> int:
                 "default_backend": False,
             },
         ]
+        landing_apps = legacy_landing_specs(selected_app_ids, args.box_host)
         application_catalog_id = profile_env["OURBOX_PLATFORM_PROFILE"]
         application_catalog_name = profile_env["OURBOX_PLATFORM_PROFILE_DESCRIPTION"]
         app_by_id = {}
@@ -996,6 +1086,7 @@ def main() -> int:
             app_by_id=app_by_id,
             image_refs=image_refs,
             catalog_path=application_catalog_path,
+            landing_assets=landing_assets_data(args.box_host, landing_apps),
         )
 
     yaml_dump(

@@ -7,7 +7,11 @@ OUT_DIR_A="${OUT_BASE}/demo-apps-a"
 OUT_DIR_B="${OUT_BASE}/demo-apps-b"
 OUT_DIR_SUBSET_A="${OUT_BASE}/demo-apps-subset-a"
 OUT_DIR_SUBSET_B="${OUT_BASE}/demo-apps-subset-b"
+OUT_DIR_MERGED="${OUT_BASE}/demo-apps-merged"
 SELECTED_APPS_FILE="${OUT_BASE}/selected-apps.json"
+MERGED_SELECTED_APPS_FILE="${OUT_BASE}/selected-apps-merged.json"
+MERGED_CATALOG_FILE="${OUT_BASE}/catalog-merged.json"
+MERGED_IMAGES_LOCK_FILE="${OUT_BASE}/images-lock-merged.json"
 IDENTITY_CONTRACT_DIR="${OUT_BASE}/identity-contract"
 trap 'rm -rf "${OUT_BASE}"' EXIT
 
@@ -67,6 +71,92 @@ EOF
 render_demo_apps "${OUT_DIR_SUBSET_A}" "${SELECTED_APPS_FILE}"
 render_demo_apps "${OUT_DIR_SUBSET_B}" "${SELECTED_APPS_FILE}"
 
+python3 - <<'PY' \
+  "${ROOT}/platform-contract/profiles/demo-apps/catalog.json" \
+  "${ROOT}/platform-contract/profiles/demo-apps/images.lock.json" \
+  "${MERGED_CATALOG_FILE}" \
+  "${MERGED_IMAGES_LOCK_FILE}"
+import json
+import sys
+from pathlib import Path
+
+demo_catalog = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+demo_lock = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+ourbox_chat_app = {
+    "id": "ourbox-chat",
+    "app_uid": "techofourown/ourbox-chat",
+    "display_name": "OurBox Chat",
+    "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
+    "renderer": "static-http",
+    "service_name": "ourbox-chat",
+    "service_port": 8080,
+    "host_template": "chat.{box_host}",
+    "path": "/",
+    "expected_status": 200,
+    "body_marker": "OurBox Chat",
+    "route_description": "ourbox-chat-root",
+    "default_backend": False,
+    "image_names": ["ourbox-chat"],
+}
+ourbox_chat_image = {
+    "name": "ourbox-chat",
+    "ref": "ghcr.io/techofourown/sw-ourbox-apps-chat/ourbox-chat@sha256:" + ("7" * 64),
+    "used_by": ["ourbox-chat"],
+}
+
+merged_catalog = dict(demo_catalog)
+merged_catalog["catalog_id"] = "merged-smoke"
+merged_catalog["catalog_name"] = "Merged Smoke Catalog"
+merged_catalog["catalog_description"] = "Validation-only merged catalog including OurBox Chat."
+merged_catalog["apps"] = list(demo_catalog["apps"]) + [ourbox_chat_app]
+merged_catalog["default_app_ids"] = [
+    "landing",
+    "todo-bloom",
+    "dufs",
+    "flatnotes",
+    "ourbox-chat",
+]
+
+merged_lock = {"schema": demo_lock["schema"], "profile": "merged-smoke", "images": list(demo_lock["images"]) + [ourbox_chat_image]}
+
+Path(sys.argv[3]).write_text(json.dumps(merged_catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+Path(sys.argv[4]).write_text(json.dumps(merged_lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
+cat > "${MERGED_SELECTED_APPS_FILE}" <<'EOF'
+{
+  "schema": 1,
+  "kind": "ourbox-selected-applications",
+  "catalog_id": "merged-smoke",
+  "selection_mode": "custom",
+  "selected_app_ids": [
+    "landing",
+    "todo-bloom",
+    "dufs",
+    "flatnotes",
+    "ourbox-chat"
+  ]
+}
+EOF
+
+OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
+OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
+OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os \
+OURBOX_PLATFORM_CONTRACT_REVISION="${REVISION}" \
+OURBOX_PLATFORM_CONTRACT_VERSION="${VERSION}" \
+OURBOX_PLATFORM_CONTRACT_CREATED="${CREATED}" \
+python3 "${ROOT}/tools/platform-contract/render-contract.py" \
+  --contract-root "${ROOT}/platform-contract" \
+  --output-dir "${OUT_DIR_MERGED}" \
+  --profile demo-apps \
+  --application-catalog "${MERGED_CATALOG_FILE}" \
+  --images-lock-file "${MERGED_IMAGES_LOCK_FILE}" \
+  --selected-apps-file "${MERGED_SELECTED_APPS_FILE}" \
+  --box-host "validate.ourbox.local" \
+  --tls-mode "lan-http" \
+  --ingress-class "traefik" \
+  --storage-class "local-path"
+
 diff -ru "${OUT_DIR_A}" "${OUT_DIR_B}"
 diff -ru "${OUT_DIR_SUBSET_A}" "${OUT_DIR_SUBSET_B}"
 
@@ -76,6 +166,9 @@ python3 "${ROOT}/tools/platform-contract/lint-rendered-contract.py" \
 python3 "${ROOT}/tools/platform-contract/lint-rendered-contract.py" \
   --contract-root "${ROOT}/platform-contract" \
   --render-dir "${OUT_DIR_SUBSET_A}"
+python3 "${ROOT}/tools/platform-contract/lint-rendered-contract.py" \
+  --contract-root "${ROOT}/platform-contract" \
+  --render-dir "${OUT_DIR_MERGED}"
 
 [[ ! -f "${OUT_DIR_SUBSET_A}/manifests/22-todo-bloom-deployment.yaml" ]] || {
   echo "selected-app subset render unexpectedly included todo-bloom" >&2
@@ -85,6 +178,53 @@ python3 "${ROOT}/tools/platform-contract/lint-rendered-contract.py" \
   echo "selected-app subset render unexpectedly included flatnotes" >&2
   exit 1
 }
+
+python3 - <<'PY' "${OUT_DIR_SUBSET_A}/manifests/landing-configmap.yaml"
+import json
+import sys
+from pathlib import Path
+
+import yaml
+
+path = Path(sys.argv[1])
+config = yaml.safe_load(path.read_text(encoding="utf-8"))
+payload = json.loads(config["data"]["ourbox-apps.json"])
+apps = payload["apps"]
+if apps != [
+    {
+        "description": "Simple file browser rooted on the shared data volume.",
+        "host": "files.validate.ourbox.local",
+        "id": "dufs",
+        "name": "Dufs",
+        "path": "/",
+    }
+]:
+    raise SystemExit(f"unexpected landing app list for subset render: {apps!r}")
+PY
+
+python3 - <<'PY' "${OUT_DIR_MERGED}/manifests/landing-configmap.yaml"
+import json
+import sys
+from pathlib import Path
+
+import yaml
+
+path = Path(sys.argv[1])
+config = yaml.safe_load(path.read_text(encoding="utf-8"))
+payload = json.loads(config["data"]["ourbox-apps.json"])
+apps = payload["apps"]
+chat_apps = [app for app in apps if app["id"] == "ourbox-chat"]
+if chat_apps != [
+    {
+        "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
+        "host": "chat.validate.ourbox.local",
+        "id": "ourbox-chat",
+        "name": "OurBox Chat",
+        "path": "/",
+    }
+]:
+    raise SystemExit(f"unexpected landing chat entry for merged render: {chat_apps!r}")
+PY
 
 mkdir -p "${IDENTITY_CONTRACT_DIR}"
 cp -a "${ROOT}/platform-contract/." "${IDENTITY_CONTRACT_DIR}/"
