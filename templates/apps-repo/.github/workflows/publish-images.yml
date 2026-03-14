@@ -1,0 +1,22 @@
+name: Publish Application Images
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build images
+        run: |
+          echo "Replace with repo-specific build steps for one or more apps"
+      - name: Publish images
+        run: |
+          echo "Replace with OCI publish steps and publish-record output"

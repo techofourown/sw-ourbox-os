@@ -49,12 +49,33 @@ cli_base() {
   basename "${1%% *}"
 }
 
-CLI="${CONTAINER_CLI:-$(pick_cli || true)}"
-[[ -n "${CLI}" ]] || die "No container CLI found (install docker/nerdctl/podman)"
-log "Using container CLI: ${CLI}"
+CRANE_BIN="$(command -v crane || true)"
+if [[ -n "${CRANE_BIN}" ]]; then
+  log "Using crane for image archive pulls: ${CRANE_BIN}"
+  CLI=""
+else
+  CLI="${CONTAINER_CLI:-$(pick_cli || true)}"
+  [[ -n "${CLI}" ]] || die "No container CLI found (install crane/docker/nerdctl/podman)"
+  log "Using container CLI: ${CLI}"
+fi
 
+podman_graphroot=""
+podman_runroot=""
 build_dir="$(mktemp -d)"
-trap 'rm -rf "${build_dir}"' EXIT
+
+cleanup() {
+  rm -rf "${build_dir:-}" "${podman_graphroot:-}" "${podman_runroot:-}"
+}
+trap cleanup EXIT
+
+if [[ "$(cli_base "${CLI}")" == "podman" ]]; then
+  # The shared rootless overlay store on the airgap builder can produce
+  # intermittent "reading blob ... no such file or directory" failures when
+  # saving some multi-layer archives. Use an isolated transient store with vfs
+  # so each bundle build operates on clean storage.
+  podman_graphroot="$(mktemp -d)"
+  podman_runroot="$(mktemp -d)"
+fi
 
 mkdir -p "${build_dir}/k3s" "${build_dir}/platform/images"
 
@@ -123,6 +144,12 @@ pull_and_save_image() {
   local image="$1"
   local tar_path="$2"
   local base
+
+  if [[ -n "${CRANE_BIN}" ]]; then
+    "${CRANE_BIN}" --platform "linux/${ARCH}" pull "${image}" "${tar_path}"
+    return 0
+  fi
+
   base="$(cli_base "${CLI}")"
 
   case "${base}" in
@@ -135,8 +162,16 @@ pull_and_save_image() {
       fi
       ;;
     podman)
-      ${CLI} pull --arch="${ARCH}" --os=linux "${image}"
-      ${CLI} save -o "${tar_path}" "${image}"
+      ${CLI} \
+        --root "${podman_graphroot}" \
+        --runroot "${podman_runroot}" \
+        --storage-driver=vfs \
+        pull --arch="${ARCH}" --os=linux "${image}"
+      ${CLI} \
+        --root "${podman_graphroot}" \
+        --runroot "${podman_runroot}" \
+        --storage-driver=vfs \
+        save --format docker-archive -o "${tar_path}" "${image}"
       ;;
     *)
       die "Unsupported container CLI: ${CLI}"
@@ -172,6 +207,9 @@ EOF_MANIFEST
 
 cp -a "${render_dir}/images.lock.json" "${build_dir}/platform/images.lock.json"
 cp -a "${ROOT}/platform-contract/profiles/demo-apps/profile.env" "${build_dir}/platform/profile.env"
+if [[ -f "${ROOT}/platform-contract/profiles/demo-apps/catalog.json" ]]; then
+  cp -a "${ROOT}/platform-contract/profiles/demo-apps/catalog.json" "${build_dir}/platform/catalog.json"
+fi
 
 cat > "${DIST_DIR}/airgap-platform.meta.env" <<EOF_META
 OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os

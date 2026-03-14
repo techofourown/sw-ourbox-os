@@ -15,6 +15,7 @@ TRAEFIK_NAMESPACE="kube-system"
 TRAEFIK_SELECTOR="app.kubernetes.io/name=traefik"
 TRAEFIK_LOG_SINCE="10m"
 SKIP_TRAEFIK_LOG_CHECK=0
+ROUTE_BASE_URL="http://127.0.0.1"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -72,6 +73,11 @@ while [[ $# -gt 0 ]]; do
       SKIP_TRAEFIK_LOG_CHECK=1
       shift
       ;;
+    --route-base-url)
+      [[ $# -ge 2 ]] || die "--route-base-url requires a value"
+      ROUTE_BASE_URL="$2"
+      shift 2
+      ;;
     *)
       die "unknown argument: $1"
       ;;
@@ -84,7 +90,7 @@ done
 [[ -f "${KUBECONFIG_PATH}" ]] || die "kubeconfig not found: ${KUBECONFIG_PATH}"
 [[ -f "${RENDER_DIR}/render.env" ]] || die "render.env not found in ${RENDER_DIR}"
 [[ -f "${CONTRACT_DIR}/contract.env" ]] || die "contract.env not found in ${CONTRACT_DIR}"
-command -v curl >/dev/null 2>&1 || die "curl is required for route verification"
+command -v python3 >/dev/null 2>&1 || die "python3 is required for route verification"
 
 kubectl_cmd() {
   "${K3S_BIN}" kubectl --kubeconfig "${KUBECONFIG_PATH}" "$@"
@@ -162,6 +168,7 @@ wait_for_contract_services() {
 verify_contract_routes() {
   local routes_file="$1"
   local host path expected_status body_marker description status body_file
+  local request_base="${ROUTE_BASE_URL%/}"
   body_file="$(mktemp)"
   trap 'rm -f "${body_file}"' RETURN
   while IFS=$'\t' read -r host path expected_status body_marker description; do
@@ -170,7 +177,36 @@ verify_contract_routes() {
     status=""
     for _ in $(seq 1 60); do
       : > "${body_file}"
-      status="$(curl -sS --max-time 5 -o "${body_file}" -w '%{http_code}' -H "Host: ${host}" "http://127.0.0.1${path}" || true)"
+      status="$(
+        python3 - <<'PY' "${request_base}" "${host}" "${path}" "${body_file}"
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+base_url, host, path, body_path = sys.argv[1:]
+request = urllib.request.Request(
+    f"{base_url}{path}",
+    headers={"Host": host},
+)
+target = Path(body_path)
+
+try:
+    with urllib.request.urlopen(request, timeout=5) as response:
+        body = response.read()
+        status = response.getcode()
+except urllib.error.HTTPError as error:
+    body = error.read()
+    status = error.code
+except Exception:
+    target.write_bytes(b"")
+    print("000")
+    raise SystemExit(0)
+
+target.write_bytes(body)
+print(status)
+PY
+      )"
       if [[ "${status}" == "${expected_status}" ]] && grep -Fqi -- "${body_marker}" "${body_file}"; then
         break
       fi

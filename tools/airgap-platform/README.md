@@ -34,6 +34,13 @@ The artifact is architecture-specific, but the source code is not split by
 architecture. `arm64` and `amd64` both use the same scripts here with a different
 `ARCH` value.
 
+User-facing naming note:
+
+- the transport artifact is still named `airgap-platform`
+- the user-facing meaning is now “application catalog bundle”
+- a host-side installer may then choose either the catalog defaults, all apps,
+  or a custom app subset from that catalog
+
 Official publication is also bound to the exact published platform-contract
 artifact identity via:
 
@@ -75,6 +82,11 @@ The tarball contains:
 
 `platform/` includes the rendered `images.lock.json` and
 `platform/profile.env` from the current `demo-apps` build input.
+
+When the profile carries application-catalog metadata, `platform/` also
+includes:
+
+- `catalog.json`
 
 `manifest.env` is self-describing and includes:
 

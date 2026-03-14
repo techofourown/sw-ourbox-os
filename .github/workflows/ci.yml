@@ -44,6 +44,12 @@ jobs:
       - name: Validate rendered platform contract
         run: bash tools/platform-contract/validate.sh
 
+      - name: Run render-contract negative tests
+        run: bash tools/platform-contract/test-render-contract-negative.sh
+
+      - name: Run verify-runtime smoke
+        run: bash tools/platform-contract/check-verify-runtime-smoke.sh
+
       - name: Run platform-contract promote tests
         run: bash tools/platform-contract/test-promote.sh
 

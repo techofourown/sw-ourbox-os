@@ -1,0 +1,22 @@
+name: Publish Application Catalog Bundle
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Render catalog bundle
+        run: |
+          bash scripts/render-catalog-bundle.sh
+      - name: Publish catalog bundle
+        run: |
+          echo "Replace with bundle publish and catalog-row update steps"
