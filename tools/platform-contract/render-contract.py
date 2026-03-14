@@ -2,6 +2,7 @@
 import argparse
 import json
 import os
+import re
 import shutil
 from pathlib import Path
 
@@ -32,6 +33,9 @@ METADATA_KEYS = (
     "OURBOX_PLATFORM_CONTRACT_CREATED",
     "OURBOX_PLATFORM_CONTRACT_DIGEST",
 )
+
+CATALOG_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+SELECTION_MODES = {"catalog-defaults", "all-apps", "custom"}
 
 
 def load_env_file(path: Path) -> dict[str, str]:
@@ -99,19 +103,39 @@ def load_application_catalog(profile_dir: Path, catalog_override: str | None) ->
         raise SystemExit(f"application catalog at {catalog_path} must declare schema=1")
     if catalog.get("kind") != "ourbox-application-catalog":
         raise SystemExit(f"application catalog at {catalog_path} must declare kind=ourbox-application-catalog")
+    catalog_id = str(catalog.get("catalog_id", "")).strip()
+    catalog_name = str(catalog.get("catalog_name", "")).strip()
+    if not catalog_id:
+        raise SystemExit(f"application catalog at {catalog_path} must declare catalog_id")
+    if not CATALOG_ID_RE.fullmatch(catalog_id):
+        raise SystemExit(
+            f"application catalog at {catalog_path} declares invalid catalog_id {catalog_id!r}; expected lowercase machine token"
+        )
+    if not catalog_name:
+        raise SystemExit(f"application catalog at {catalog_path} must declare catalog_name")
 
     apps = catalog.get("apps")
     if not isinstance(apps, list) or not apps:
         raise SystemExit(f"application catalog at {catalog_path} must declare a non-empty apps list")
 
     app_ids: list[str] = []
+    app_uids: set[str] = set()
+    default_backends = 0
     for app in apps:
         app_id = str(app.get("id", "")).strip()
+        app_uid = str(app.get("app_uid", "")).strip()
         if not app_id:
             raise SystemExit(f"application catalog at {catalog_path} contains an app without an id")
         if app_id in app_ids:
             raise SystemExit(f"application catalog at {catalog_path} contains a duplicate app id: {app_id}")
+        if not app_uid:
+            raise SystemExit(f"application catalog at {catalog_path} app {app_id!r} must declare app_uid")
+        if app_uid in app_uids:
+            raise SystemExit(f"application catalog at {catalog_path} contains a duplicate app_uid: {app_uid}")
         app_ids.append(app_id)
+        app_uids.add(app_uid)
+        if bool(app.get("default_backend", False)):
+            default_backends += 1
 
     default_app_ids = catalog.get("default_app_ids", [])
     if not isinstance(default_app_ids, list) or not default_app_ids:
@@ -121,6 +145,8 @@ def load_application_catalog(profile_dir: Path, catalog_override: str | None) ->
         raise SystemExit(
             f"application catalog at {catalog_path} declares unknown default_app_ids: {', '.join(unknown_defaults)}"
         )
+    if default_backends > 1:
+        raise SystemExit(f"application catalog at {catalog_path} declares more than one default_backend app")
 
     return catalog, catalog_path
 
@@ -167,6 +193,10 @@ def resolve_selected_apps(catalog: dict, selected_apps_path: str | None) -> tupl
     selection_mode = str(data.get("selection_mode", "")).strip()
     if not selection_mode:
         raise SystemExit(f"selected-apps file at {selected_path} must declare selection_mode")
+    if selection_mode not in SELECTION_MODES:
+        raise SystemExit(
+            f"selected-apps file at {selected_path} declares unsupported selection_mode {selection_mode!r}"
+        )
 
     selected_app_ids = data.get("selected_app_ids")
     if not isinstance(selected_app_ids, list) or not selected_app_ids:

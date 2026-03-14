@@ -93,6 +93,60 @@ render_expect_failure \
   "${contract_bad_defaults}" \
   "${TMP_ROOT}/out-bad-defaults"
 
+contract_bad_catalog_id="${TMP_ROOT}/contract-bad-catalog-id"
+prepare_contract_root "${contract_bad_catalog_id}"
+python3 - <<'PY' "${contract_bad_catalog_id}/profiles/demo-apps/catalog.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+catalog = json.loads(path.read_text(encoding="utf-8"))
+catalog["catalog_id"] = "Demo Apps"
+path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+render_expect_failure \
+  bad-catalog-id \
+  "declares invalid catalog_id" \
+  "${contract_bad_catalog_id}" \
+  "${TMP_ROOT}/out-bad-catalog-id"
+
+contract_duplicate_app_uid="${TMP_ROOT}/contract-duplicate-app-uid"
+prepare_contract_root "${contract_duplicate_app_uid}"
+python3 - <<'PY' "${contract_duplicate_app_uid}/profiles/demo-apps/catalog.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+catalog = json.loads(path.read_text(encoding="utf-8"))
+catalog["apps"][1]["app_uid"] = catalog["apps"][0]["app_uid"]
+path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+render_expect_failure \
+  duplicate-app-uid \
+  "contains a duplicate app_uid" \
+  "${contract_duplicate_app_uid}" \
+  "${TMP_ROOT}/out-duplicate-app-uid"
+
+contract_multiple_default_backends="${TMP_ROOT}/contract-multiple-default-backends"
+prepare_contract_root "${contract_multiple_default_backends}"
+python3 - <<'PY' "${contract_multiple_default_backends}/profiles/demo-apps/catalog.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+catalog = json.loads(path.read_text(encoding="utf-8"))
+catalog["apps"][1]["default_backend"] = True
+path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+render_expect_failure \
+  multiple-default-backends \
+  "declares more than one default_backend app" \
+  "${contract_multiple_default_backends}" \
+  "${TMP_ROOT}/out-multiple-default-backends"
+
 contract_bad_selected="${TMP_ROOT}/contract-bad-selected"
 prepare_contract_root "${contract_bad_selected}"
 cat > "${TMP_ROOT}/selected-apps-unknown.json" <<'EOF_SELECTED'
@@ -113,6 +167,24 @@ render_expect_failure \
   "${contract_bad_selected}" \
   "${TMP_ROOT}/out-bad-selected" \
   --selected-apps-file "${TMP_ROOT}/selected-apps-unknown.json"
+
+cat > "${TMP_ROOT}/selected-apps-bad-mode.json" <<'EOF_SELECTED_BAD_MODE'
+{
+  "schema": 1,
+  "kind": "ourbox-selected-applications",
+  "catalog_id": "demo-apps",
+  "selection_mode": "surprise-mode",
+  "selected_app_ids": [
+    "landing"
+  ]
+}
+EOF_SELECTED_BAD_MODE
+render_expect_failure \
+  bad-selected-mode \
+  "declares unsupported selection_mode" \
+  "${contract_bad_selected}" \
+  "${TMP_ROOT}/out-bad-selected-mode" \
+  --selected-apps-file "${TMP_ROOT}/selected-apps-bad-mode.json"
 
 contract_bad_images="${TMP_ROOT}/contract-bad-images"
 prepare_contract_root "${contract_bad_images}"
