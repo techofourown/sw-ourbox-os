@@ -8,6 +8,7 @@ import subprocess
 import tempfile
 import textwrap
 import unittest
+import uuid
 from pathlib import Path
 
 
@@ -114,6 +115,72 @@ class ReleaseControlTests(unittest.TestCase):
         )
         stub_path.chmod(0o755)
         return stub_path
+
+    def write_stub_gh(self, tempdir: Path) -> Path:
+        stub_path = tempdir / "gh"
+        stub_path.write_text(
+            textwrap.dedent(
+                """\
+                #!/usr/bin/env bash
+                set -euo pipefail
+                printf '%s\\n' "$*" >> "${STUB_GH_LOG}"
+                if [[ "${1:-}" == "run" && "${2:-}" == "list" ]]; then
+                  printf '%s\\n' "${STUB_GH_RUN_LIST_JSON:-[]}"
+                  exit 0
+                fi
+                echo "unexpected gh command: $*" >&2
+                exit 95
+                """
+            ),
+            encoding="utf-8",
+        )
+        stub_path.chmod(0o755)
+        return stub_path
+
+    def run_resolve_promotion_context(
+        self,
+        *,
+        release_tag: str,
+        run_list: list[dict],
+        timeout_seconds: str = "0",
+        poll_seconds: str = "0",
+    ) -> tuple[subprocess.CompletedProcess[str], str]:
+        with tempfile.TemporaryDirectory(prefix="release-control-shell-test-") as tmpdir:
+            tmp = Path(tmpdir)
+            stub_dir = tmp / "bin"
+            stub_dir.mkdir()
+            self.write_stub_gh(stub_dir)
+            output_path = tmp / "github-output.txt"
+            env = os.environ.copy()
+            env.update(
+                {
+                    "PATH": f"{stub_dir}:{env['PATH']}",
+                    "STUB_GH_LOG": str(tmp / "gh.log"),
+                    "STUB_GH_RUN_LIST_JSON": json.dumps(run_list),
+                    "GITHUB_EVENT_NAME": "release",
+                    "GITHUB_REPOSITORY": "techofourown/sw-ourbox-os",
+                    "RELEASE_TAG": release_tag,
+                    "RELEASE_IS_DRAFT": "false",
+                    "RELEASE_IS_PRERELEASE": "false",
+                    "CANDIDATE_LOOKUP_TIMEOUT_SECONDS": timeout_seconds,
+                    "CANDIDATE_LOOKUP_POLL_SECONDS": poll_seconds,
+                }
+            )
+            result = subprocess.run(
+                [
+                    str(ROOT / "tools" / "release-control" / "resolve-promotion-context.sh"),
+                    "versioned",
+                    "Airgap Platform",
+                    str(output_path),
+                ],
+                cwd=ROOT,
+                env=env,
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            output_text = output_path.read_text(encoding="utf-8") if output_path.exists() else ""
+            return result, output_text
 
     def run_main(self, argv: list[str]) -> int:
         return module.main(argv)
@@ -554,6 +621,60 @@ class ReleaseControlTests(unittest.TestCase):
                 self.assertTrue((deploy_dir / f"{role_prefix}-artifact.promote.json").is_file())
                 log_text = log_path.read_text(encoding="utf-8")
                 self.assertNotIn(f"pull {provenance['artifacts'][role_prefix]['artifact_pinned_ref']}", log_text)
+
+    def test_resolve_promotion_context_defers_when_matching_candidate_run_is_pending(self) -> None:
+        release_tag = f"codex-shell-test-{uuid.uuid4().hex[:12]}"
+        source_commit = subprocess.check_output(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+            text=True,
+        ).strip()
+        subprocess.run(["git", "-C", str(ROOT), "tag", "-f", release_tag, "HEAD"], check=True)
+        try:
+            result, output_text = self.run_resolve_promotion_context(
+                release_tag=release_tag,
+                run_list=[
+                    {
+                        "databaseId": 123456,
+                        "headSha": source_commit,
+                        "status": "in_progress",
+                        "conclusion": "",
+                        "createdAt": "2026-03-14T21:14:57Z",
+                    }
+                ],
+            )
+        finally:
+            subprocess.run(["git", "-C", str(ROOT), "tag", "-d", release_tag], check=True, capture_output=True)
+
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("skip=true", output_text)
+        self.assertIn("candidate_run_id=", output_text)
+
+    def test_resolve_promotion_context_fails_when_matching_candidate_run_completed_unsuccessfully(self) -> None:
+        release_tag = f"codex-shell-test-{uuid.uuid4().hex[:12]}"
+        source_commit = subprocess.check_output(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
+            text=True,
+        ).strip()
+        subprocess.run(["git", "-C", str(ROOT), "tag", "-f", release_tag, "HEAD"], check=True)
+        try:
+            result, output_text = self.run_resolve_promotion_context(
+                release_tag=release_tag,
+                run_list=[
+                    {
+                        "databaseId": 123457,
+                        "headSha": source_commit,
+                        "status": "completed",
+                        "conclusion": "failure",
+                        "createdAt": "2026-03-14T21:14:57Z",
+                    }
+                ],
+            )
+        finally:
+            subprocess.run(["git", "-C", str(ROOT), "tag", "-d", release_tag], check=True, capture_output=True)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(output_text, "")
+        self.assertIn("completed unsuccessfully", result.stdout + result.stderr)
 
 
 if __name__ == "__main__":
