@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "OurBox Application Catalog Bundle Publish Record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "kind",
+    "catalog_id",
+    "catalog_name",
+    "artifact_ref",
+    "artifact_digest",
+    "github_sha",
+    "github_run_id",
+    "github_run_attempt"
+  ],
+  "properties": {
+    "schema": {
+      "const": 1
+    },
+    "kind": {
+      "const": "ourbox-application-catalog-bundle-publish-record"
+    },
+    "catalog_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]*$"
+    },
+    "catalog_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "artifact_ref": {
+      "type": "string",
+      "pattern": "^ghcr\\.io/.+/.+@sha256:[0-9a-f]{64}$"
+    },
+    "artifact_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "github_sha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "github_run_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "github_run_attempt": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

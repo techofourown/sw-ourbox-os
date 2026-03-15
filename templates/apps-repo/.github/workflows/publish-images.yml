@@ -7,16 +7,88 @@ on:
   workflow_dispatch:
 
 jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      apps: ${{ steps.plan.outputs.apps }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: plan
+        name: Resolve publish matrix from apps-manifest.json
+        run: |
+          python3 - <<'PY' >> "${GITHUB_OUTPUT}"
+          import json
+          from pathlib import Path
+
+          manifest = json.loads(Path("apps-manifest.json").read_text(encoding="utf-8"))
+          apps = []
+          for app in manifest["apps"]:
+              apps.append(
+                  {
+                      "app_id": app["app_id"],
+                      "display_name": app["display_name"],
+                      "source_path": app["source_path"],
+                      "image_repo": app["image_repo"],
+                      "default_tag": app["default_tag"],
+                  }
+              )
+          print("apps=" + json.dumps(apps))
+          PY
+
   publish:
+    needs: plan
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        app: ${{ fromJson(needs.plan.outputs.apps) }}
     steps:
       - uses: actions/checkout@v4
-      - name: Build images
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: build
+        name: Build and publish ${{ matrix.app.app_id }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ./${{ matrix.app.source_path }}
+          push: true
+          tags: |
+            ${{ matrix.app.image_repo }}:${{ matrix.app.default_tag }}
+            ${{ matrix.app.image_repo }}:sha-${{ github.sha }}
+      - name: Write publish record
         run: |
-          echo "Replace with repo-specific build steps for one or more apps"
-      - name: Publish images
-        run: |
-          echo "Replace with OCI publish steps and publish-record output"
+          mkdir -p dist
+          DIGEST="${{ steps.build.outputs.digest }}" python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          record = {
+              "schema": 1,
+              "kind": "ourbox-application-image-publish-record",
+              "app_id": "${{ matrix.app.app_id }}",
+              "display_name": "${{ matrix.app.display_name }}",
+              "image_repo": "${{ matrix.app.image_repo }}",
+              "default_tag": "${{ matrix.app.default_tag }}",
+              "pinned_ref": "${{ matrix.app.image_repo }}@" + os.environ["DIGEST"],
+              "digest": os.environ["DIGEST"],
+              "github_sha": os.environ["GITHUB_SHA"],
+              "github_run_id": os.environ["GITHUB_RUN_ID"],
+              "github_run_attempt": os.environ["GITHUB_RUN_ATTEMPT"],
+          }
+          Path("dist/${{ matrix.app.app_id }}.publish-record.json").write_text(
+              json.dumps(record, indent=2) + "\n",
+              encoding="utf-8",
+          )
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app.app_id }}-publish-record
+          path: dist/${{ matrix.app.app_id }}.publish-record.json
