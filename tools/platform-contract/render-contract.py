@@ -806,8 +806,12 @@ def emit_static_http_app(
     asset_data: dict[str, LiteralStr] = {}
     if asset_dir_name:
         asset_dir = contract_root / asset_dir_name
-        if asset_dir.is_dir():
-            asset_data.update(load_assets(asset_dir))
+        if not asset_dir.is_dir():
+            location = f" at {catalog_path}" if catalog_path else ""
+            raise SystemExit(
+                f"application catalog{location} app {app_id!r} declares asset_dir {asset_dir_name!r} but {asset_dir} is missing"
+            )
+        asset_data.update(load_assets(asset_dir))
     if extra_assets:
         asset_data.update(extra_assets)
     if asset_data:

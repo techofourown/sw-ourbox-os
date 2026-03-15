@@ -12,6 +12,8 @@ SELECTED_APPS_FILE="${OUT_BASE}/selected-apps.json"
 MERGED_SELECTED_APPS_FILE="${OUT_BASE}/selected-apps-merged.json"
 MERGED_CATALOG_FILE="${OUT_BASE}/catalog-merged.json"
 MERGED_IMAGES_LOCK_FILE="${OUT_BASE}/images-lock-merged.json"
+BROKEN_ASSET_DIR_CATALOG_FILE="${OUT_BASE}/catalog-broken-asset-dir.json"
+BROKEN_ASSET_DIR_LOG="${OUT_BASE}/broken-asset-dir.log"
 IDENTITY_CONTRACT_DIR="${OUT_BASE}/identity-contract"
 trap 'rm -rf "${OUT_BASE}"' EXIT
 FIXTURE_APPLICATION_CATALOG_FILE="${ROOT}/platform-contract/profiles/demo-apps/catalog.json"
@@ -141,6 +143,22 @@ cat > "${MERGED_SELECTED_APPS_FILE}" <<'EOF'
 }
 EOF
 
+python3 - <<'PY' "${FIXTURE_APPLICATION_CATALOG_FILE}" "${BROKEN_ASSET_DIR_CATALOG_FILE}"
+import json
+import sys
+from pathlib import Path
+
+catalog = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+for app in catalog["apps"]:
+    if app["id"] == "landing":
+        app["asset_dir"] = "missing-landing-assets"
+        break
+else:
+    raise SystemExit("fixture catalog did not contain landing app")
+
+Path(sys.argv[2]).write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+
 OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
 OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
 OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os \
@@ -171,6 +189,33 @@ python3 "${ROOT}/tools/platform-contract/lint-rendered-contract.py" \
 python3 "${ROOT}/tools/platform-contract/lint-rendered-contract.py" \
   --contract-root "${ROOT}/platform-contract" \
   --render-dir "${OUT_DIR_MERGED}"
+
+if OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
+  OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
+  OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os \
+  OURBOX_PLATFORM_CONTRACT_REVISION="${REVISION}" \
+  OURBOX_PLATFORM_CONTRACT_VERSION="${VERSION}" \
+  OURBOX_PLATFORM_CONTRACT_CREATED="${CREATED}" \
+  python3 "${ROOT}/tools/platform-contract/render-contract.py" \
+    --contract-root "${ROOT}/platform-contract" \
+    --output-dir "${OUT_BASE}/broken-asset-dir-render" \
+    --profile demo-apps \
+    --application-catalog "${BROKEN_ASSET_DIR_CATALOG_FILE}" \
+    --selected-apps-file "${SELECTED_APPS_FILE}" \
+    --box-host "validate.ourbox.local" \
+    --tls-mode "lan-http" \
+    --ingress-class "traefik" \
+    --storage-class "local-path" \
+    > /dev/null 2> "${BROKEN_ASSET_DIR_LOG}"; then
+  echo "render-contract unexpectedly accepted a missing explicit asset_dir" >&2
+  exit 1
+fi
+
+grep -Fq "app 'landing' declares asset_dir 'missing-landing-assets'" "${BROKEN_ASSET_DIR_LOG}" || {
+  echo "render-contract did not report the missing explicit asset_dir clearly" >&2
+  cat "${BROKEN_ASSET_DIR_LOG}" >&2
+  exit 1
+}
 
 [[ ! -f "${OUT_DIR_SUBSET_A}/manifests/22-todo-bloom-deployment.yaml" ]] || {
   echo "selected-app subset render unexpectedly included todo-bloom" >&2
