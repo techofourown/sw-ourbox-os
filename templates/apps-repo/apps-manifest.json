@@ -1,13 +1,14 @@
 {
   "schema": 1,
   "kind": "ourbox-apps-collection",
-  "collection_id": "demo",
-  "display_name": "Demo Apps",
+  "collection_id": "example",
+  "display_name": "Example Apps Publisher",
   "apps": [
     {
       "app_id": "example-app",
       "display_name": "Example App",
-      "image_repo": "ghcr.io/techofourown/sw-ourbox-apps-demo/example-app",
+      "source_path": "apps/example-app",
+      "image_repo": "ghcr.io/techofourown/sw-ourbox-apps-example/example-app",
       "default_tag": "latest"
     }
   ],

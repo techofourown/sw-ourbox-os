@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "profile": "example-catalog",
+  "images": [
+    {
+      "name": "example-app",
+      "ref": "ghcr.io/techofourown/sw-ourbox-apps-example/example-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "used_by": [
+        "example-app"
+      ]
+    }
+  ]
+}

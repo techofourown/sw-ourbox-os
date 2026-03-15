@@ -119,9 +119,9 @@ These paths are stable and intentionally preserved.
 
 ---
 
-## 6. Reference contract documents
+## 6. Reference contract documents and schemas
 
-The following documents are stable human-readable contract surfaces for downstream maintainers.
+The following documents and schemas are stable contract surfaces for downstream maintainers.
 
 | Document | Purpose |
 |---|---|
@@ -129,12 +129,17 @@ The following documents are stable human-readable contract surfaces for downstre
 | `docs/reference/installer-selection-contract.md` | Shared policy for choosing installable OS payloads |
 | `docs/reference/airgap-platform-selection-contract.md` | Shared policy for choosing a contract-bound airgap-platform bundle after OS selection |
 | `docs/reference/installer-ssh-contract.md` | Shared policy for installer SSH posture |
+| `docs/reference/app-authoring-guide.md` | End-to-end authoring workflow from apps repo to catalog repo to rendered platform contract |
 | `docs/architecture/official-image-production-and-consumption.md` | High-level public model for official and custom image flows |
 | `docs/architecture/artifact-distribution-and-integration.md` | Artifact-distribution and integration model |
 | `docs/reference/artifact-publish-record-contract.md` | Machine-readable publish record contract |
 | `docs/reference/repository-layout-and-authority.md` | Repository layout, source-of-truth, and generated/output boundaries |
+| `schemas/apps-manifest.schema.json` | Stable schema for `sw-ourbox-apps-*` manifest files |
+| `schemas/application-catalog.schema.json` | Stable schema for `sw-ourbox-catalog-*` catalog definitions |
+| `schemas/application-image-publish-record.schema.json` | Stable schema for apps-repo image publish records |
+| `schemas/application-catalog-bundle-publish-record.schema.json` | Stable schema for catalog-bundle publish records |
 
-These documents are for people, not machines, but they are still contract surfaces. Downstream maintainers should rely on them when deciding what is stable.
+The documents are human-readable contract surfaces. The schemas are machine-readable contract surfaces. Downstream maintainers should rely on both when deciding what is stable.
 
 ---
 
