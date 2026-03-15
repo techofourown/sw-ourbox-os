@@ -1,0 +1,20 @@
+self-hosted-runner:
+  labels:
+    - official-heavy
+    - airgap-builder
+paths:
+  .github/workflows/airgap-platform-promote.yml:
+    ignore:
+      - 'shellcheck reported issue in this script: SC2155:.+'
+  .github/workflows/airgap-platform.yml:
+    ignore:
+      - 'shellcheck reported issue in this script: SC2086:.+'
+      - 'shellcheck reported issue in this script: SC2097:.+'
+      - 'shellcheck reported issue in this script: SC2098:.+'
+      - 'shellcheck reported issue in this script: SC2129:.+'
+  .github/workflows/install-defaults-promote.yml:
+    ignore:
+      - 'shellcheck reported issue in this script: SC2129:.+'
+  .github/workflows/platform-contract-promote.yml:
+    ignore:
+      - 'shellcheck reported issue in this script: SC2155:.+'
