@@ -28,7 +28,7 @@ It packages:
 - the `k3s` binary for one target architecture
 - the matching upstream k3s airgap image tar
 - the platform app images listed in the rendered `images.lock.json`
-- the current upstream `demo-apps` profile inputs used to build the bundle
+- the selected application-catalog inputs used to build the bundle
 
 The artifact is architecture-specific, but the source code is not split by
 architecture. `arm64` and `amd64` both use the same scripts here with a different
@@ -54,18 +54,22 @@ Checked in here and elsewhere in this repo:
 - `build.sh`, `publish.sh`, `promote.sh`
 - `versions.env` for pinned upstream k3s version
 - `platform-contract/profiles/demo-apps/profile.env`
-- `platform-contract/profiles/demo-apps/images.lock.json`
+- `platform-contract/profiles/demo-apps/{catalog.json,images.lock.json}` as
+  fixture fallback inputs for local validation
 - the platform-contract rendering and lint tooling under `tools/platform-contract/`
 
 Fetched during the build:
 
+- the published application catalog bundle selected by `OURBOX_APPLICATION_CATALOG_REF`
+  when that input is set
 - the upstream `k3s` binary for the selected architecture
 - the upstream `k3s-airgap-images-<arch>.tar`
 - each application image pinned in the rendered `images.lock.json`
 
 There is intentionally no checked-in `airgap-platform/` payload tree in this
-repository. The artifact is assembled by script from pinned repo inputs plus
-fetched upstream bytes.
+repository. The artifact is assembled by script from published catalog inputs
+plus fetched upstream bytes. The checked-in `demo-apps` catalog and lock files
+remain only as a validation fallback when no external catalog bundle is supplied.
 
 ## Output shape
 
@@ -81,7 +85,7 @@ The tarball contains:
 - `manifest.env`
 
 `platform/` includes the rendered `images.lock.json` and
-`platform/profile.env` from the current `demo-apps` build input.
+`platform/profile.env` from the selected catalog/profile build input.
 
 When the profile carries application-catalog metadata, `platform/` also
 includes:
@@ -127,9 +131,11 @@ Build:
 ```bash
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
+OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
 ARCH=arm64 ./tools/airgap-platform/build.sh
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
+OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
 ARCH=amd64 ./tools/airgap-platform/build.sh
 ```
 

@@ -281,7 +281,7 @@ Start from:
 Minimum contents:
 
 - `catalog/catalog.json`
-- `catalog/images.lock.json`
+- `catalog/image-sources.json`
 - `catalog/profile.env`
 - `scripts/render-catalog-bundle.sh`
 - `scripts/check-catalog-bundle-smoke.sh`
@@ -310,7 +310,7 @@ Required per-app integration fields:
 | `expected_status` | expected HTTP success status |
 | `body_marker` | short marker string proving the app responded correctly |
 | `route_description` | human-readable route label used in validation output |
-| `image_names` | list of image names that must exist in `images.lock.json` |
+| `image_names` | list of image names that must exist in the generated `images.lock.json` |
 
 Optional but commonly used:
 
@@ -326,9 +326,10 @@ Important behavior:
   app with runtime state.
 - `image_names[0]` is the primary image ref consumed by the platform renderer.
 
-### 4.8 Pin the image digest in `images.lock.json`
+### 4.8 Declare image source refs in `image-sources.json`
 
-Each image lock entry binds a logical image name to a digest-pinned image ref.
+This file is the authoring truth for which source ref each logical image name
+should follow when the catalog publishes.
 
 Example:
 
@@ -339,7 +340,7 @@ Example:
   "images": [
     {
       "name": "ourbox-chat",
-      "ref": "ghcr.io/techofourown/sw-ourbox-apps-chat/ourbox-chat@sha256:...",
+      "ref": "ghcr.io/techofourown/sw-ourbox-apps-chat/ourbox-chat:latest",
       "used_by": [
         "ourbox-chat"
       ]
@@ -350,9 +351,12 @@ Example:
 
 Rules:
 
-- every `ref` must be digest-pinned,
-- every `name` referenced by a catalog app must exist in `images.lock.json`,
+- every `ref` must be a clean single-line OCI ref,
+- every `name` referenced by a catalog app must exist in `image-sources.json`,
 - every `used_by` id must exist in `catalog.json`.
+
+The publish/render step resolves those refs into digest-pinned entries in the
+generated `dist/images.lock.json` and bundle-carried `images.lock.json`.
 
 ### 4.9 Update `profile.env`
 
@@ -361,6 +365,7 @@ This file is installer-facing catalog metadata. At minimum it should include:
 - `OURBOX_APPLICATION_CATALOG_ID`
 - `OURBOX_APPLICATION_CATALOG_NAME_SLUG`
 - `OURBOX_APPLICATION_CATALOG_DEFAULT_APP_IDS`
+- `OURBOX_PLATFORM_CONTRACT_DIGEST`
 
 Keep it in sync with `catalog.json`.
 
@@ -372,6 +377,9 @@ Minimum publish behavior:
   into `dist/application-catalog-bundle.tar.gz`,
 - publish that tarball to GHCR,
 - emit a machine-readable publish record.
+
+`images.lock.json` should be generated during the render/publish step rather
+than treated as the checked-in authoring truth.
 
 Schema:
 
@@ -468,7 +476,7 @@ Recommended layout:
 │   └── publish-catalog-bundle.yml
 ├── catalog/
 │   ├── catalog.json
-│   ├── images.lock.json
+│   ├── image-sources.json
 │   └── profile.env
 └── scripts/
     ├── check-catalog-bundle-smoke.sh
@@ -483,10 +491,10 @@ Catalog CI should prove:
 - `catalog.json` shape is valid,
 - `default_app_ids` all exist,
 - `app_uid` values are unique,
-- `image_names` are satisfied by `images.lock.json`,
-- every image ref is digest-pinned,
+- `image_names` are satisfied by `image-sources.json`,
+- generated `images.lock.json` is digest-pinned,
 - the rendered bundle contains the exact expected inputs,
-- referenced image digests exist in GHCR.
+- referenced image source refs resolve successfully.
 
 ### 6.2 Publish workflow expectations
 
@@ -630,8 +638,8 @@ Cause:
 
 Cause:
 
-- the image refs were tags rather than digests,
-- or the publish record was never consulted when updating `images.lock.json`.
+- the image source refs no longer resolved to the intended digest,
+- or the generated `images.lock.json` was never refreshed and republished.
 
 ## 13. Minimal supported authoring surface
 
@@ -639,7 +647,7 @@ If you want the smallest possible supported path, the minimum is:
 
 1. publish a digest-pinned OCI image from an apps repo,
 2. add a catalog entry with the required route and health metadata,
-3. add the image digest to `images.lock.json`,
+3. add the source ref to `image-sources.json`,
 4. publish the catalog bundle.
 
 That is enough for the app to be selectable and rendered into the platform

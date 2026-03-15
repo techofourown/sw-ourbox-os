@@ -9,6 +9,8 @@ DIST_DIR="${ROOT}/dist"
 VERSIONS_FILE="${ROOT}/tools/airgap-platform/versions.env"
 RENDER_SCRIPT="${ROOT}/tools/platform-contract/render-contract.py"
 LINT_SCRIPT="${ROOT}/tools/platform-contract/lint-rendered-contract.py"
+FIXTURE_APPLICATION_CATALOG_FILE="${ROOT}/platform-contract/profiles/demo-apps/catalog.json"
+FIXTURE_APPLICATION_IMAGES_LOCK_FILE="${ROOT}/platform-contract/profiles/demo-apps/images.lock.json"
 
 command -v curl >/dev/null 2>&1 || die "curl is required"
 command -v git >/dev/null 2>&1 || die "git is required (to stamp revision)"
@@ -91,6 +93,57 @@ fi
 
 mkdir -p "${build_dir}/k3s" "${build_dir}/platform/images"
 
+# Local validation can still fall back to the checked-in fixture profile, but
+# official publication should point OURBOX_APPLICATION_CATALOG_REF at a
+# published catalog bundle.
+APPLICATION_CATALOG_FILE="${FIXTURE_APPLICATION_CATALOG_FILE}"
+APPLICATION_IMAGES_LOCK_FILE="${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}"
+APPLICATION_CATALOG_SOURCE_KIND="fixture-profile"
+APPLICATION_CATALOG_MANIFEST_FILE=""
+
+prepare_application_catalog_inputs() {
+  local pull_dir=""
+  local extract_dir=""
+  local bundle_tarball=""
+  local manifest_digest=""
+
+  if [[ -z "${OURBOX_APPLICATION_CATALOG_REF:-}" ]]; then
+    log "Using in-repo demo-apps catalog fixtures for airgap-platform build."
+    return 0
+  fi
+
+  command -v oras >/dev/null 2>&1 || die "oras is required when OURBOX_APPLICATION_CATALOG_REF is set"
+
+  pull_dir="${build_dir}/application-catalog-pull"
+  extract_dir="${build_dir}/application-catalog"
+  rm -rf "${pull_dir}" "${extract_dir}"
+  mkdir -p "${pull_dir}" "${extract_dir}"
+
+  log "Pulling application catalog bundle: ${OURBOX_APPLICATION_CATALOG_REF}"
+  oras pull "${OURBOX_APPLICATION_CATALOG_REF}" -o "${pull_dir}" >/dev/null
+  bundle_tarball="$(find "${pull_dir}" -maxdepth 4 -type f -name 'application-catalog-bundle.tar.gz' | head -n 1 || true)"
+  [[ -f "${bundle_tarball}" ]] || die "application catalog pull did not produce application-catalog-bundle.tar.gz"
+
+  tar -xzf "${bundle_tarball}" -C "${extract_dir}"
+  [[ -f "${extract_dir}/catalog.json" ]] || die "application catalog bundle missing catalog.json"
+  [[ -f "${extract_dir}/images.lock.json" ]] || die "application catalog bundle missing images.lock.json"
+  [[ -f "${extract_dir}/manifest.env" ]] || die "application catalog bundle missing manifest.env"
+
+  manifest_digest="$(awk -F= '/^OURBOX_PLATFORM_CONTRACT_DIGEST=/{print $2; exit}' "${extract_dir}/manifest.env")"
+  [[ "${manifest_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] \
+    || die "application catalog bundle manifest must declare a valid OURBOX_PLATFORM_CONTRACT_DIGEST"
+  [[ "${manifest_digest}" == "${OURBOX_PLATFORM_CONTRACT_DIGEST}" ]] \
+    || die "application catalog bundle contract digest mismatch: expected ${OURBOX_PLATFORM_CONTRACT_DIGEST}, got ${manifest_digest}"
+
+  APPLICATION_CATALOG_FILE="${extract_dir}/catalog.json"
+  APPLICATION_IMAGES_LOCK_FILE="${extract_dir}/images.lock.json"
+  APPLICATION_CATALOG_MANIFEST_FILE="${extract_dir}/manifest.env"
+  APPLICATION_CATALOG_SOURCE_KIND="published-catalog-bundle"
+  log "Using published application catalog bundle inputs for airgap-platform build."
+}
+
+prepare_application_catalog_inputs
+
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 VERSION="dev"
@@ -109,6 +162,8 @@ python3 "${RENDER_SCRIPT}" \
   --contract-root "${ROOT}/platform-contract" \
   --output-dir "${render_dir}" \
   --profile demo-apps \
+  --application-catalog "${APPLICATION_CATALOG_FILE}" \
+  --images-lock-file "${APPLICATION_IMAGES_LOCK_FILE}" \
   --box-host "airgap.ourbox.local" \
   --tls-mode "lan-http" \
   --ingress-class "traefik" \
@@ -219,8 +274,8 @@ EOF_MANIFEST
 
 cp -a "${render_dir}/images.lock.json" "${build_dir}/platform/images.lock.json"
 cp -a "${ROOT}/platform-contract/profiles/demo-apps/profile.env" "${build_dir}/platform/profile.env"
-if [[ -f "${ROOT}/platform-contract/profiles/demo-apps/catalog.json" ]]; then
-  cp -a "${ROOT}/platform-contract/profiles/demo-apps/catalog.json" "${build_dir}/platform/catalog.json"
+if [[ -f "${APPLICATION_CATALOG_FILE}" ]]; then
+  cp -a "${APPLICATION_CATALOG_FILE}" "${build_dir}/platform/catalog.json"
 fi
 
 cat > "${DIST_DIR}/airgap-platform.meta.env" <<EOF_META

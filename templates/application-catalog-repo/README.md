@@ -14,7 +14,7 @@ Use it together with:
 
 - the application catalog definition
 - the default app set for that catalog
-- the digest-pinned OCI images included in that catalog
+- the source refs that should be resolved into the published image lock
 - CI that validates and publishes the catalog bundle
 
 ## What this repo class does not own
@@ -32,10 +32,10 @@ Use it together with:
   - publishes the rendered catalog bundle to GHCR
 - `catalog/catalog.json`
   - example catalog definition with route and health metadata
-- `catalog/images.lock.json`
-  - example digest-pinned image lock file
+- `catalog/image-sources.json`
+  - example image-source file resolved into the published `images.lock.json`
 - `catalog/profile.env`
-  - installer-facing default metadata
+  - installer-facing default metadata, including the required platform-contract digest binding
 - `scripts/render-catalog-bundle.sh`
   - renders the published tarball
 - `scripts/check-catalog-bundle-smoke.sh`
@@ -46,6 +46,6 @@ Use it together with:
 ## Recommended next steps when instantiating
 
 1. Replace the example catalog metadata with the real app entries.
-2. Update `images.lock.json` to the real published digests from your app repos.
+2. Update `image-sources.json` to the real source refs from your app repos.
 3. Keep `profile.env` in sync with `catalog.json`.
 4. Publish the bundle and hand its pinned ref to the installer flow.

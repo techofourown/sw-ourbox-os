@@ -15,9 +15,9 @@ rendered, linted, bundled, and later consumed by downstream image repos.
 Key inputs:
 
 - `landing/`
-  - launcher and landing-page source content
+  - fixture static assets retained for local validation only
 - `todo-bloom/`
-  - example application source content bundled into the contract
+  - fixture static assets retained for local validation only
 - `profiles/`
   - named profile inputs used by the contract renderer
 
@@ -51,13 +51,16 @@ checked-in source of truth remains this directory plus the toolchain under
 
 This directory defines the contract consumed above the hardware seam:
 
-- launcher and operator-facing landing content
+- generated data surfaces and contract metadata
 - rendered manifests and verification surfaces
-- profile-specific image lock and configuration inputs
+- profile-specific render controls
+
+It should no longer be the production authority for live application HTML/JS
+or for copied standalone catalog/image-lock defaults.
 
 The same source tree is also used when building `airgap-platform`, because that
-bundle re-renders the contract and pulls the images pinned by the current
-published `demo-apps` profile.
+bundle re-renders the contract and pulls the images selected by the current
+catalog input.
 
 ## Build and validation
 
@@ -71,5 +74,5 @@ From the repo root:
 ## Related directories
 
 - `tools/platform-contract/` for the render, lint, publish, and verification scripts
-- `platform-contract/profiles/demo-apps/` for the current default profile inputs
+- `platform-contract/profiles/demo-apps/` for local fixture inputs and profile metadata
 - `platform-contract/manifests/` for generated output inside published bundles

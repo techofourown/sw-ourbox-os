@@ -14,7 +14,7 @@ need_cmd python3
 need_cmd oras
 
 mapfile -t refs < <(
-  python3 - <<'PY' "${ROOT}/catalog/images.lock.json"
+  python3 - <<'PY' "${ROOT}/catalog/image-sources.json"
 import json
 import sys
 from pathlib import Path

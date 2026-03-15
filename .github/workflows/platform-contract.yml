@@ -55,7 +55,17 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      - name: Resolve application catalog bundle ref
+        id: catalog
+        run: |
+          set -euo pipefail
+          mutable_ref="ghcr.io/techofourown/sw-ourbox-catalog-demo:latest"
+          digest="$(oras resolve "${mutable_ref}")"
+          echo "pinned_ref=ghcr.io/techofourown/sw-ourbox-catalog-demo@${digest}" >> "${GITHUB_OUTPUT}"
+
       - name: Publish platform-contract bundle
+        env:
+          OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
         run: |
           set -euo pipefail
           ./tools/platform-contract/publish.sh edge

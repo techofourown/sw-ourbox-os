@@ -26,10 +26,13 @@ An application catalog repository owns:
 - the default app set for that catalog
 - stable app identity for each app entry (`app_uid`)
 - the mapping from app ids to published OCI images
-- the rendered bundle inputs:
+- the authoring inputs:
   - `catalog.json`
-  - `images.lock.json`
+  - `image-sources.json`
   - `profile.env`
+- the rendered bundle outputs:
+  - `images.lock.json`
+  - `manifest.env`
 - CI for building and publishing the catalog bundle artifact
 - catalog rows that let installers browse available catalog bundles
 

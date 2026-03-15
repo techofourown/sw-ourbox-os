@@ -23,6 +23,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Lint workflows
+        uses: rhysd/actionlint@v1.7.11
+
       - name: Check workflow trust boundaries
         run: bash tools/policy/check-workflow-safety.sh
 
