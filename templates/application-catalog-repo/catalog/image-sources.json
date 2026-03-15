@@ -4,7 +4,7 @@
   "images": [
     {
       "name": "example-app",
-      "ref": "ghcr.io/techofourown/sw-ourbox-apps-example/example-app@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "ref": "ghcr.io/example-org/example-apps/example-app:latest",
       "used_by": [
         "example-app"
       ]

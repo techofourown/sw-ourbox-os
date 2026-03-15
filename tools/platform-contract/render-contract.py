@@ -800,34 +800,45 @@ def emit_static_http_app(
     service_port = int(app["service_port"])
     image_ref = resolve_primary_image_ref(app, image_refs, catalog_path=catalog_path)
     asset_dir_name = str(app.get("asset_dir", "")).strip()
-    if not asset_dir_name and renderer in {"landing", "todo-bloom"}:
-        asset_dir_name = renderer
 
     volumes = None
     volume_mounts = None
+    asset_data: dict[str, LiteralStr] = {}
     if asset_dir_name:
         asset_dir = contract_root / asset_dir_name
         if asset_dir.is_dir():
-            configmap_name = f"{service_name}-assets"
-            asset_data = load_assets(asset_dir)
-            if extra_assets:
-                asset_data.update(extra_assets)
-            yaml_dump(
-                manifests_dir / f"{service_name}-configmap.yaml",
-                configmap(
-                    metadata,
-                    profile_env,
-                    box_host,
-                    tls_mode,
-                    ingress_class,
-                    storage_class,
-                    name=configmap_name,
-                    component=configmap_name,
-                    data=asset_data,
-                ),
-            )
-            volumes = [{"name": "assets", "configMap": {"name": configmap_name}}]
+            asset_data.update(load_assets(asset_dir))
+    if extra_assets:
+        asset_data.update(extra_assets)
+    if asset_data:
+        configmap_name = f"{service_name}-assets"
+        yaml_dump(
+            manifests_dir / f"{service_name}-configmap.yaml",
+            configmap(
+                metadata,
+                profile_env,
+                box_host,
+                tls_mode,
+                ingress_class,
+                storage_class,
+                name=configmap_name,
+                component=configmap_name,
+                data=asset_data,
+            ),
+        )
+        volumes = [{"name": "assets", "configMap": {"name": configmap_name}}]
+        if asset_dir_name:
             volume_mounts = [{"name": "assets", "mountPath": "/usr/share/nginx/html", "readOnly": True}]
+        else:
+            volume_mounts = [
+                {
+                    "name": "assets",
+                    "mountPath": f"/usr/share/nginx/html/{file_name}",
+                    "subPath": file_name,
+                    "readOnly": True,
+                }
+                for file_name in sorted(asset_data)
+            ]
 
     yaml_dump(
         manifests_dir / f"{service_name}-deployment.yaml",

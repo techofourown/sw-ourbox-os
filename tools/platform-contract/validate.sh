@@ -14,6 +14,8 @@ MERGED_CATALOG_FILE="${OUT_BASE}/catalog-merged.json"
 MERGED_IMAGES_LOCK_FILE="${OUT_BASE}/images-lock-merged.json"
 IDENTITY_CONTRACT_DIR="${OUT_BASE}/identity-contract"
 trap 'rm -rf "${OUT_BASE}"' EXIT
+FIXTURE_APPLICATION_CATALOG_FILE="${ROOT}/platform-contract/profiles/demo-apps/catalog.json"
+FIXTURE_APPLICATION_IMAGES_LOCK_FILE="${ROOT}/platform-contract/profiles/demo-apps/images.lock.json"
 
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -72,8 +74,8 @@ render_demo_apps "${OUT_DIR_SUBSET_A}" "${SELECTED_APPS_FILE}"
 render_demo_apps "${OUT_DIR_SUBSET_B}" "${SELECTED_APPS_FILE}"
 
 python3 - <<'PY' \
-  "${ROOT}/platform-contract/profiles/demo-apps/catalog.json" \
-  "${ROOT}/platform-contract/profiles/demo-apps/images.lock.json" \
+  "${FIXTURE_APPLICATION_CATALOG_FILE}" \
+  "${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}" \
   "${MERGED_CATALOG_FILE}" \
   "${MERGED_IMAGES_LOCK_FILE}"
 import json
@@ -333,7 +335,9 @@ identity_after_catalog="$(identity_output)"
   exit 1
 }
 
-cp -f "${ROOT}/platform-contract/profiles/demo-apps/catalog.json" "${IDENTITY_CONTRACT_DIR}/catalog.json"
+# Use the local fixture catalog here on purpose so the identity check keeps
+# covering the checked-in validation corpus as well as external bundle inputs.
+cp -f "${FIXTURE_APPLICATION_CATALOG_FILE}" "${IDENTITY_CONTRACT_DIR}/catalog.json"
 identity_before_images_lock="$(identity_output)"
 
 python3 - <<'PY' "${IDENTITY_CONTRACT_DIR}/images.lock.json"

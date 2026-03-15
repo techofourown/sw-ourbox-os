@@ -30,7 +30,7 @@ REQUIRED_ANNOTATIONS = (
 EXPECTED_ROUTE_MARKERS = {
     "landing-root": {
         "body_marker": "Your apps, served by your machine, to your phone.",
-        "source_file": "landing/index.html",
+        "source_file": None,
     },
     "landing-app-status": {
         "body_marker": "ourbox-landing-status",
@@ -46,7 +46,7 @@ EXPECTED_ROUTE_MARKERS = {
     },
     "todo-bloom-root": {
         "body_marker": "Todo Bloom",
-        "source_file": "todo-bloom/index.html",
+        "source_file": None,
     },
 }
 
@@ -164,6 +164,25 @@ def public_landing_apps(apps: list[dict[str, str]]) -> list[dict[str, str]]:
     ]
 
 
+def load_catalog(path: Path) -> dict | None:
+    if not path.is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def app_by_id_from_catalog(catalog: dict | None) -> dict[str, dict]:
+    if not catalog:
+        return {}
+    return {str(app["id"]): app for app in catalog.get("apps", [])}
+
+
+def asset_files_for_dir(contract_root: Path, asset_dir_name: str) -> set[str]:
+    asset_dir = contract_root / asset_dir_name
+    if not asset_dir.is_dir():
+        return set()
+    return {path.name for path in sorted(asset_dir.iterdir()) if path.is_file()}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Lint a rendered platform contract bundle.")
     parser.add_argument("--contract-root", required=True)
@@ -178,6 +197,8 @@ def main() -> int:
         raise SystemExit(f"Missing manifests directory: {manifests_dir}")
 
     selected_apps_file = Path(args.selected_apps_file).resolve() if args.selected_apps_file else render_dir / "selected-apps.json"
+    catalog = load_catalog(render_dir / "catalog.json")
+    app_by_id = app_by_id_from_catalog(catalog)
     if selected_apps_file.is_file():
         selected_apps = json.loads(selected_apps_file.read_text(encoding="utf-8"))
         selected_app_ids_list = list(selected_apps.get("selected_app_ids", []))
@@ -252,18 +273,22 @@ def main() -> int:
     configmap_names = {(resource["metadata"].get("namespace", ""), resource["metadata"]["name"]) for resource in configmaps}
     expected_asset_maps = {}
     if "landing" in selected_app_ids:
-        expected_asset_maps[("ourbox-system", "landing-assets")] = {
-            path.name for path in sorted((contract_root / "landing").iterdir()) if path.is_file()
-        }
-        expected_asset_maps[("ourbox-system", "landing-assets")].add("ourbox-apps.json")
+        landing_expected = {"ourbox-apps.json"}
+        landing_asset_dir = str(app_by_id.get("landing", {}).get("asset_dir", "")).strip()
+        if landing_asset_dir:
+            landing_expected.update(asset_files_for_dir(contract_root, landing_asset_dir))
+        expected_asset_maps[("ourbox-system", "landing-assets")] = landing_expected
         expected_asset_maps[("ourbox-system", "landing-status-assets")] = {
             path.name for path in sorted((contract_root / "landing-status").iterdir()) if path.is_file()
         }
         expected_asset_maps[("ourbox-system", "landing-status-assets")].add("ourbox-app-targets.json")
     if "todo-bloom" in selected_app_ids:
-        expected_asset_maps[("ourbox-system", "todo-bloom-assets")] = {
-            path.name for path in sorted((contract_root / "todo-bloom").iterdir()) if path.is_file()
-        }
+        todo_bloom_asset_dir = str(app_by_id.get("todo-bloom", {}).get("asset_dir", "")).strip()
+        if todo_bloom_asset_dir:
+            expected_asset_maps[("ourbox-system", "todo-bloom-assets")] = asset_files_for_dir(
+                contract_root,
+                todo_bloom_asset_dir,
+            )
     for key, expected_files in expected_asset_maps.items():
         if key not in configmap_names:
             errors.append(f"Missing asset ConfigMap {key[1]}")

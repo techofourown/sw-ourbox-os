@@ -54,6 +54,7 @@ jobs:
     needs: context
     runs-on: ubuntu-latest
     outputs:
+      catalog_pinned_ref: ${{ steps.catalog.outputs.pinned_ref }}
       pinned_ref: ${{ steps.contract.outputs.pinned_ref }}
       digest: ${{ steps.contract.outputs.digest }}
     steps:
@@ -92,7 +93,17 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      - name: Resolve application catalog bundle ref
+        id: catalog
+        run: |
+          set -euo pipefail
+          mutable_ref="ghcr.io/techofourown/sw-ourbox-catalog-demo:latest"
+          digest="$(oras resolve "${mutable_ref}")"
+          echo "pinned_ref=ghcr.io/techofourown/sw-ourbox-catalog-demo@${digest}" >> "${GITHUB_OUTPUT}"
+
       - name: Publish bound platform-contract artifact
+        env:
+          OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
         run: |
           set -euo pipefail
           ./tools/platform-contract/publish.sh "${{ needs.context.outputs.platform_contract_tag }}"
@@ -148,6 +159,7 @@ jobs:
           CONTAINER_CLI: podman
           OURBOX_PLATFORM_CONTRACT_REF: ${{ needs.publish-platform-contract.outputs.pinned_ref }}
           OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest }}
+          OURBOX_APPLICATION_CATALOG_REF: ${{ needs.publish-platform-contract.outputs.catalog_pinned_ref }}
         run: |
           set -euo pipefail
           TAG="${{ needs.context.outputs.immutable_tag }}" \
