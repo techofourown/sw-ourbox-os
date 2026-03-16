@@ -71,7 +71,7 @@ path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="
 PY
 render_expect_failure \
   missing-route-keys \
-  "missing required route keys" \
+  "missing required runtime-surface keys" \
   "${contract_missing_route}" \
   "${TMP_ROOT}/out-missing-route"
 
