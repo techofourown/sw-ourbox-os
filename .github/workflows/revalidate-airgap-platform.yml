@@ -321,9 +321,8 @@ jobs:
             | grep -q '^OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:'
 
       - name: Upload revalidation metadata
-        if: ${{ steps.request.outputs.publish_recovery != 'true' }}
+        if: ${{ always() && steps.request.outputs.publish_recovery != 'true' }}
         uses: actions/upload-artifact@v4
-        if: always()
         with:
           name: revalidation-airgap-${{ matrix.arch }}-${{ github.run_id }}
           path: |
@@ -331,9 +330,8 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload publish outputs
-        if: ${{ steps.request.outputs.publish_recovery == 'true' }}
+        if: ${{ always() && steps.request.outputs.publish_recovery == 'true' }}
         uses: actions/upload-artifact@v4
-        if: always()
         with:
           name: recovery-airgap-${{ matrix.arch }}-${{ github.run_id }}
           path: |
