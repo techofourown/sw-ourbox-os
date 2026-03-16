@@ -1,0 +1,98 @@
+name: Airgap Platform Recovery Request
+
+on:
+  workflow_dispatch:
+    inputs:
+      platform_contract_ref:
+        description: Digest-pinned platform-contract ref to publish from
+        required: true
+        type: string
+      platform_contract_digest:
+        description: sha256 digest for the existing platform-contract artifact
+        required: true
+        type: string
+      immutable_tag:
+        description: Immutable airgap-platform tag to publish, for example main-50e9a7a6aa2c
+        required: true
+        type: string
+      channel:
+        description: Channel tag to update, for example beta or nightly
+        required: false
+        default: beta
+        type: string
+      application_catalog_ref:
+        description: Optional digest-pinned application catalog bundle ref override
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: airgap-platform-recovery-${{ github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  request:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate recovery request inputs
+        env:
+          PLATFORM_CONTRACT_REF: ${{ inputs.platform_contract_ref }}
+          PLATFORM_CONTRACT_DIGEST: ${{ inputs.platform_contract_digest }}
+          IMMUTABLE_TAG: ${{ inputs.immutable_tag }}
+          CHANNEL: ${{ inputs.channel }}
+          APPLICATION_CATALOG_REF: ${{ inputs.application_catalog_ref }}
+        run: |
+          set -euo pipefail
+
+          [[ "${PLATFORM_CONTRACT_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
+            echo "platform_contract_ref must be digest-pinned" >&2
+            exit 1
+          }
+          [[ "${PLATFORM_CONTRACT_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "platform_contract_digest must be a sha256 digest" >&2
+            exit 1
+          }
+          [[ "${PLATFORM_CONTRACT_REF##*@}" == "${PLATFORM_CONTRACT_DIGEST}" ]] || {
+            echo "platform_contract_ref and platform_contract_digest do not match" >&2
+            exit 1
+          }
+          [[ -n "${IMMUTABLE_TAG}" ]] || {
+            echo "immutable_tag is required" >&2
+            exit 1
+          }
+          [[ -n "${CHANNEL}" ]] || {
+            echo "channel is required" >&2
+            exit 1
+          }
+          if [[ -n "${APPLICATION_CATALOG_REF}" ]] && [[ ! "${APPLICATION_CATALOG_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]]; then
+            echo "application_catalog_ref must be digest-pinned when provided" >&2
+            exit 1
+          fi
+
+      - name: Write recovery request artifact
+        env:
+          PLATFORM_CONTRACT_REF: ${{ inputs.platform_contract_ref }}
+          PLATFORM_CONTRACT_DIGEST: ${{ inputs.platform_contract_digest }}
+          IMMUTABLE_TAG: ${{ inputs.immutable_tag }}
+          CHANNEL: ${{ inputs.channel }}
+          APPLICATION_CATALOG_REF: ${{ inputs.application_catalog_ref }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist/recovery-request
+          cat > dist/recovery-request/recovery-request.env <<EOF
+          PLATFORM_CONTRACT_REF=${PLATFORM_CONTRACT_REF}
+          PLATFORM_CONTRACT_DIGEST=${PLATFORM_CONTRACT_DIGEST}
+          IMMUTABLE_TAG=${IMMUTABLE_TAG}
+          CHANNEL=${CHANNEL}
+          APPLICATION_CATALOG_REF=${APPLICATION_CATALOG_REF}
+          EOF
+
+      - name: Upload recovery request
+        uses: actions/upload-artifact@v4
+        with:
+          name: airgap-platform-recovery-${{ github.run_id }}
+          path: dist/recovery-request/recovery-request.env
+          if-no-files-found: error

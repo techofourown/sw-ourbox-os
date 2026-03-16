@@ -17,38 +17,21 @@ on:
       - 'package-lock.json'
   schedule:
     - cron: '0 3 * * *'
-  workflow_dispatch:
-    inputs:
-      platform_contract_ref:
-        description: Optional digest-pinned platform-contract ref for publish-only recovery
-        required: false
-        type: string
-      platform_contract_digest:
-        description: Optional platform-contract digest for publish-only recovery
-        required: false
-        type: string
-      application_catalog_ref:
-        description: Optional digest-pinned application catalog bundle ref override
-        required: false
-        type: string
-      immutable_tag:
-        description: Optional immutable airgap-platform tag override
-        required: false
-        type: string
-      channel:
-        description: Optional channel override for the published airgap bundle
-        required: false
-        type: string
+  workflow_run:
+    workflows: ["Airgap Platform Recovery Request"]
+    types: [completed]
 permissions:
+  actions: read
   contents: read
   packages: write
 
 concurrency:
-  group: airgap-platform-${{ github.event_name }}-${{ github.ref_name || github.run_id }}
+  group: airgap-platform-${{ github.event_name }}-${{ github.event.workflow_run.id || github.ref_name || github.run_id }}
   cancel-in-progress: false
 
 jobs:
   context:
+    if: github.event_name != 'workflow_run'
     runs-on: ubuntu-latest
     outputs:
       channel: ${{ steps.context.outputs.channel }}
@@ -57,9 +40,6 @@ jobs:
     steps:
       - name: Resolve publication context
         id: context
-        env:
-          INPUT_CHANNEL: ${{ github.event.inputs.channel }}
-          INPUT_IMMUTABLE_TAG: ${{ github.event.inputs.immutable_tag }}
         run: |
           set -euo pipefail
 
@@ -69,43 +49,76 @@ jobs:
             echo "channel=nightly" >> "${GITHUB_OUTPUT}"
             echo "immutable_tag=nightly-${stamp}-${short_sha}" >> "${GITHUB_OUTPUT}"
             echo "platform_contract_tag=nightly-${stamp}-${short_sha}" >> "${GITHUB_OUTPUT}"
-          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            stamp="$(date -u +'%Y%m%d%H%M%S')"
-            channel="${INPUT_CHANNEL:-beta}"
-            immutable_tag="${INPUT_IMMUTABLE_TAG:-manual-${stamp}-${short_sha}}"
-            echo "channel=${channel}" >> "${GITHUB_OUTPUT}"
-            echo "immutable_tag=${immutable_tag}" >> "${GITHUB_OUTPUT}"
-            echo "platform_contract_tag=${immutable_tag}" >> "${GITHUB_OUTPUT}"
           else
             echo "channel=beta" >> "${GITHUB_OUTPUT}"
             echo "immutable_tag=main-${short_sha}" >> "${GITHUB_OUTPUT}"
             echo "platform_contract_tag=main-${short_sha}" >> "${GITHUB_OUTPUT}"
           fi
 
-  reuse-platform-contract:
-    needs: context
-    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.platform_contract_ref != '' || inputs.platform_contract_digest != '' || inputs.application_catalog_ref != '') }}
+  recovery-request:
+    if: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     outputs:
+      channel: ${{ steps.request.outputs.channel }}
+      immutable_tag: ${{ steps.request.outputs.immutable_tag }}
       catalog_pinned_ref: ${{ steps.contract.outputs.catalog_pinned_ref }}
       pinned_ref: ${{ steps.contract.outputs.pinned_ref }}
       digest: ${{ steps.contract.outputs.digest }}
     steps:
-      - name: Validate manual platform-contract recovery inputs
-        id: contract
-        env:
-          PLATFORM_CONTRACT_REF: ${{ inputs.platform_contract_ref }}
-          PLATFORM_CONTRACT_DIGEST: ${{ inputs.platform_contract_digest }}
-          APPLICATION_CATALOG_REF: ${{ inputs.application_catalog_ref }}
+      - name: Download recovery request
+        uses: actions/download-artifact@v4
+        with:
+          name: airgap-platform-recovery-${{ github.event.workflow_run.id }}
+          path: dist/recovery-request
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Load recovery request context
+        id: request
         run: |
           set -euo pipefail
 
+          request_file="$(find dist/recovery-request -type f -name 'recovery-request.env' | head -n1 || true)"
+          [[ -f "${request_file}" ]] || {
+            echo "Missing recovery-request.env in downloaded recovery request artifact" >&2
+            exit 1
+          }
+
+          # shellcheck disable=SC1090
+          source "${request_file}"
+
+          [[ -n "${CHANNEL:-}" ]] || {
+            echo "Recovery request did not declare CHANNEL" >&2
+            exit 1
+          }
+          [[ -n "${IMMUTABLE_TAG:-}" ]] || {
+            echo "Recovery request did not declare IMMUTABLE_TAG" >&2
+            exit 1
+          }
+
+          echo "channel=${CHANNEL}" >> "${GITHUB_OUTPUT}"
+          echo "immutable_tag=${IMMUTABLE_TAG}" >> "${GITHUB_OUTPUT}"
+
+      - name: Validate recovery contract inputs
+        id: contract
+        run: |
+          set -euo pipefail
+
+          request_file="$(find dist/recovery-request -type f -name 'recovery-request.env' | head -n1 || true)"
+          [[ -f "${request_file}" ]] || {
+            echo "Missing recovery-request.env in downloaded recovery request artifact" >&2
+            exit 1
+          }
+
+          # shellcheck disable=SC1090
+          source "${request_file}"
+
           [[ -n "${PLATFORM_CONTRACT_REF}" ]] || {
-            echo "workflow_dispatch recovery requires platform_contract_ref" >&2
+            echo "Recovery request requires PLATFORM_CONTRACT_REF" >&2
             exit 1
           }
           [[ -n "${PLATFORM_CONTRACT_DIGEST}" ]] || {
-            echo "workflow_dispatch recovery requires platform_contract_digest" >&2
+            echo "Recovery request requires PLATFORM_CONTRACT_DIGEST" >&2
             exit 1
           }
           [[ "${PLATFORM_CONTRACT_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
@@ -131,7 +144,7 @@ jobs:
 
   publish-platform-contract:
     needs: context
-    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.platform_contract_ref == '' && inputs.platform_contract_digest == '' && inputs.application_catalog_ref == '') }}
+    if: github.event_name != 'workflow_run'
     runs-on: ubuntu-latest
     outputs:
       catalog_pinned_ref: ${{ steps.catalog.outputs.pinned_ref }}
@@ -209,7 +222,15 @@ jobs:
           if-no-files-found: warn
 
   publish:
-    needs: [context, reuse-platform-contract, publish-platform-contract]
+    needs: [context, recovery-request, publish-platform-contract]
+    if: >
+      always() &&
+      (
+        (github.event_name == 'workflow_run' && needs.recovery-request.result == 'success') ||
+        (github.event_name != 'workflow_run' &&
+         needs.context.result == 'success' &&
+         needs.publish-platform-contract.result == 'success')
+      )
     runs-on: [self-hosted, official-heavy, airgap-builder]
     strategy:
       fail-fast: false
@@ -236,8 +257,8 @@ jobs:
       - name: Select compatible application catalog bundle
         id: catalog
         env:
-          EXPECTED_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest || needs.reuse-platform-contract.outputs.digest }}
-          ORIGINAL_CATALOG_PINNED_REF: ${{ needs.publish-platform-contract.outputs.catalog_pinned_ref || needs.reuse-platform-contract.outputs.catalog_pinned_ref }}
+          EXPECTED_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest || needs.recovery-request.outputs.digest }}
+          ORIGINAL_CATALOG_PINNED_REF: ${{ needs.publish-platform-contract.outputs.catalog_pinned_ref || needs.recovery-request.outputs.catalog_pinned_ref }}
           DEFAULT_CATALOG_REPO: ghcr.io/techofourown/sw-ourbox-catalog-demo
         run: |
           set -euo pipefail
@@ -305,19 +326,20 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
-          OURBOX_PLATFORM_CONTRACT_REF: ${{ needs.publish-platform-contract.outputs.pinned_ref || needs.reuse-platform-contract.outputs.pinned_ref }}
-          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest || needs.reuse-platform-contract.outputs.digest }}
+          IMMUTABLE_TAG: ${{ needs.context.outputs.immutable_tag || needs.recovery-request.outputs.immutable_tag }}
+          OURBOX_PLATFORM_CONTRACT_REF: ${{ needs.publish-platform-contract.outputs.pinned_ref || needs.recovery-request.outputs.pinned_ref }}
+          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest || needs.recovery-request.outputs.digest }}
           OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
         run: |
           set -euo pipefail
-          TAG="${{ needs.context.outputs.immutable_tag }}" \
+          TAG="${IMMUTABLE_TAG}" \
             ARCH="${ARCH}" \
-            ./tools/airgap-platform/publish.sh "${ARCH}" "${{ needs.context.outputs.immutable_tag }}"
+            ./tools/airgap-platform/publish.sh "${ARCH}" "${IMMUTABLE_TAG}"
 
       - name: Tag official channel from candidate digest
         env:
           ARCH: ${{ matrix.arch }}
-          CHANNEL: ${{ needs.context.outputs.channel }}
+          CHANNEL: ${{ needs.context.outputs.channel || needs.recovery-request.outputs.channel }}
         run: |
           set -euo pipefail
           REF_FILE="dist/airgap-platform.${ARCH}.ref"
@@ -330,14 +352,14 @@ jobs:
       - name: Update official airgap catalog
         env:
           ARCH: ${{ matrix.arch }}
-          CHANNEL: ${{ needs.context.outputs.channel }}
+          CHANNEL: ${{ needs.context.outputs.channel || needs.recovery-request.outputs.channel }}
         run: |
           set -euo pipefail
           ./tools/airgap-platform/update-catalog.sh \
             "dist/airgap-platform.${ARCH}.publish-record.json" \
             "${CHANNEL}" \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            "${{ needs.context.outputs.immutable_tag }}-${ARCH}"
+            "${{ needs.context.outputs.immutable_tag || needs.recovery-request.outputs.immutable_tag }}-${ARCH}"
 
       - name: Smoke pull published digest and verify layout
         if: always()
