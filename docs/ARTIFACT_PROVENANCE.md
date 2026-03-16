@@ -51,9 +51,9 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 
 | Operation | Entrypoint |
 |---|---|
-| Build platform contract | `./tools/platform-contract/build.sh` |
+| Build platform contract | `OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... ./tools/platform-contract/build.sh` |
 | Publish platform contract | `./tools/platform-contract/publish.sh [tag]` |
-| Build airgap platform | `ARCH=arm64 ./tools/airgap-platform/build.sh` |
+| Build airgap platform | `OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... ARCH=arm64 ./tools/airgap-platform/build.sh` |
 | Publish airgap platform | `ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 [tag]` |
 | Build install defaults | `./tools/install-defaults/build.sh` |
 | Publish install defaults | `TAG=edge ./tools/install-defaults/publish.sh [tag]` |
@@ -64,6 +64,8 @@ All build logic lives in this repository. Official and compatible builds use the
 For production publication, both `platform-contract/publish.sh` and
 `airgap-platform/publish.sh` require `OURBOX_APPLICATION_CATALOG_REF` to be a
 digest-pinned published application catalog bundle ref.
+Local fixture-only validation may still opt in with
+`OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1`.
 
 ---
 

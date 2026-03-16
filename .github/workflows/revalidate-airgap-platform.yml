@@ -51,6 +51,14 @@ jobs:
       - name: Login to GHCR (for pulling upstream platform images)
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      - name: Resolve application catalog bundle ref
+        id: catalog
+        run: |
+          set -euo pipefail
+          mutable_ref="ghcr.io/techofourown/sw-ourbox-catalog-demo:latest"
+          digest="$(oras resolve "${mutable_ref}")"
+          echo "pinned_ref=ghcr.io/techofourown/sw-ourbox-catalog-demo@${digest}" >> "${GITHUB_OUTPUT}"
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -60,6 +68,8 @@ jobs:
         run: python3 -m pip install --disable-pip-version-check pyyaml
 
       - name: Build local platform-contract bundle for airgap binding
+        env:
+          OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
         run: |
           set -euo pipefail
           ./tools/platform-contract/build.sh
@@ -73,6 +83,7 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
+          OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
         run: |
           set -euo pipefail
           ARCH="${ARCH}" ./tools/airgap-platform/build.sh

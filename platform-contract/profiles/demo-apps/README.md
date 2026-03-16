@@ -14,7 +14,7 @@ contract profile.
 
 ## Where this profile is used
 
-This profile still drives local validation by default. Official publication no
+This profile still drives local validation when explicitly requested. Official publication no
 longer needs to treat the checked-in catalog/image-lock copies as production
 authority:
 
@@ -25,7 +25,8 @@ authority:
   enforce its `OURBOX_PLATFORM_CONTRACT_DIGEST` binding
 
 That means changes here should now be treated as fixture maintenance unless you
-are deliberately updating the local validation corpus.
+are deliberately updating the local validation corpus and opt in with
+`OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1`.
 
 ## Who consumes the output
 

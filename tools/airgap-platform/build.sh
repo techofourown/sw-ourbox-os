@@ -93,9 +93,7 @@ fi
 
 mkdir -p "${build_dir}/k3s" "${build_dir}/platform/images"
 
-# Local validation can still fall back to the checked-in fixture profile, but
-# official publication should point OURBOX_APPLICATION_CATALOG_REF at a
-# published catalog bundle.
+ALLOW_FIXTURE_APPLICATION_CATALOG="${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-0}"
 APPLICATION_CATALOG_FILE="${FIXTURE_APPLICATION_CATALOG_FILE}"
 APPLICATION_IMAGES_LOCK_FILE="${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}"
 APPLICATION_CATALOG_SOURCE_KIND="fixture-profile"
@@ -108,8 +106,11 @@ prepare_application_catalog_inputs() {
   local manifest_digest=""
 
   if [[ -z "${OURBOX_APPLICATION_CATALOG_REF:-}" ]]; then
-    log "Using in-repo demo-apps catalog fixtures for airgap-platform build."
-    return 0
+    if [[ "${ALLOW_FIXTURE_APPLICATION_CATALOG}" == "1" ]]; then
+      log "Using explicitly requested in-repo demo-apps catalog fixtures for airgap-platform build."
+      return 0
+    fi
+    die "OURBOX_APPLICATION_CATALOG_REF is required for airgap-platform build. Set OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 only for explicit local fixture validation."
   fi
 
   command -v oras >/dev/null 2>&1 || die "oras is required when OURBOX_APPLICATION_CATALOG_REF is set"
@@ -276,6 +277,11 @@ cp -a "${render_dir}/images.lock.json" "${build_dir}/platform/images.lock.json"
 cp -a "${ROOT}/platform-contract/profiles/demo-apps/profile.env" "${build_dir}/platform/profile.env"
 if [[ -f "${APPLICATION_CATALOG_FILE}" ]]; then
   cp -a "${APPLICATION_CATALOG_FILE}" "${build_dir}/platform/catalog.json"
+fi
+if [[ -f "${render_dir}/selected-apps.json" ]]; then
+  cp -a "${render_dir}/selected-apps.json" "${build_dir}/platform/selected-apps.json"
+else
+  die "rendered platform contract did not produce selected-apps.json"
 fi
 
 cat > "${DIST_DIR}/airgap-platform.meta.env" <<EOF_META

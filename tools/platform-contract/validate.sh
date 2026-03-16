@@ -56,6 +56,31 @@ render_demo_apps() {
     "${render_cmd[@]}"
 }
 
+render_expect_failure() {
+  local label="$1"
+  local expected="$2"
+  shift 2
+  local log_file="${OUT_BASE}/${label}.log"
+
+  if OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
+    OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
+    OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os \
+    OURBOX_PLATFORM_CONTRACT_REVISION="${REVISION}" \
+    OURBOX_PLATFORM_CONTRACT_VERSION="${VERSION}" \
+    OURBOX_PLATFORM_CONTRACT_CREATED="${CREATED}" \
+    "$@" >"${log_file}" 2>&1; then
+    echo "expected failure for ${label}" >&2
+    cat "${log_file}" >&2
+    exit 1
+  fi
+
+  grep -Fq "${expected}" "${log_file}" || {
+    echo "expected ${label} output to contain: ${expected}" >&2
+    cat "${log_file}" >&2
+    exit 1
+  }
+}
+
 render_demo_apps "${OUT_DIR_A}"
 render_demo_apps "${OUT_DIR_B}"
 
@@ -337,6 +362,11 @@ if not image_ref.startswith("docker.io/library/python:3.12-alpine@sha256:"):
     raise SystemExit(f"unexpected landing-status platform image ref: {image_ref!r}")
 PY
 
+render_expect_failure \
+  missing-catalog-build-input \
+  "OURBOX_APPLICATION_CATALOG_REF is required for platform-contract build" \
+  "${ROOT}/tools/platform-contract/build.sh"
+
 mkdir -p "${IDENTITY_CONTRACT_DIR}"
 cp -a "${ROOT}/platform-contract/." "${IDENTITY_CONTRACT_DIR}/"
 cat > "${IDENTITY_CONTRACT_DIR}/contract.env" <<EOF_CONTRACT
@@ -404,12 +434,18 @@ identity_after_images_lock="$(identity_output)"
 
 (
   cd "${ROOT}"
-  ./tools/platform-contract/build.sh >/dev/null
+  OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/platform-contract/build.sh >/dev/null
 )
 tar -tzf "${ROOT}/dist/platform-contract.tar.gz" \
   | grep -Fx 'platform-contract/landing-status/app.py' >/dev/null \
   || {
     echo "built platform-contract tarball is missing landing-status/app.py" >&2
+    exit 1
+  }
+tar -tzf "${ROOT}/dist/platform-contract.tar.gz" \
+  | grep -Fx 'platform-contract/rendered/defaults/demo-apps/selected-apps.json' >/dev/null \
+  || {
+    echo "built platform-contract tarball is missing rendered/defaults/demo-apps/selected-apps.json" >&2
     exit 1
   }
 

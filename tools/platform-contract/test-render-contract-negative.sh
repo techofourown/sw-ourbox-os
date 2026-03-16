@@ -204,4 +204,13 @@ render_expect_failure \
   "${contract_bad_images}" \
   "${TMP_ROOT}/out-bad-images"
 
+contract_missing_catalog="${TMP_ROOT}/contract-missing-catalog"
+prepare_contract_root "${contract_missing_catalog}"
+rm -f "${contract_missing_catalog}/profiles/demo-apps/catalog.json"
+render_expect_failure \
+  missing-catalog \
+  "supported renders require explicit application intent" \
+  "${contract_missing_catalog}" \
+  "${TMP_ROOT}/out-missing-catalog"
+
 printf '[%s] render-contract negative tests passed\n' "$(date -Is)"
