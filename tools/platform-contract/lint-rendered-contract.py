@@ -123,7 +123,7 @@ def expected_landing_apps(render_dir: Path, selected_app_ids: list[str], box_hos
                     "name": str(app["display_name"]),
                     "description": str(app["description"]),
                     "host": str(app["host_template"]).format(box_host=box_host),
-                    "path": str(app.get("path", "/")),
+                    "path": normalize_path(app.get("path", "/")),
                     "service_name": str(app["service_name"]),
                 }
             )
