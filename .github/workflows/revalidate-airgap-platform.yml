@@ -57,7 +57,23 @@ jobs:
           set -euo pipefail
           mutable_ref="ghcr.io/techofourown/sw-ourbox-catalog-demo:latest"
           digest="$(oras resolve "${mutable_ref}")"
-          echo "pinned_ref=ghcr.io/techofourown/sw-ourbox-catalog-demo@${digest}" >> "${GITHUB_OUTPUT}"
+          pinned_ref="ghcr.io/techofourown/sw-ourbox-catalog-demo@${digest}"
+          pull_dir="$(mktemp -d)"
+          extract_dir="$(mktemp -d)"
+          trap 'rm -rf "${pull_dir}" "${extract_dir}"' EXIT
+
+          oras pull "${pinned_ref}" -o "${pull_dir}" >/dev/null
+          bundle_tarball="$(find "${pull_dir}" -maxdepth 4 -type f -name 'application-catalog-bundle.tar.gz' | head -n 1 || true)"
+          test -f "${bundle_tarball}"
+          tar -xzf "${bundle_tarball}" -C "${extract_dir}"
+          test -f "${extract_dir}/manifest.env"
+          bound_contract_digest="$(awk -F= '/^OURBOX_PLATFORM_CONTRACT_DIGEST=/{print $2; exit}' "${extract_dir}/manifest.env")"
+          [[ "${bound_contract_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
+
+          {
+            echo "pinned_ref=${pinned_ref}"
+            echo "bound_contract_digest=${bound_contract_digest}"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -70,13 +86,13 @@ jobs:
       - name: Build local platform-contract bundle for airgap binding
         env:
           OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
+          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ steps.catalog.outputs.bound_contract_digest }}
         run: |
           set -euo pipefail
           ./tools/platform-contract/build.sh
-          contract_sha="$(sha256sum dist/platform-contract.tar.gz | awk '{print $1}')"
           {
             echo "OURBOX_PLATFORM_CONTRACT_REF=revalidate-local-platform-contract"
-            echo "OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:${contract_sha}"
+            echo "OURBOX_PLATFORM_CONTRACT_DIGEST=${{ steps.catalog.outputs.bound_contract_digest }}"
           } >> "${GITHUB_ENV}"
 
       - name: Build airgap bundle (no publish)
