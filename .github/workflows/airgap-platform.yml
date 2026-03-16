@@ -153,13 +153,77 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      - name: Select compatible application catalog bundle
+        id: catalog
+        env:
+          EXPECTED_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest }}
+          ORIGINAL_CATALOG_PINNED_REF: ${{ needs.publish-platform-contract.outputs.catalog_pinned_ref }}
+        run: |
+          set -euo pipefail
+
+          resolve_bound_contract_digest() {
+            local ref="$1" tmp pull_dir extract_dir bundle_tar manifest_file manifest_digest
+            tmp="$(mktemp -d)"
+            pull_dir="${tmp}/pull"
+            extract_dir="${tmp}/extract"
+            mkdir -p "${pull_dir}"
+            oras pull "${ref}" -o "${pull_dir}" >/dev/null
+            bundle_tar="$(find "${pull_dir}" -maxdepth 4 -type f -name 'application-catalog-bundle.tar.gz' | head -n1 || true)"
+            [[ -f "${bundle_tar}" ]] || {
+              echo "application catalog ref did not contain application-catalog-bundle.tar.gz: ${ref}" >&2
+              rm -rf "${tmp}"
+              return 1
+            }
+            mkdir -p "${extract_dir}"
+            tar -xzf "${bundle_tar}" -C "${extract_dir}"
+            manifest_file="${extract_dir}/manifest.env"
+            [[ -f "${manifest_file}" ]] || {
+              echo "application catalog bundle missing manifest.env: ${ref}" >&2
+              rm -rf "${tmp}"
+              return 1
+            }
+            manifest_digest="$(awk -F= '/^OURBOX_PLATFORM_CONTRACT_DIGEST=/{print $2; exit}' "${manifest_file}")"
+            rm -rf "${tmp}"
+            [[ "${manifest_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+              echo "application catalog ref did not declare a valid OURBOX_PLATFORM_CONTRACT_DIGEST: ${ref}" >&2
+              return 1
+            }
+            printf '%s\n' "${manifest_digest}"
+          }
+
+          select_catalog_ref() {
+            local candidate_ref="$1" manifest_digest
+            manifest_digest="$(resolve_bound_contract_digest "${candidate_ref}")" || return 1
+            if [[ "${manifest_digest}" == "${EXPECTED_CONTRACT_DIGEST}" ]]; then
+              echo "Using application catalog bundle ${candidate_ref} (bound=${manifest_digest})"
+              echo "pinned_ref=${candidate_ref}" >> "${GITHUB_OUTPUT}"
+              return 0
+            fi
+            echo "Skipping application catalog bundle ${candidate_ref}: bound=${manifest_digest}, expected=${EXPECTED_CONTRACT_DIGEST}" >&2
+            return 1
+          }
+
+          if [[ -n "${ORIGINAL_CATALOG_PINNED_REF}" ]] && select_catalog_ref "${ORIGINAL_CATALOG_PINNED_REF}"; then
+            exit 0
+          fi
+
+          catalog_repo="${ORIGINAL_CATALOG_PINNED_REF%@*}"
+          mutable_ref="${catalog_repo}:latest"
+          refreshed_digest="$(oras resolve "${mutable_ref}")"
+          refreshed_ref="${catalog_repo}@${refreshed_digest}"
+
+          select_catalog_ref "${refreshed_ref}" || {
+            echo "No compatible application catalog bundle found for contract ${EXPECTED_CONTRACT_DIGEST}" >&2
+            exit 1
+          }
+
       - name: Publish immutable candidate bundle
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
           OURBOX_PLATFORM_CONTRACT_REF: ${{ needs.publish-platform-contract.outputs.pinned_ref }}
           OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest }}
-          OURBOX_APPLICATION_CATALOG_REF: ${{ needs.publish-platform-contract.outputs.catalog_pinned_ref }}
+          OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
         run: |
           set -euo pipefail
           TAG="${{ needs.context.outputs.immutable_tag }}" \
