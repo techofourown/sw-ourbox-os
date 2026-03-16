@@ -176,13 +176,6 @@ def app_by_id_from_catalog(catalog: dict | None) -> dict[str, dict]:
     return {str(app["id"]): app for app in catalog.get("apps", [])}
 
 
-def asset_files_for_dir(contract_root: Path, asset_dir_name: str) -> set[str]:
-    asset_dir = contract_root / asset_dir_name
-    if not asset_dir.is_dir():
-        return set()
-    return {path.name for path in sorted(asset_dir.iterdir()) if path.is_file()}
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Lint a rendered platform contract bundle.")
     parser.add_argument("--contract-root", required=True)
@@ -273,22 +266,11 @@ def main() -> int:
     configmap_names = {(resource["metadata"].get("namespace", ""), resource["metadata"]["name"]) for resource in configmaps}
     expected_asset_maps = {}
     if "landing" in selected_app_ids:
-        landing_expected = {"ourbox-apps.json"}
-        landing_asset_dir = str(app_by_id.get("landing", {}).get("asset_dir", "")).strip()
-        if landing_asset_dir:
-            landing_expected.update(asset_files_for_dir(contract_root, landing_asset_dir))
-        expected_asset_maps[("ourbox-system", "landing-assets")] = landing_expected
+        expected_asset_maps[("ourbox-system", "landing-assets")] = {"ourbox-apps.json"}
         expected_asset_maps[("ourbox-system", "landing-status-assets")] = {
             path.name for path in sorted((contract_root / "landing-status").iterdir()) if path.is_file()
         }
         expected_asset_maps[("ourbox-system", "landing-status-assets")].add("ourbox-app-targets.json")
-    if "todo-bloom" in selected_app_ids:
-        todo_bloom_asset_dir = str(app_by_id.get("todo-bloom", {}).get("asset_dir", "")).strip()
-        if todo_bloom_asset_dir:
-            expected_asset_maps[("ourbox-system", "todo-bloom-assets")] = asset_files_for_dir(
-                contract_root,
-                todo_bloom_asset_dir,
-            )
     for key, expected_files in expected_asset_maps.items():
         if key not in configmap_names:
             errors.append(f"Missing asset ConfigMap {key[1]}")

@@ -15,9 +15,9 @@ rendered, linted, bundled, and later consumed by downstream image repos.
 Key inputs:
 
 - `landing/`
-  - fixture static assets retained for local validation only
+  - legacy fixture static assets retained for local validation only
 - `todo-bloom/`
-  - fixture static assets retained for local validation only
+  - legacy fixture static assets retained for local validation only
 - `profiles/`
   - named profile inputs used by the contract renderer
 
@@ -56,7 +56,9 @@ This directory defines the contract consumed above the hardware seam:
 - profile-specific render controls
 
 It should no longer be the production authority for live application HTML/JS
-or for copied standalone catalog/image-lock defaults.
+or for copied standalone catalog/image-lock defaults. Published application
+catalogs are expected to ship their own static app content in the selected app
+images rather than via `asset_dir` overlays from this tree.
 
 The same source tree is also used when building `airgap-platform`, because that
 bundle re-renders the contract and pulls the images selected by the current

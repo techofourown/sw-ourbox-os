@@ -19,7 +19,8 @@ longer needs to treat the checked-in catalog/image-lock copies as production
 authority:
 
 - official `platform-contract` publication can render against an external
-  published application catalog bundle via `OURBOX_APPLICATION_CATALOG_REF`
+  digest-pinned published application catalog bundle via
+  `OURBOX_APPLICATION_CATALOG_REF`
 - official `airgap-platform` publication can pull the same external bundle and
   enforce its `OURBOX_PLATFORM_CONTRACT_DIGEST` binding
 

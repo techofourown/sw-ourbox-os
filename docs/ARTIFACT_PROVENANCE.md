@@ -61,6 +61,10 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 
 All build logic lives in this repository. Official and compatible builds use the same entrypoints.
 
+For production publication, both `platform-contract/publish.sh` and
+`airgap-platform/publish.sh` require `OURBOX_APPLICATION_CATALOG_REF` to be a
+digest-pinned published application catalog bundle ref.
+
 ---
 
 ## Official release workflows
