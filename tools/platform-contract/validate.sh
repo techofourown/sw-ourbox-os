@@ -111,9 +111,39 @@ from pathlib import Path
 
 demo_catalog = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 demo_lock = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8"))
+demo_apps = {app["id"]: dict(app) for app in demo_catalog["apps"]}
+demo_images = {image["name"]: dict(image) for image in demo_lock["images"]}
+
+
+def stable_app(base_id: str, stable_id: str, *, local_app_id: str | None = None) -> dict:
+    app = dict(demo_apps[base_id])
+    app["id"] = stable_id
+    app["app_uid"] = stable_id
+    app["local_app_id"] = local_app_id or base_id
+    return app
+
+
+hello_world_app = {
+    "id": "techofourown/hello-world",
+    "app_uid": "techofourown/hello-world",
+    "local_app_id": "hello-world",
+    "display_name": "Hello World",
+    "description": "Small hello-world app sourced from a second sw-ourbox-apps repo.",
+    "renderer": "hello-world",
+    "service_name": "hello-world",
+    "service_port": 80,
+    "host_template": "hello.{box_host}",
+    "path": "/",
+    "expected_status": 200,
+    "body_marker": "Hello, world.",
+    "route_description": "hello-world-root",
+    "default_backend": False,
+    "image_names": ["hello-world"],
+}
 ourbox_chat_app = {
-    "id": "ourbox-chat",
+    "id": "techofourown/ourbox-chat",
     "app_uid": "techofourown/ourbox-chat",
+    "local_app_id": "ourbox-chat",
     "display_name": "OurBox Chat",
     "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
     "renderer": "static-http",
@@ -127,26 +157,62 @@ ourbox_chat_app = {
     "default_backend": False,
     "image_names": ["ourbox-chat"],
 }
-ourbox_chat_image = {
-    "name": "ourbox-chat",
-    "ref": "ghcr.io/techofourown/sw-ourbox-apps-chat/ourbox-chat@sha256:" + ("7" * 64),
-    "used_by": ["ourbox-chat"],
+
+merged_catalog = {
+    "schema": 1,
+    "kind": "ourbox-application-catalog",
+    "catalog_id": "merged-live-smoke",
+    "catalog_name": "Merged Live Smoke Catalog",
+    "catalog_description": "Validation-only merged catalog shaped like the live stable-id app surface.",
+    "default_app_ids": [
+        "techofourown/hello-world",
+        "techofourown/landing",
+        "techofourown/ourbox-chat",
+        "techofourown/todo-bloom",
+        "thirdparty/dufs",
+        "thirdparty/flatnotes",
+    ],
+    "apps": [
+        hello_world_app,
+        stable_app("landing", "techofourown/landing", local_app_id="landing"),
+        ourbox_chat_app,
+        stable_app("todo-bloom", "techofourown/todo-bloom", local_app_id="todo-bloom"),
+        stable_app("dufs", "thirdparty/dufs", local_app_id="dufs"),
+        stable_app("flatnotes", "thirdparty/flatnotes", local_app_id="flatnotes"),
+    ],
 }
 
-merged_catalog = dict(demo_catalog)
-merged_catalog["catalog_id"] = "merged-smoke"
-merged_catalog["catalog_name"] = "Merged Smoke Catalog"
-merged_catalog["catalog_description"] = "Validation-only merged catalog including OurBox Chat."
-merged_catalog["apps"] = list(demo_catalog["apps"]) + [ourbox_chat_app]
-merged_catalog["default_app_ids"] = [
-    "landing",
-    "todo-bloom",
-    "dufs",
-    "flatnotes",
-    "ourbox-chat",
-]
-
-merged_lock = {"schema": demo_lock["schema"], "profile": "merged-smoke", "images": list(demo_lock["images"]) + [ourbox_chat_image]}
+merged_lock = {
+    "schema": demo_lock["schema"],
+    "profile": "merged-live-smoke",
+    "images": [
+        {
+            "name": "nginx",
+            "ref": demo_images["nginx"]["ref"],
+            "used_by": ["techofourown/landing", "techofourown/todo-bloom"],
+        },
+        {
+            "name": "dufs",
+            "ref": demo_images["dufs"]["ref"],
+            "used_by": ["thirdparty/dufs"],
+        },
+        {
+            "name": "flatnotes",
+            "ref": demo_images["flatnotes"]["ref"],
+            "used_by": ["thirdparty/flatnotes"],
+        },
+        {
+            "name": "hello-world",
+            "ref": "ghcr.io/techofourown/sw-ourbox-apps-hello-world/hello-world@sha256:" + ("6" * 64),
+            "used_by": ["techofourown/hello-world"],
+        },
+        {
+            "name": "ourbox-chat",
+            "ref": "ghcr.io/techofourown/sw-ourbox-apps-chat/ourbox-chat@sha256:" + ("7" * 64),
+            "used_by": ["techofourown/ourbox-chat"],
+        },
+    ],
+}
 
 Path(sys.argv[3]).write_text(json.dumps(merged_catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 Path(sys.argv[4]).write_text(json.dumps(merged_lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -156,14 +222,15 @@ cat > "${MERGED_SELECTED_APPS_FILE}" <<'EOF'
 {
   "schema": 1,
   "kind": "ourbox-selected-applications",
-  "catalog_id": "merged-smoke",
+  "catalog_id": "merged-live-smoke",
   "selection_mode": "custom",
   "selected_app_ids": [
-    "landing",
-    "todo-bloom",
-    "dufs",
-    "flatnotes",
-    "ourbox-chat"
+    "techofourown/hello-world",
+    "techofourown/landing",
+    "techofourown/ourbox-chat",
+    "techofourown/todo-bloom",
+    "thirdparty/dufs",
+    "thirdparty/flatnotes"
   ]
 }
 EOF
@@ -309,12 +376,33 @@ path = Path(sys.argv[1])
 config = yaml.safe_load(path.read_text(encoding="utf-8"))
 payload = json.loads(config["data"]["ourbox-apps.json"])
 apps = payload["apps"]
-chat_apps = [app for app in apps if app["id"] == "ourbox-chat"]
+expected_ids = [
+    "techofourown/hello-world",
+    "techofourown/ourbox-chat",
+    "techofourown/todo-bloom",
+    "thirdparty/dufs",
+    "thirdparty/flatnotes",
+]
+actual_ids = [app["id"] for app in apps]
+if actual_ids != expected_ids:
+    raise SystemExit(f"unexpected landing app ids for merged render: {actual_ids!r}")
+hello_apps = [app for app in apps if app["id"] == "techofourown/hello-world"]
+chat_apps = [app for app in apps if app["id"] == "techofourown/ourbox-chat"]
+if hello_apps != [
+    {
+        "description": "Small hello-world app sourced from a second sw-ourbox-apps repo.",
+        "host": "hello.validate.ourbox.local",
+        "id": "techofourown/hello-world",
+        "name": "Hello World",
+        "path": "/",
+    }
+]:
+    raise SystemExit(f"unexpected landing hello entry for merged render: {hello_apps!r}")
 if chat_apps != [
     {
         "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
         "host": "chat.validate.ourbox.local",
-        "id": "ourbox-chat",
+        "id": "techofourown/ourbox-chat",
         "name": "OurBox Chat",
         "path": "/",
     }
@@ -333,18 +421,107 @@ path = Path(sys.argv[1])
 config = yaml.safe_load(path.read_text(encoding="utf-8"))
 payload = json.loads(config["data"]["ourbox-app-targets.json"])
 apps = payload["apps"]
-chat_apps = [app for app in apps if app["id"] == "ourbox-chat"]
+expected_ids = [
+    "techofourown/hello-world",
+    "techofourown/ourbox-chat",
+    "techofourown/todo-bloom",
+    "thirdparty/dufs",
+    "thirdparty/flatnotes",
+]
+actual_ids = [app["id"] for app in apps]
+if actual_ids != expected_ids:
+    raise SystemExit(f"unexpected landing status app ids for merged render: {actual_ids!r}")
+hello_apps = [app for app in apps if app["id"] == "techofourown/hello-world"]
+chat_apps = [app for app in apps if app["id"] == "techofourown/ourbox-chat"]
+if hello_apps != [
+    {
+        "description": "Small hello-world app sourced from a second sw-ourbox-apps repo.",
+        "host": "hello.validate.ourbox.local",
+        "id": "techofourown/hello-world",
+        "name": "Hello World",
+        "path": "/",
+        "service_name": "hello-world",
+    }
+]:
+    raise SystemExit(f"unexpected landing status hello target for merged render: {hello_apps!r}")
 if chat_apps != [
     {
         "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
         "host": "chat.validate.ourbox.local",
-        "id": "ourbox-chat",
+        "id": "techofourown/ourbox-chat",
         "name": "OurBox Chat",
         "path": "/",
         "service_name": "ourbox-chat",
     }
 ]:
     raise SystemExit(f"unexpected landing status chat target for merged render: {chat_apps!r}")
+PY
+
+python3 - <<'PY' "${OUT_DIR_MERGED}/selected-app-surface.json"
+import json
+import sys
+from pathlib import Path
+
+surface = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+if surface["default_backend_app_id"] != "techofourown/landing":
+    raise SystemExit(f"unexpected default backend app id: {surface['default_backend_app_id']!r}")
+if surface["landing_selected"] is not True:
+    raise SystemExit("expected landing_selected to be true")
+if surface["landing_app_id"] != "techofourown/landing":
+    raise SystemExit(f"unexpected landing app id: {surface['landing_app_id']!r}")
+if surface["status_route"]["path"] != "/_ourbox/app-status.json":
+    raise SystemExit(f"unexpected status route path: {surface['status_route']!r}")
+if surface["status_route"]["path_type"] != "Exact":
+    raise SystemExit(f"unexpected status route path_type: {surface['status_route']!r}")
+apps = {app["id"]: app for app in surface["apps"]}
+for app_id in (
+    "techofourown/hello-world",
+    "techofourown/landing",
+    "techofourown/ourbox-chat",
+    "techofourown/todo-bloom",
+    "thirdparty/dufs",
+    "thirdparty/flatnotes",
+):
+    if app_id not in apps:
+        raise SystemExit(f"selected app surface missing {app_id}")
+hello = apps["techofourown/hello-world"]
+chat = apps["techofourown/ourbox-chat"]
+if hello["publish_mdns_alias"] is not True or hello["include_in_status"] is not True:
+    raise SystemExit(f"unexpected hello flags: {hello!r}")
+if chat["publish_mdns_alias"] is not True or chat["include_in_status"] is not True:
+    raise SystemExit(f"unexpected chat flags: {chat!r}")
+landing = apps["techofourown/landing"]
+if landing["publish_mdns_alias"] is not False or landing["include_in_status"] is not False:
+    raise SystemExit(f"unexpected landing flags: {landing!r}")
+PY
+
+python3 - <<'PY' "${OUT_DIR_MERGED}/manifests/50-demo-apps-ingress.yaml"
+import sys
+from pathlib import Path
+
+import yaml
+
+ingress = yaml.safe_load(Path(sys.argv[1]).read_text(encoding="utf-8"))
+status_paths = [
+    path
+    for rule in ingress["spec"]["rules"]
+    if rule.get("host") == "validate.ourbox.local"
+    for path in rule.get("http", {}).get("paths", [])
+    if path.get("path") == "/_ourbox/app-status.json"
+]
+if status_paths != [
+    {
+        "path": "/_ourbox/app-status.json",
+        "pathType": "Exact",
+        "backend": {
+            "service": {
+                "name": "landing-status",
+                "port": {"number": 8080},
+            }
+        },
+    }
+]:
+    raise SystemExit(f"unexpected landing status ingress path: {status_paths!r}")
 PY
 
 python3 - <<'PY' "${OUT_DIR_MERGED}/manifests/05-contract-metadata-configmap.yaml"
@@ -446,6 +623,12 @@ tar -tzf "${ROOT}/dist/platform-contract.tar.gz" \
   | grep -Fx 'platform-contract/rendered/defaults/demo-apps/selected-apps.json' >/dev/null \
   || {
     echo "built platform-contract tarball is missing rendered/defaults/demo-apps/selected-apps.json" >&2
+    exit 1
+  }
+tar -tzf "${ROOT}/dist/platform-contract.tar.gz" \
+  | grep -Fx 'platform-contract/rendered/defaults/demo-apps/selected-app-surface.json' >/dev/null \
+  || {
+    echo "built platform-contract tarball is missing rendered/defaults/demo-apps/selected-app-surface.json" >&2
     exit 1
   }
 

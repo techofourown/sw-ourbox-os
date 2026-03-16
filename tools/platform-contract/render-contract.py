@@ -228,115 +228,196 @@ def resolve_selected_apps(catalog: dict, selected_apps_path: str | None) -> tupl
     return selection_mode, normalized_ids, app_by_id
 
 
-def selected_application_route_specs(
+def normalize_route_path(value: str | None) -> str:
+    path = str(value or "/").strip() or "/"
+    if not path.startswith("/"):
+        path = "/" + path
+    return path
+
+
+def resolved_selected_application_surface(
     catalog: dict,
     selected_app_ids: list[str],
     box_host: str,
     *,
+    selection_mode: str,
     catalog_path: Path | None = None,
-) -> list[dict]:
+) -> dict:
     app_by_id = {str(app["id"]): app for app in catalog["apps"]}
-    route_specs: list[dict] = []
+    resolved_apps: list[dict] = []
+    default_backend_app_id: str | None = None
+    landing_app_id: str | None = None
+
     for app_id in selected_app_ids:
         app = app_by_id[app_id]
         missing_keys = [
             key
-            for key in ("host_template", "service_name", "service_port", "expected_status", "body_marker", "route_description")
+            for key in (
+                "display_name",
+                "description",
+                "renderer",
+                "host_template",
+                "service_name",
+                "service_port",
+                "expected_status",
+                "body_marker",
+                "route_description",
+            )
             if key not in app
         ]
         if missing_keys:
             location = f" at {catalog_path}" if catalog_path else ""
             raise SystemExit(
-                f"application catalog{location} app {app_id!r} is missing required route keys: {', '.join(missing_keys)}"
+                f"application catalog{location} app {app_id!r} is missing required runtime-surface keys: {', '.join(missing_keys)}"
             )
-        route_specs.append(
+
+        path = normalize_route_path(app.get("path", "/"))
+        host = str(app["host_template"]).format(box_host=box_host)
+        default_backend = bool(app.get("default_backend", False))
+        renderer = str(app["renderer"]).strip()
+
+        if default_backend:
+            if default_backend_app_id is not None:
+                location = f" at {catalog_path}" if catalog_path else ""
+                raise SystemExit(
+                    f"application catalog{location} declares multiple selected default_backend apps: "
+                    f"{default_backend_app_id!r} and {app_id!r}"
+                )
+            default_backend_app_id = app_id
+
+        if renderer == "landing":
+            if landing_app_id is not None:
+                location = f" at {catalog_path}" if catalog_path else ""
+                raise SystemExit(
+                    f"application catalog{location} declares multiple selected landing renderers: "
+                    f"{landing_app_id!r} and {app_id!r}"
+                )
+            landing_app_id = app_id
+
+        resolved_apps.append(
             {
-                "host": str(app["host_template"]).format(box_host=box_host),
-                "path": str(app.get("path", "/")),
+                "id": app_id,
+                "app_uid": str(app.get("app_uid", app_id)),
+                "local_app_id": str(app.get("local_app_id", "")),
+                "display_name": str(app["display_name"]),
+                "description": str(app["description"]),
+                "renderer": renderer,
+                "host": host,
+                "path": path,
+                "url": f"http://{host}{path}",
                 "service_name": str(app["service_name"]),
                 "service_port": int(app["service_port"]),
+                "route_description": str(app["route_description"]),
                 "expected_status": int(app["expected_status"]),
                 "body_marker": str(app["body_marker"]),
-                "description": str(app["route_description"]),
-                "default_backend": bool(app.get("default_backend", False)),
+                "default_backend": default_backend,
+                "show_on_landing": not default_backend,
+                "publish_mdns_alias": host != box_host,
+                "include_in_status": not default_backend,
+            }
+        )
+
+    status_route = None
+    if landing_app_id is not None:
+        status_route = {
+            "host": box_host,
+            "path": LANDING_STATUS_ROUTE_PATH,
+            "path_type": "Exact",
+            "service_name": "landing-status",
+            "service_port": 8080,
+            "expected_status": 200,
+            "body_marker": LANDING_STATUS_BODY_MARKER,
+            "description": LANDING_STATUS_ROUTE_DESCRIPTION,
+        }
+
+    return {
+        "schema": 1,
+        "kind": "ourbox-selected-app-surface",
+        "application_catalog_id": str(catalog["catalog_id"]),
+        "application_catalog_name": str(catalog["catalog_name"]),
+        "selection_mode": selection_mode,
+        "box_host": box_host,
+        "default_backend_app_id": default_backend_app_id,
+        "landing_selected": landing_app_id is not None,
+        "landing_app_id": landing_app_id,
+        "status_route": status_route,
+        "apps": resolved_apps,
+    }
+
+
+def surface_route_specs(surface: dict) -> list[dict]:
+    route_specs = [
+        {
+            "host": str(app["host"]),
+            "path": str(app["path"]),
+            "path_type": "Prefix",
+            "service_name": str(app["service_name"]),
+            "service_port": int(app["service_port"]),
+            "expected_status": int(app["expected_status"]),
+            "body_marker": str(app["body_marker"]),
+            "description": str(app["route_description"]),
+            "default_backend": bool(app.get("default_backend", False)),
+        }
+        for app in surface["apps"]
+    ]
+    status_route = surface.get("status_route")
+    if status_route:
+        route_specs.append(
+            {
+                "host": str(status_route["host"]),
+                "path": str(status_route["path"]),
+                "path_type": str(status_route.get("path_type", "Prefix")),
+                "service_name": str(status_route["service_name"]),
+                "service_port": int(status_route["service_port"]),
+                "expected_status": int(status_route["expected_status"]),
+                "body_marker": str(status_route["body_marker"]),
+                "description": str(status_route["description"]),
+                "default_backend": False,
             }
         )
     return route_specs
 
 
-def selected_application_landing_specs(
-    catalog: dict,
-    selected_app_ids: list[str],
-    box_host: str,
-    *,
-    catalog_path: Path | None = None,
-) -> list[dict[str, str]]:
-    app_by_id = {str(app["id"]): app for app in catalog["apps"]}
-    landing_specs: list[dict[str, str]] = []
-    for app_id in selected_app_ids:
-        app = app_by_id[app_id]
-        if bool(app.get("default_backend", False)):
-            continue
-        missing_keys = [key for key in ("display_name", "description", "host_template") if key not in app]
-        if missing_keys:
-            location = f" at {catalog_path}" if catalog_path else ""
-            raise SystemExit(
-                f"application catalog{location} app {app_id!r} is missing required landing keys: {', '.join(missing_keys)}"
-            )
-        landing_specs.append(
-            {
-                "id": app_id,
-                "name": str(app["display_name"]),
-                "description": str(app["description"]),
-                "host": str(app["host_template"]).format(box_host=box_host),
-                "path": str(app.get("path", "/")),
-                "service_name": str(app["service_name"]),
-            }
-        )
-    return landing_specs
-
-
-def legacy_landing_specs(selected_app_ids: list[str], box_host: str) -> list[dict[str, str]]:
-    app_specs = [
-        {
-            "id": "dufs",
-            "name": "Files",
-            "description": "Upload, download, and share files.",
-            "host": f"files.{box_host}",
-            "path": "/",
-            "service_name": "dufs",
-        },
-        {
-            "id": "flatnotes",
-            "name": "Notes",
-            "description": "Write and organize markdown notes.",
-            "host": f"notes.{box_host}",
-            "path": "/",
-            "service_name": "flatnotes",
-        },
-        {
-            "id": "todo-bloom",
-            "name": "Todo",
-            "description": "Plan your day with clarity.",
-            "host": f"todo.{box_host}",
-            "path": "/",
-            "service_name": "todo-bloom",
-        },
-    ]
-    selected = set(selected_app_ids)
-    return [app for app in app_specs if app["id"] in selected]
-
-
-def public_landing_specs(apps: list[dict[str, str]]) -> list[dict[str, str]]:
+def public_landing_specs(apps: list[dict]) -> list[dict[str, str]]:
     return [
         {
-            "id": app["id"],
-            "name": app["name"],
-            "description": app["description"],
-            "host": app["host"],
-            "path": app["path"],
+            "id": str(app["id"]),
+            "name": str(app["name"]),
+            "description": str(app["description"]),
+            "host": str(app["host"]),
+            "path": str(app["path"]),
         }
         for app in apps
+    ]
+
+
+def landing_surface_specs(surface: dict) -> list[dict[str, str]]:
+    return [
+        {
+            "id": str(app["id"]),
+            "name": str(app["display_name"]),
+            "description": str(app["description"]),
+            "host": str(app["host"]),
+            "path": str(app["path"]),
+            "service_name": str(app["service_name"]),
+        }
+        for app in surface["apps"]
+        if bool(app.get("show_on_landing", False))
+    ]
+
+
+def landing_status_surface_specs(surface: dict) -> list[dict[str, str]]:
+    return [
+        {
+            "id": str(app["id"]),
+            "name": str(app["display_name"]),
+            "description": str(app["description"]),
+            "host": str(app["host"]),
+            "path": str(app["path"]),
+            "service_name": str(app["service_name"]),
+        }
+        for app in surface["apps"]
+        if bool(app.get("include_in_status", False))
     ]
 
 
@@ -709,7 +790,7 @@ def ingress(
         rules_by_host.setdefault(route["host"], []).append(
             {
                 "path": route["path"],
-                "pathType": "Prefix",
+                "pathType": route.get("path_type", "Prefix"),
                 "backend": {
                     "service": {
                         "name": route["service_name"],
@@ -1013,7 +1094,7 @@ def emit_landing_status_service(
     ingress_class: str,
     storage_class: str,
     *,
-    landing_apps: list[dict[str, str]],
+    status_apps: list[dict[str, str]],
 ) -> None:
     assets_dir = contract_root / "landing-status"
     configmap_name = "landing-status-assets"
@@ -1022,7 +1103,7 @@ def emit_landing_status_service(
     role_name = "landing-status"
     rolebinding_name = "landing-status"
     asset_data = load_assets(assets_dir)
-    asset_data.update(landing_status_assets_data(box_host, landing_apps))
+    asset_data.update(landing_status_assets_data(box_host, status_apps))
 
     yaml_dump(
         manifests_dir / f"{service_name}-configmap.yaml",
@@ -1127,6 +1208,7 @@ def emit_application_manifests(
     storage_class: str,
     *,
     selected_app_ids: list[str],
+    landing_app_id: str | None,
     app_by_id: dict[str, dict],
     image_refs: dict[str, str],
     catalog_path: Path | None,
@@ -1147,7 +1229,7 @@ def emit_application_manifests(
                 app=app,
                 image_refs=image_refs,
                 catalog_path=catalog_path,
-                extra_assets=landing_assets if app_id == "landing" else None,
+                extra_assets=landing_assets if app_id == landing_app_id else None,
             )
             continue
         if renderer == "dufs":
@@ -1214,31 +1296,17 @@ def main() -> int:
     image_refs = {item["name"]: item["ref"] for item in images_lock["images"]}
     application_catalog, application_catalog_path = load_application_catalog(profile_dir, args.application_catalog)
     selection_mode, selected_app_ids, app_by_id = resolve_selected_apps(application_catalog, args.selected_apps_file)
-    route_specs = selected_application_route_specs(
+    selected_app_surface = resolved_selected_application_surface(
         application_catalog,
         selected_app_ids,
         args.box_host,
+        selection_mode=selection_mode,
         catalog_path=application_catalog_path,
     )
-    landing_apps = selected_application_landing_specs(
-        application_catalog,
-        selected_app_ids,
-        args.box_host,
-        catalog_path=application_catalog_path,
-    )
-    if "landing" in selected_app_ids:
-        route_specs.append(
-            {
-                "host": args.box_host,
-                "path": LANDING_STATUS_ROUTE_PATH,
-                "service_name": "landing-status",
-                "service_port": 8080,
-                "expected_status": 200,
-                "body_marker": LANDING_STATUS_BODY_MARKER,
-                "description": LANDING_STATUS_ROUTE_DESCRIPTION,
-                "default_backend": False,
-            }
-        )
+    route_specs = surface_route_specs(selected_app_surface)
+    landing_apps = landing_surface_specs(selected_app_surface)
+    status_apps = landing_status_surface_specs(selected_app_surface)
+    landing_app_id = selected_app_surface.get("landing_app_id")
     application_catalog_id = str(application_catalog["catalog_id"])
     application_catalog_name = str(application_catalog["catalog_name"])
 
@@ -1299,7 +1367,7 @@ def main() -> int:
                 "selected_app_ids": ",".join(selected_app_ids),
                 "platform_images.json": LiteralStr(
                     json.dumps(
-                        {"landing-status": LANDING_STATUS_IMAGE_REF} if "landing" in selected_app_ids else {},
+                        {"landing-status": LANDING_STATUS_IMAGE_REF} if selected_app_surface["landing_selected"] else {},
                         indent=2,
                         sort_keys=True,
                     )
@@ -1319,12 +1387,13 @@ def main() -> int:
         ingress_class,
         storage_class,
         selected_app_ids=selected_app_ids,
+        landing_app_id=landing_app_id,
         app_by_id=app_by_id,
         image_refs=image_refs,
         catalog_path=application_catalog_path,
         landing_assets=landing_assets_data(args.box_host, landing_apps),
     )
-    if "landing" in selected_app_ids:
+    if selected_app_surface["landing_selected"]:
         emit_landing_status_service(
             manifests_dir,
             contract_root,
@@ -1334,7 +1403,7 @@ def main() -> int:
             tls_mode,
             ingress_class,
             storage_class,
-            landing_apps=landing_apps,
+            status_apps=status_apps,
         )
 
     yaml_dump(
@@ -1365,9 +1434,14 @@ def main() -> int:
             "APPLICATION_CATALOG_ID": application_catalog_id,
             "APPLICATION_SELECTION_MODE": selection_mode,
             "SELECTED_APP_IDS": ",".join(selected_app_ids),
+            "SELECTED_APP_SURFACE_FILE": "selected-app-surface.json",
             "READINESS_LABEL_SELECTOR": f"ourbox.techofourown.io/contract-profile={profile_env['OURBOX_PLATFORM_PROFILE']},ourbox.techofourown.io/readiness-required=true",
             "HTTP_ROUTES_FILE": "verification/http-routes.tsv",
         },
+    )
+    (output_dir / "selected-app-surface.json").write_text(
+        json.dumps(selected_app_surface, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
     (output_dir / "images.lock.json").write_text(json.dumps(images_lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     (output_dir / "catalog.json").write_text(json.dumps(application_catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")

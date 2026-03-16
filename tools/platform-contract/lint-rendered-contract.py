@@ -100,6 +100,13 @@ def load_env_file(path: Path) -> dict[str, str]:
     return data
 
 
+def normalize_path(value: str | None) -> str:
+    path = str(value or "/").strip() or "/"
+    if not path.startswith("/"):
+        path = "/" + path
+    return path
+
+
 def expected_landing_apps(render_dir: Path, selected_app_ids: list[str], box_host: str) -> list[dict[str, str]]:
     catalog_path = render_dir / "catalog.json"
     if catalog_path.is_file():
@@ -170,10 +177,27 @@ def load_catalog(path: Path) -> dict | None:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+def load_selected_app_surface(path: Path) -> dict | None:
+    if not path.is_file():
+        return None
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
 def app_by_id_from_catalog(catalog: dict | None) -> dict[str, dict]:
     if not catalog:
         return {}
     return {str(app["id"]): app for app in catalog.get("apps", [])}
+
+
+def selected_landing_app_id(app_by_id: dict[str, dict], selected_app_ids: list[str]) -> str | None:
+    landing_ids = [
+        app_id
+        for app_id in selected_app_ids
+        if str(app_by_id.get(app_id, {}).get("renderer", "")).strip() == "landing"
+    ]
+    if not landing_ids:
+        return None
+    return landing_ids[0]
 
 
 def main() -> int:
@@ -192,6 +216,7 @@ def main() -> int:
     selected_apps_file = Path(args.selected_apps_file).resolve() if args.selected_apps_file else render_dir / "selected-apps.json"
     catalog = load_catalog(render_dir / "catalog.json")
     app_by_id = app_by_id_from_catalog(catalog)
+    selected_app_surface = load_selected_app_surface(render_dir / "selected-app-surface.json")
     if selected_apps_file.is_file():
         selected_apps = json.loads(selected_apps_file.read_text(encoding="utf-8"))
         selected_app_ids_list = list(selected_apps.get("selected_app_ids", []))
@@ -201,6 +226,9 @@ def main() -> int:
     else:
         selected_app_ids_list = ["landing", "todo-bloom", "dufs", "flatnotes"]
         selected_app_ids = {"landing", "todo-bloom", "dufs", "flatnotes"}
+    render_env = load_env_file(render_dir / "render.env")
+    box_host = render_env.get("BOX_HOST", "")
+    landing_app_id = selected_landing_app_id(app_by_id, selected_app_ids_list)
 
     resources = load_resources(manifests_dir)
     resources_by_key = {resource_key(resource): resource for resource in resources}
@@ -224,6 +252,93 @@ def main() -> int:
     }
     pvc_names = {(resource["metadata"].get("namespace", ""), resource["metadata"]["name"]) for resource in pvcs}
     errors: list[str] = []
+
+    if selected_app_surface is None:
+        errors.append("Missing selected-app-surface.json")
+    else:
+        if selected_app_surface.get("schema") != 1:
+            errors.append("selected-app-surface.json must declare schema=1")
+        if selected_app_surface.get("kind") != "ourbox-selected-app-surface":
+            errors.append("selected-app-surface.json must declare kind=ourbox-selected-app-surface")
+        if box_host and selected_app_surface.get("box_host") != box_host:
+            errors.append("selected-app-surface.json box_host does not match render.env")
+
+        surface_apps = selected_app_surface.get("apps", [])
+        if not isinstance(surface_apps, list):
+            errors.append("selected-app-surface.json must declare an apps list")
+            surface_apps = []
+        surface_ids = [str(app.get("id", "")).strip() for app in surface_apps]
+        if surface_ids != selected_app_ids_list:
+            errors.append("selected-app-surface.json app ids do not match selected-apps.json")
+
+        expected_default_backend_id = next(
+            (
+                app_id
+                for app_id in selected_app_ids_list
+                if bool(app_by_id.get(app_id, {}).get("default_backend", False))
+            ),
+            None,
+        )
+        if selected_app_surface.get("default_backend_app_id") != expected_default_backend_id:
+            errors.append("selected-app-surface.json default_backend_app_id does not match the selected app set")
+        if bool(selected_app_surface.get("landing_selected", False)) != (landing_app_id is not None):
+            errors.append("selected-app-surface.json landing_selected does not match the selected app set")
+        if selected_app_surface.get("landing_app_id") != landing_app_id:
+            errors.append("selected-app-surface.json landing_app_id does not match the selected app set")
+
+        status_route = selected_app_surface.get("status_route")
+        if landing_app_id is None:
+            if status_route is not None:
+                errors.append("selected-app-surface.json status_route must be null when no landing app is selected")
+        else:
+            if not isinstance(status_route, dict):
+                errors.append("selected-app-surface.json must declare status_route when landing is selected")
+            else:
+                expected_status_route = {
+                    "host": box_host,
+                    "path": "/_ourbox/app-status.json",
+                    "path_type": "Exact",
+                    "service_name": "landing-status",
+                    "service_port": 8080,
+                    "expected_status": 200,
+                    "body_marker": "ourbox-landing-status",
+                    "description": "landing-app-status",
+                }
+                for key, expected_value in expected_status_route.items():
+                    if status_route.get(key) != expected_value:
+                        errors.append(f"selected-app-surface.json status_route {key} does not match expected runtime surface")
+
+        surface_by_id = {str(app.get("id", "")): app for app in surface_apps}
+        for app_id in selected_app_ids_list:
+            catalog_app = app_by_id.get(app_id)
+            if not catalog_app:
+                continue
+            surface_app = surface_by_id.get(app_id)
+            if surface_app is None:
+                errors.append(f"selected-app-surface.json is missing app {app_id}")
+                continue
+
+            expected_host = str(catalog_app["host_template"]).format(box_host=box_host)
+            expected_path = normalize_path(catalog_app.get("path", "/"))
+            expected_url = f"http://{expected_host}{expected_path}"
+            expected_default_backend = bool(catalog_app.get("default_backend", False))
+            expected_flags = {
+                "display_name": str(catalog_app["display_name"]),
+                "description": str(catalog_app["description"]),
+                "renderer": str(catalog_app["renderer"]),
+                "host": expected_host,
+                "path": expected_path,
+                "url": expected_url,
+                "service_name": str(catalog_app["service_name"]),
+                "service_port": int(catalog_app["service_port"]),
+                "default_backend": expected_default_backend,
+                "show_on_landing": not expected_default_backend,
+                "publish_mdns_alias": expected_host != box_host,
+                "include_in_status": not expected_default_backend,
+            }
+            for key, expected_value in expected_flags.items():
+                if surface_app.get(key) != expected_value:
+                    errors.append(f"selected-app-surface.json app {app_id} field {key} does not match expected runtime surface")
 
     for resource in resources:
         metadata = resource.get("metadata", {})
@@ -265,7 +380,7 @@ def main() -> int:
 
     configmap_names = {(resource["metadata"].get("namespace", ""), resource["metadata"]["name"]) for resource in configmaps}
     expected_asset_maps = {}
-    if "landing" in selected_app_ids:
+    if landing_app_id is not None:
         expected_asset_maps[("ourbox-system", "landing-assets")] = {"ourbox-apps.json"}
         expected_asset_maps[("ourbox-system", "landing-status-assets")] = {
             path.name for path in sorted((contract_root / "landing-status").iterdir()) if path.is_file()
@@ -280,8 +395,6 @@ def main() -> int:
             errors.append(f"ConfigMap/{key[1]} does not match asset source files")
             continue
         if key == ("ourbox-system", "landing-assets"):
-            render_env = load_env_file(render_dir / "render.env")
-            box_host = render_env.get("BOX_HOST", "")
             if not box_host:
                 errors.append("render.env is missing BOX_HOST required to validate landing app links")
                 continue
@@ -299,8 +412,6 @@ def main() -> int:
             if actual_payload != expected_payload:
                 errors.append("ConfigMap/landing-assets ourbox-apps.json does not match the selected app set")
         if key == ("ourbox-system", "landing-status-assets"):
-            render_env = load_env_file(render_dir / "render.env")
-            box_host = render_env.get("BOX_HOST", "")
             if not box_host:
                 errors.append("render.env is missing BOX_HOST required to validate landing status targets")
                 continue
@@ -412,16 +523,12 @@ def main() -> int:
                             f"not found in source file {source_file}"
                         )
             expected_route_descriptions = {
-                description
-                for description, app_id in (
-                    ("landing-app-status", "landing"),
-                    ("landing-root", "landing"),
-                    ("dufs-root", "dufs"),
-                    ("flatnotes-root", "flatnotes"),
-                    ("todo-bloom-root", "todo-bloom"),
-                )
-                if app_id in selected_app_ids
+                str(app_by_id[app_id]["route_description"])
+                for app_id in selected_app_ids_list
+                if app_id in app_by_id and str(app_by_id[app_id].get("route_description", "")).strip()
             }
+            if landing_app_id is not None:
+                expected_route_descriptions.add("landing-app-status")
             missing_descriptions = sorted(expected_route_descriptions - seen_descriptions)
             if missing_descriptions:
                 errors.append(
