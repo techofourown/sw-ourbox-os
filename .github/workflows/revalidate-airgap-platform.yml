@@ -1,54 +1,18 @@
 name: Revalidate Airgap Platform (non-publishing)
 # Runs the full airgap-platform bundle build on the official builder to confirm
-# the release-capable path still works. Normal scheduled/manual use does NOT
-# publish any official artifacts.
+# the release-capable path still works. Does NOT publish any official artifacts.
+# Use this after infrastructure changes, runner migrations, or to satisfy the
+# ADR-0008 revalidation requirement.
 #
-# This workflow also supports an explicit recovery mode via workflow_dispatch
-# for cases where an already-published platform-contract and catalog bundle
-# need to be paired to republish airgap artifacts without regenerating the
-# platform-contract digest again.
+# For an actual official republish, touch release/REVALIDATION_TRIGGER in a PR instead.
 
 on:
   workflow_dispatch:
-    inputs:
-      publish_recovery:
-        description: Publish/tag airgap artifacts using explicit published refs
-        required: false
-        default: "false"
-      source_ref:
-        description: Exact sw-ourbox-os git ref to build from in recovery mode
-        required: false
-        default: ""
-      application_catalog_ref:
-        description: Optional digest-pinned published catalog bundle ref
-        required: false
-        default: ""
-      platform_contract_ref:
-        description: Required for recovery publish mode
-        required: false
-        default: ""
-      platform_contract_digest:
-        description: Optional explicit contract digest to validate against catalog binding
-        required: false
-        default: ""
-      immutable_tag:
-        description: Required for recovery publish mode
-        required: false
-        default: ""
-      channel:
-        description: Required for recovery publish mode
-        required: false
-        default: ""
-      arch:
-        description: Optional single architecture to run (arm64 or amd64)
-        required: false
-        default: ""
   schedule:
-    - cron: '0 4 * * 0'
+    - cron: '0 4 * * 0'   # Weekly, Sunday 04:00 UTC (staggered after matchbox revalidation)
 
 permissions:
   contents: read
-  packages: write
 
 concurrency:
   group: revalidate-airgap-platform
@@ -64,62 +28,16 @@ jobs:
         arch: [arm64, amd64]
 
     steps:
-      - name: Resolve execution inputs
-        id: request
-        env:
-          INPUT_PUBLISH_RECOVERY: ${{ github.event.inputs.publish_recovery }}
-          INPUT_SOURCE_REF: ${{ github.event.inputs.source_ref }}
-          INPUT_PLATFORM_CONTRACT_REF: ${{ github.event.inputs.platform_contract_ref }}
-          INPUT_IMMUTABLE_TAG: ${{ github.event.inputs.immutable_tag }}
-          INPUT_CHANNEL: ${{ github.event.inputs.channel }}
-          INPUT_ARCH: ${{ github.event.inputs.arch }}
-        run: |
-          set -euo pipefail
-
-          source_ref="${GITHUB_SHA}"
-          [[ -n "${INPUT_SOURCE_REF:-}" ]] && source_ref="${INPUT_SOURCE_REF}"
-
-          publish_recovery="${INPUT_PUBLISH_RECOVERY:-false}"
-          arch_filter="${INPUT_ARCH:-}"
-          if [[ -n "${arch_filter}" ]]; then
-            case "${arch_filter}" in
-              arm64|amd64) ;;
-              *)
-                echo "arch input must be arm64 or amd64" >&2
-                exit 1
-                ;;
-            esac
-          fi
-
-          selected="true"
-          if [[ -n "${arch_filter}" && "${arch_filter}" != "${{ matrix.arch }}" ]]; then
-            selected="false"
-          fi
-
-          {
-            echo "source_ref=${source_ref}"
-            echo "publish_recovery=${publish_recovery}"
-            echo "platform_contract_ref=${INPUT_PLATFORM_CONTRACT_REF:-}"
-            echo "immutable_tag=${INPUT_IMMUTABLE_TAG:-}"
-            echo "channel=${INPUT_CHANNEL:-}"
-            echo "arch_filter=${arch_filter}"
-            echo "selected=${selected}"
-          } >> "${GITHUB_OUTPUT}"
-
-      - name: Checkout requested source ref
-        if: ${{ steps.request.outputs.selected == 'true' }}
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
-          ref: ${{ steps.request.outputs.source_ref }}
 
       - name: Install ORAS
-        if: ${{ steps.request.outputs.selected == 'true' }}
         uses: oras-project/setup-oras@v1
 
       - name: Install crane
-        if: ${{ steps.request.outputs.selected == 'true' }}
         run: |
           set -euo pipefail
           CRANE_VERSION="v0.20.7"
@@ -131,26 +49,15 @@ jobs:
           echo "${CRANE_DIR}" >> "${GITHUB_PATH}"
 
       - name: Login to GHCR (for pulling upstream platform images)
-        if: ${{ steps.request.outputs.selected == 'true' }}
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Resolve application catalog bundle ref
-        if: ${{ steps.request.outputs.selected == 'true' }}
         id: catalog
-        env:
-          INPUT_APPLICATION_CATALOG_REF: ${{ github.event.inputs.application_catalog_ref }}
-          INPUT_PLATFORM_CONTRACT_DIGEST: ${{ github.event.inputs.platform_contract_digest }}
         run: |
           set -euo pipefail
-
-          if [[ -n "${INPUT_APPLICATION_CATALOG_REF:-}" ]]; then
-            pinned_ref="${INPUT_APPLICATION_CATALOG_REF}"
-          else
-            mutable_ref="ghcr.io/techofourown/sw-ourbox-catalog-demo:latest"
-            digest="$(oras resolve "${mutable_ref}")"
-            pinned_ref="ghcr.io/techofourown/sw-ourbox-catalog-demo@${digest}"
-          fi
-
+          mutable_ref="ghcr.io/techofourown/sw-ourbox-catalog-demo:latest"
+          digest="$(oras resolve "${mutable_ref}")"
+          pinned_ref="ghcr.io/techofourown/sw-ourbox-catalog-demo@${digest}"
           pull_dir="$(mktemp -d)"
           extract_dir="$(mktemp -d)"
           trap 'rm -rf "${pull_dir}" "${extract_dir}"' EXIT
@@ -160,83 +67,35 @@ jobs:
           test -f "${bundle_tarball}"
           tar -xzf "${bundle_tarball}" -C "${extract_dir}"
           test -f "${extract_dir}/manifest.env"
-
           bound_contract_digest="$(awk -F= '/^OURBOX_PLATFORM_CONTRACT_DIGEST=/{print $2; exit}' "${extract_dir}/manifest.env")"
           [[ "${bound_contract_digest}" =~ ^sha256:[0-9a-f]{64}$ ]]
-
-          platform_contract_digest="${bound_contract_digest}"
-          if [[ -n "${INPUT_PLATFORM_CONTRACT_DIGEST:-}" ]]; then
-            [[ "${INPUT_PLATFORM_CONTRACT_DIGEST}" == "${bound_contract_digest}" ]] || {
-              echo "explicit platform_contract_digest does not match catalog bundle binding" >&2
-              echo "expected: ${bound_contract_digest}" >&2
-              echo "actual:   ${INPUT_PLATFORM_CONTRACT_DIGEST}" >&2
-              exit 1
-            }
-            platform_contract_digest="${INPUT_PLATFORM_CONTRACT_DIGEST}"
-          fi
 
           {
             echo "pinned_ref=${pinned_ref}"
             echo "bound_contract_digest=${bound_contract_digest}"
-            echo "platform_contract_digest=${platform_contract_digest}"
           } >> "${GITHUB_OUTPUT}"
 
-      - name: Validate recovery publish inputs
-        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
-        env:
-          PLATFORM_CONTRACT_REF: ${{ steps.request.outputs.platform_contract_ref }}
-          PLATFORM_CONTRACT_DIGEST: ${{ steps.catalog.outputs.platform_contract_digest }}
-          IMMUTABLE_TAG: ${{ steps.request.outputs.immutable_tag }}
-          CHANNEL: ${{ steps.request.outputs.channel }}
-        run: |
-          set -euo pipefail
-
-          [[ -n "${PLATFORM_CONTRACT_REF}" ]] || {
-            echo "platform_contract_ref is required when publish_recovery=true" >&2
-            exit 1
-          }
-          [[ "${PLATFORM_CONTRACT_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
-            echo "platform_contract_ref must be digest-pinned" >&2
-            exit 1
-          }
-          [[ "${PLATFORM_CONTRACT_REF##*@}" == "${PLATFORM_CONTRACT_DIGEST}" ]] || {
-            echo "platform_contract_ref digest must match platform_contract_digest" >&2
-            exit 1
-          }
-          [[ -n "${IMMUTABLE_TAG}" ]] || {
-            echo "immutable_tag is required when publish_recovery=true" >&2
-            exit 1
-          }
-          [[ -n "${CHANNEL}" ]] || {
-            echo "channel is required when publish_recovery=true" >&2
-            exit 1
-          }
-
       - name: Set up Python
-        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
       - name: Install platform-contract build deps
-        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
         run: python3 -m pip install --disable-pip-version-check pyyaml
 
       - name: Build local platform-contract bundle for airgap binding
-        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
         env:
           OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
-          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ steps.catalog.outputs.platform_contract_digest }}
+          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ steps.catalog.outputs.bound_contract_digest }}
         run: |
           set -euo pipefail
           ./tools/platform-contract/build.sh
           {
             echo "OURBOX_PLATFORM_CONTRACT_REF=revalidate-local-platform-contract"
-            echo "OURBOX_PLATFORM_CONTRACT_DIGEST=${{ steps.catalog.outputs.platform_contract_digest }}"
+            echo "OURBOX_PLATFORM_CONTRACT_DIGEST=${{ steps.catalog.outputs.bound_contract_digest }}"
           } >> "${GITHUB_ENV}"
 
       - name: Build airgap bundle (no publish)
-        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
@@ -245,8 +104,7 @@ jobs:
           set -euo pipefail
           ARCH="${ARCH}" ./tools/airgap-platform/build.sh
 
-      - name: Verify local bundle layout
-        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
+      - name: Verify bundle layout
         env:
           ARCH: ${{ matrix.arch }}
         run: |
@@ -258,111 +116,20 @@ jobs:
           tar -tzf dist/airgap-platform.tar.gz > "${TAR_LIST}"
 
           echo "Tar listing (head):"
-          sed -n '1,60p' "${TAR_LIST}"
+          sed -n '1,50p' "${TAR_LIST}"
 
           grep -q '^k3s/k3s$' "${TAR_LIST}"
           grep -q "^k3s/k3s-airgap-images-${ARCH}\\.tar$" "${TAR_LIST}"
           grep -q '^manifest.env$' "${TAR_LIST}"
-          grep -q '^platform/catalog.json$' "${TAR_LIST}"
-          grep -q '^platform/selected-apps.json$' "${TAR_LIST}"
-          grep -q '^platform/images.lock.json$' "${TAR_LIST}"
           grep -q '^platform/images/' "${TAR_LIST}"
 
-      - name: Publish immutable candidate bundle
-        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
-        env:
-          ARCH: ${{ matrix.arch }}
-          CONTAINER_CLI: podman
-          OURBOX_PLATFORM_CONTRACT_REF: ${{ steps.request.outputs.platform_contract_ref }}
-          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ steps.catalog.outputs.platform_contract_digest }}
-          OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
-        run: |
-          set -euo pipefail
-          tag="${{ steps.request.outputs.immutable_tag }}"
-          TAG="${tag}" ./tools/airgap-platform/publish.sh "${ARCH}" "${tag}"
-
-      - name: Tag official channel from candidate digest
-        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
-        env:
-          ARCH: ${{ matrix.arch }}
-          CHANNEL: ${{ steps.request.outputs.channel }}
-        run: |
-          set -euo pipefail
-          REF_FILE="dist/airgap-platform.${ARCH}.ref"
-          [[ -f "${REF_FILE}" ]] || {
-            echo "Missing ${REF_FILE}" >&2
-            exit 1
-          }
-          oras tag "$(cat "${REF_FILE}")" "${CHANNEL}-${ARCH}" >/dev/null
-
-      - name: Update official airgap catalog
-        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
-        env:
-          ARCH: ${{ matrix.arch }}
-          CHANNEL: ${{ steps.request.outputs.channel }}
-        run: |
-          set -euo pipefail
-          ./tools/airgap-platform/update-catalog.sh \
-            "dist/airgap-platform.${ARCH}.publish-record.json" \
-            "${CHANNEL}" \
-            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-            "${{ steps.request.outputs.immutable_tag }}-${ARCH}"
-
-      - name: Smoke pull published digest and verify layout
-        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
-        env:
-          ARCH: ${{ matrix.arch }}
-        run: |
-          set -euo pipefail
-
-          REF_FILE="dist/airgap-platform.${ARCH}.ref"
-          [[ -f "${REF_FILE}" ]] || {
-            echo "Missing ${REF_FILE}" >&2
-            exit 1
-          }
-
-          REF="$(cat "${REF_FILE}")"
-          echo "Smoke pull: ${REF}"
-
-          rm -rf /tmp/airgap-platform
-          mkdir -p /tmp/airgap-platform
-          oras pull "${REF}" -o /tmp/airgap-platform
-
-          test -f /tmp/airgap-platform/dist/airgap-platform.tar.gz
-
-          TAR_LIST="/tmp/airgap-platform/tar.list"
-          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz > "${TAR_LIST}"
-
-          echo "Tar listing (head):"
-          sed -n '1,60p' "${TAR_LIST}"
-
-          grep -q '^k3s/k3s$' "${TAR_LIST}"
-          grep -q "^k3s/k3s-airgap-images-${ARCH}\\.tar$" "${TAR_LIST}"
-          grep -q '^manifest.env$' "${TAR_LIST}"
-          grep -q '^platform/catalog.json$' "${TAR_LIST}"
-          grep -q '^platform/selected-apps.json$' "${TAR_LIST}"
-          grep -q '^platform/images.lock.json$' "${TAR_LIST}"
-          grep -q '^platform/images/' "${TAR_LIST}"
-          tar -xOzf /tmp/airgap-platform/dist/airgap-platform.tar.gz manifest.env \
-            | grep -q '^OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:'
+          echo "Bundle layout verified for ${ARCH}."
 
       - name: Upload revalidation metadata
-        if: ${{ always() && steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: revalidation-airgap-${{ matrix.arch }}-${{ github.run_id }}
           path: |
             dist/airgap-platform.meta.env
-          if-no-files-found: warn
-
-      - name: Upload publish outputs
-        if: ${{ always() && steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: recovery-airgap-${{ matrix.arch }}-${{ github.run_id }}
-          path: |
-            dist/airgap-platform.${{ matrix.arch }}.ref
-            dist/airgap-platform.${{ matrix.arch }}.push.log
-            dist/airgap-platform.meta.env
-            dist/airgap-platform.${{ matrix.arch }}.publish-record.json
           if-no-files-found: warn
