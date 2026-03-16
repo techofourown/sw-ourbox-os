@@ -1,23 +1,23 @@
 {
   "schema": 1,
   "source_repo": "https://github.com/techofourown/sw-ourbox-os",
-  "approved_release_tag": "v0.17.1",
+  "approved_release_tag": "v0.19.4",
   "platform_contract": {
-    "versioned_ref": "ghcr.io/techofourown/sw-ourbox-os/platform-contract:v0.17.1",
-    "pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:b4463acb02132c475280ef148b3ea9696d8019dc558849245fae9110d3cc62e0",
-    "digest": "sha256:b4463acb02132c475280ef148b3ea9696d8019dc558849245fae9110d3cc62e0",
+    "versioned_ref": "ghcr.io/techofourown/sw-ourbox-os/platform-contract:main-d62094a83d3c",
+    "pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:636af2d46d04b086366e97184d4e257d6c6e7dc75f070758d032cdd3cd4ff976",
+    "digest": "sha256:636af2d46d04b086366e97184d4e257d6c6e7dc75f070758d032cdd3cd4ff976",
     "required_route_marker": "Your apps, served by your machine, to your phone."
   },
   "airgap_platform": {
     "arm64": {
-      "versioned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:v0.17.1-arm64",
-      "pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:e79e0fff6b4643b58855bcc893eb28a44aa166206b9083ba2063d29d5b6c35d1",
-      "digest": "sha256:e79e0fff6b4643b58855bcc893eb28a44aa166206b9083ba2063d29d5b6c35d1"
+      "versioned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:main-d62094a83d3c-arm64",
+      "pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:1f1857ea55fd2b752de8843d6813ecc53e01370710013f21bd363ce4da5a03f9",
+      "digest": "sha256:1f1857ea55fd2b752de8843d6813ecc53e01370710013f21bd363ce4da5a03f9"
     },
     "amd64": {
-      "versioned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:v0.17.1-amd64",
-      "pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:fe6eb2e4c9ea1510f3270b9d20512a7d1b19c8e3adbef73587fca367137f16b7",
-      "digest": "sha256:fe6eb2e4c9ea1510f3270b9d20512a7d1b19c8e3adbef73587fca367137f16b7"
+      "versioned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:main-d62094a83d3c-amd64",
+      "pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:5841d97ac4419327f4c690941215b88c92866d4283b02064f510adbdac340d16",
+      "digest": "sha256:5841d97ac4419327f4c690941215b88c92866d4283b02064f510adbdac340d16"
     }
   }
 }

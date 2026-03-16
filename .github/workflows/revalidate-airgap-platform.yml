@@ -278,9 +278,8 @@ jobs:
           OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
         run: |
           set -euo pipefail
-          TAG="${{ steps.request.outputs.immutable_tag }}" \
-            ARCH="${ARCH}" \
-            ./tools/airgap-platform/publish.sh "${ARCH}" "${{ steps.request.outputs.immutable_tag }}"
+          tag="${{ steps.request.outputs.immutable_tag }}"
+          TAG="${tag}" ./tools/airgap-platform/publish.sh "${ARCH}" "${tag}"
 
       - name: Tag official channel from candidate digest
         if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
