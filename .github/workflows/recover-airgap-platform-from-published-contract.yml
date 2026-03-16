@@ -1,0 +1,150 @@
+name: Recover Airgap Platform From Published Contract
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_ref:
+        description: Exact sw-ourbox-os git ref to build from
+        required: true
+        default: d62094a83d3cbe7ff4808f15e378b3eaef32d3b6
+      immutable_tag:
+        description: Immutable airgap tag stem (without arch suffix)
+        required: true
+        default: main-d62094a83d3c
+      channel:
+        description: Official channel tag prefix
+        required: true
+        default: beta
+      platform_contract_ref:
+        description: Digest-pinned published platform-contract ref
+        required: true
+        default: ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:636af2d46d04b086366e97184d4e257d6c6e7dc75f070758d032cdd3cd4ff976
+      platform_contract_digest:
+        description: Digest for the published platform-contract ref
+        required: true
+        default: sha256:636af2d46d04b086366e97184d4e257d6c6e7dc75f070758d032cdd3cd4ff976
+      application_catalog_ref:
+        description: Digest-pinned published application catalog bundle ref
+        required: true
+        default: ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:399e093e36d6f7f93f13a69675e3ffce25736e2c442d6796761bf28f4416d030
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: recover-airgap-platform-${{ inputs.source_ref }}-${{ inputs.immutable_tag }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: [self-hosted, official-heavy, airgap-builder]
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [arm64, amd64]
+
+    steps:
+      - name: Checkout requested source ref
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+          ref: ${{ inputs.source_ref }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Publish immutable candidate bundle
+        env:
+          ARCH: ${{ matrix.arch }}
+          TAG: ${{ inputs.immutable_tag }}
+          CHANNEL: ${{ inputs.channel }}
+          CONTAINER_CLI: podman
+          OURBOX_PLATFORM_CONTRACT_REF: ${{ inputs.platform_contract_ref }}
+          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ inputs.platform_contract_digest }}
+          OURBOX_APPLICATION_CATALOG_REF: ${{ inputs.application_catalog_ref }}
+        run: |
+          set -euo pipefail
+          TAG="${TAG}" ARCH="${ARCH}" ./tools/airgap-platform/publish.sh "${ARCH}" "${TAG}"
+
+      - name: Tag official channel from candidate digest
+        env:
+          ARCH: ${{ matrix.arch }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          set -euo pipefail
+          REF_FILE="dist/airgap-platform.${ARCH}.ref"
+          [[ -f "${REF_FILE}" ]] || {
+            echo "Missing ${REF_FILE}" >&2
+            exit 1
+          }
+          oras tag "$(cat "${REF_FILE}")" "${CHANNEL}-${ARCH}" >/dev/null
+
+      - name: Update official airgap catalog
+        env:
+          ARCH: ${{ matrix.arch }}
+          CHANNEL: ${{ inputs.channel }}
+        run: |
+          set -euo pipefail
+          ./tools/airgap-platform/update-catalog.sh \
+            "dist/airgap-platform.${ARCH}.publish-record.json" \
+            "${CHANNEL}" \
+            "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            "${{ inputs.immutable_tag }}-${ARCH}"
+
+      - name: Smoke pull published digest and verify layout
+        env:
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+
+          REF_FILE="dist/airgap-platform.${ARCH}.ref"
+          [[ -f "${REF_FILE}" ]] || {
+            echo "Missing ${REF_FILE}" >&2
+            exit 1
+          }
+
+          REF="$(cat "${REF_FILE}")"
+          echo "Smoke pull: ${REF}"
+
+          rm -rf /tmp/airgap-platform
+          mkdir -p /tmp/airgap-platform
+          oras pull "${REF}" -o /tmp/airgap-platform
+
+          test -f /tmp/airgap-platform/dist/airgap-platform.tar.gz
+
+          TAR_LIST="/tmp/airgap-platform/tar.list"
+          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz > "${TAR_LIST}"
+
+          echo "Tar listing (head):"
+          sed -n '1,60p' "${TAR_LIST}"
+
+          grep -q '^k3s/k3s$' "${TAR_LIST}"
+          grep -q "^k3s/k3s-airgap-images-${ARCH}\\.tar$" "${TAR_LIST}"
+          grep -q '^manifest.env$' "${TAR_LIST}"
+          grep -q '^platform/catalog.json$' "${TAR_LIST}"
+          grep -q '^platform/selected-apps.json$' "${TAR_LIST}"
+          grep -q '^platform/images.lock.json$' "${TAR_LIST}"
+          grep -q '^platform/images/' "${TAR_LIST}"
+          tar -xOzf /tmp/airgap-platform/dist/airgap-platform.tar.gz manifest.env \
+            | grep -q '^OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:'
+
+      - name: Upload publish outputs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: recover-airgap-platform-${{ matrix.arch }}-${{ github.run_id }}
+          path: |
+            dist/airgap-platform.${{ matrix.arch }}.ref
+            dist/airgap-platform.${{ matrix.arch }}.push.log
+            dist/airgap-platform.meta.env
+            dist/airgap-platform.${{ matrix.arch }}.publish-record.json
+          if-no-files-found: warn
