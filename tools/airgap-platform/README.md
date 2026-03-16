@@ -61,7 +61,6 @@ Checked in here and elsewhere in this repo:
 Fetched during the build:
 
 - the published application catalog bundle selected by `OURBOX_APPLICATION_CATALOG_REF`
-  when that input is set
 - the upstream `k3s` binary for the selected architecture
 - the upstream `k3s-airgap-images-<arch>.tar`
 - each application image pinned in the rendered `images.lock.json`
@@ -69,7 +68,8 @@ Fetched during the build:
 There is intentionally no checked-in `airgap-platform/` payload tree in this
 repository. The artifact is assembled by script from published catalog inputs
 plus fetched upstream bytes. The checked-in `demo-apps` catalog and lock files
-remain only as a validation fallback when no external catalog bundle is supplied.
+remain only as an explicit validation fixture when
+`OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1` is set.
 
 ## Output shape
 
@@ -91,6 +91,7 @@ When the profile carries application-catalog metadata, `platform/` also
 includes:
 
 - `catalog.json`
+- `selected-apps.json`
 
 `manifest.env` is self-describing and includes:
 
@@ -136,6 +137,15 @@ ARCH=arm64 ./tools/airgap-platform/build.sh
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
 OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
+ARCH=amd64 ./tools/airgap-platform/build.sh
+```
+
+For explicit local fixture validation only:
+
+```bash
+OURBOX_PLATFORM_CONTRACT_REF=revalidate-local-platform-contract \
+OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:$(printf '%064d' 0) \
+OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 \
 ARCH=amd64 ./tools/airgap-platform/build.sh
 ```
 

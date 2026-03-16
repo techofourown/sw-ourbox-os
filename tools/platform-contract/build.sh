@@ -22,6 +22,7 @@ fi
 BUILD_DIR="$(mktemp -d)"
 trap 'rm -rf "${BUILD_DIR}"' EXIT
 
+ALLOW_FIXTURE_APPLICATION_CATALOG="${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-0}"
 APPLICATION_CATALOG_FILE="${CONTRACT_DIR}/profiles/demo-apps/catalog.json"
 APPLICATION_IMAGES_LOCK_FILE="${CONTRACT_DIR}/profiles/demo-apps/images.lock.json"
 APPLICATION_CATALOG_SOURCE_KIND="fixture-profile"
@@ -34,8 +35,11 @@ prepare_application_catalog_inputs() {
   local manifest_digest=""
 
   if [[ -z "${OURBOX_APPLICATION_CATALOG_REF:-}" ]]; then
-    log "Using in-repo demo-apps catalog fixtures for platform-contract build."
-    return 0
+    if [[ "${ALLOW_FIXTURE_APPLICATION_CATALOG}" == "1" ]]; then
+      log "Using explicitly requested in-repo demo-apps catalog fixtures for platform-contract build."
+      return 0
+    fi
+    die "OURBOX_APPLICATION_CATALOG_REF is required for platform-contract build. Set OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 only for explicit local fixture validation."
   fi
 
   command -v oras >/dev/null 2>&1 || die "oras is required when OURBOX_APPLICATION_CATALOG_REF is set"

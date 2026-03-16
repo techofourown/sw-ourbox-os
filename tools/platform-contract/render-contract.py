@@ -103,7 +103,10 @@ def load_assets(path: Path) -> dict[str, LiteralStr]:
 def load_application_catalog(profile_dir: Path, catalog_override: str | None) -> tuple[dict | None, Path | None]:
     catalog_path = Path(catalog_override).resolve() if catalog_override else profile_dir / "catalog.json"
     if not catalog_path.exists():
-        return None, None
+        raise SystemExit(
+            f"application catalog not found at {catalog_path}; "
+            "supported renders require explicit application intent"
+        )
 
     catalog = json.loads(catalog_path.read_text(encoding="utf-8"))
     if catalog.get("schema") != 1:
@@ -1210,84 +1213,34 @@ def main() -> int:
     images_lock, _images_lock_path = load_images_lock(profile_dir, args.images_lock_file)
     image_refs = {item["name"]: item["ref"] for item in images_lock["images"]}
     application_catalog, application_catalog_path = load_application_catalog(profile_dir, args.application_catalog)
-    if application_catalog is not None:
-        selection_mode, selected_app_ids, app_by_id = resolve_selected_apps(application_catalog, args.selected_apps_file)
-        route_specs = selected_application_route_specs(
-            application_catalog,
-            selected_app_ids,
-            args.box_host,
-            catalog_path=application_catalog_path,
-        )
-        landing_apps = selected_application_landing_specs(
-            application_catalog,
-            selected_app_ids,
-            args.box_host,
-            catalog_path=application_catalog_path,
-        )
-        if "landing" in selected_app_ids:
-            route_specs.append(
-                {
-                    "host": args.box_host,
-                    "path": LANDING_STATUS_ROUTE_PATH,
-                    "service_name": "landing-status",
-                    "service_port": 8080,
-                    "expected_status": 200,
-                    "body_marker": LANDING_STATUS_BODY_MARKER,
-                    "description": LANDING_STATUS_ROUTE_DESCRIPTION,
-                    "default_backend": False,
-                }
-            )
-        application_catalog_id = str(application_catalog["catalog_id"])
-        application_catalog_name = str(application_catalog["catalog_name"])
-    else:
-        selection_mode = "legacy-defaults"
-        selected_app_ids = ["landing", "todo-bloom", "dufs", "flatnotes"]
-        route_specs = [
+    selection_mode, selected_app_ids, app_by_id = resolve_selected_apps(application_catalog, args.selected_apps_file)
+    route_specs = selected_application_route_specs(
+        application_catalog,
+        selected_app_ids,
+        args.box_host,
+        catalog_path=application_catalog_path,
+    )
+    landing_apps = selected_application_landing_specs(
+        application_catalog,
+        selected_app_ids,
+        args.box_host,
+        catalog_path=application_catalog_path,
+    )
+    if "landing" in selected_app_ids:
+        route_specs.append(
             {
                 "host": args.box_host,
-                "path": "/",
-                "service_name": "landing",
-                "service_port": 80,
-                "expected_status": 200,
-                "body_marker": "Your apps, served by your machine, to your phone.",
-                "description": "landing-root",
-                "default_backend": True,
-            },
-            {
-                "host": f"files.{args.box_host}",
-                "path": "/",
-                "service_name": "dufs",
-                "service_port": 5000,
-                "expected_status": 200,
-                "body_marker": "Upload files",
-                "description": "dufs-root",
-                "default_backend": False,
-            },
-            {
-                "host": f"notes.{args.box_host}",
-                "path": "/",
-                "service_name": "flatnotes",
+                "path": LANDING_STATUS_ROUTE_PATH,
+                "service_name": "landing-status",
                 "service_port": 8080,
                 "expected_status": 200,
-                "body_marker": "flatnotes",
-                "description": "flatnotes-root",
+                "body_marker": LANDING_STATUS_BODY_MARKER,
+                "description": LANDING_STATUS_ROUTE_DESCRIPTION,
                 "default_backend": False,
-            },
-            {
-                "host": f"todo.{args.box_host}",
-                "path": "/",
-                "service_name": "todo-bloom",
-                "service_port": 80,
-                "expected_status": 200,
-                "body_marker": "Todo Bloom",
-                "description": "todo-bloom-root",
-                "default_backend": False,
-            },
-        ]
-        landing_apps = legacy_landing_specs(selected_app_ids, args.box_host)
-        application_catalog_id = profile_env["OURBOX_PLATFORM_PROFILE"]
-        application_catalog_name = profile_env["OURBOX_PLATFORM_PROFILE_DESCRIPTION"]
-        app_by_id = {}
+            }
+        )
+    application_catalog_id = str(application_catalog["catalog_id"])
+    application_catalog_name = str(application_catalog["catalog_name"])
 
     default_backend = next((route for route in route_specs if route["default_backend"]), route_specs[0])
 
@@ -1356,8 +1309,23 @@ def main() -> int:
             },
         ),
     )
-    if application_catalog is not None:
-        emit_application_manifests(
+    emit_application_manifests(
+        manifests_dir,
+        contract_root,
+        metadata,
+        profile_env,
+        args.box_host,
+        tls_mode,
+        ingress_class,
+        storage_class,
+        selected_app_ids=selected_app_ids,
+        app_by_id=app_by_id,
+        image_refs=image_refs,
+        catalog_path=application_catalog_path,
+        landing_assets=landing_assets_data(args.box_host, landing_apps),
+    )
+    if "landing" in selected_app_ids:
+        emit_landing_status_service(
             manifests_dir,
             contract_root,
             metadata,
@@ -1366,24 +1334,8 @@ def main() -> int:
             tls_mode,
             ingress_class,
             storage_class,
-            selected_app_ids=selected_app_ids,
-            app_by_id=app_by_id,
-            image_refs=image_refs,
-            catalog_path=application_catalog_path,
-            landing_assets=landing_assets_data(args.box_host, landing_apps),
+            landing_apps=landing_apps,
         )
-        if "landing" in selected_app_ids:
-            emit_landing_status_service(
-                manifests_dir,
-                contract_root,
-                metadata,
-                profile_env,
-                args.box_host,
-                tls_mode,
-                ingress_class,
-                storage_class,
-                landing_apps=landing_apps,
-            )
 
     yaml_dump(
         manifests_dir / "50-demo-apps-ingress.yaml",
@@ -1418,23 +1370,22 @@ def main() -> int:
         },
     )
     (output_dir / "images.lock.json").write_text(json.dumps(images_lock, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    if application_catalog is not None:
-        (output_dir / "catalog.json").write_text(json.dumps(application_catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-        (output_dir / "selected-apps.json").write_text(
-            json.dumps(
-                {
-                    "schema": 1,
-                    "kind": "ourbox-selected-applications",
-                    "catalog_id": application_catalog_id,
-                    "selection_mode": selection_mode,
-                    "selected_app_ids": selected_app_ids,
-                },
-                indent=2,
-                sort_keys=True,
-            )
-            + "\n",
-            encoding="utf-8",
+    (output_dir / "catalog.json").write_text(json.dumps(application_catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    (output_dir / "selected-apps.json").write_text(
+        json.dumps(
+            {
+                "schema": 1,
+                "kind": "ourbox-selected-applications",
+                "catalog_id": application_catalog_id,
+                "selection_mode": selection_mode,
+                "selected_app_ids": selected_app_ids,
+            },
+            indent=2,
+            sort_keys=True,
         )
+        + "\n",
+        encoding="utf-8",
+    )
     write_routes(verification_dir / "http-routes.tsv", route_specs)
     return 0
 

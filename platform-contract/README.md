@@ -69,8 +69,15 @@ catalog input.
 From the repo root:
 
 ```bash
-./tools/platform-contract/build.sh
+OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
+  ./tools/platform-contract/build.sh
 ./tools/platform-contract/validate.sh
+```
+
+For explicit local fixture validation only:
+
+```bash
+OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/platform-contract/build.sh
 ```
 
 ## Related directories
