@@ -17,6 +17,28 @@ on:
       - 'package-lock.json'
   schedule:
     - cron: '0 3 * * *'
+  workflow_dispatch:
+    inputs:
+      platform_contract_ref:
+        description: Optional digest-pinned platform-contract ref for publish-only recovery
+        required: false
+        type: string
+      platform_contract_digest:
+        description: Optional platform-contract digest for publish-only recovery
+        required: false
+        type: string
+      application_catalog_ref:
+        description: Optional digest-pinned application catalog bundle ref override
+        required: false
+        type: string
+      immutable_tag:
+        description: Optional immutable airgap-platform tag override
+        required: false
+        type: string
+      channel:
+        description: Optional channel override for the published airgap bundle
+        required: false
+        type: string
 permissions:
   contents: read
   packages: write
@@ -35,6 +57,9 @@ jobs:
     steps:
       - name: Resolve publication context
         id: context
+        env:
+          INPUT_CHANNEL: ${{ github.event.inputs.channel }}
+          INPUT_IMMUTABLE_TAG: ${{ github.event.inputs.immutable_tag }}
         run: |
           set -euo pipefail
 
@@ -44,14 +69,69 @@ jobs:
             echo "channel=nightly" >> "${GITHUB_OUTPUT}"
             echo "immutable_tag=nightly-${stamp}-${short_sha}" >> "${GITHUB_OUTPUT}"
             echo "platform_contract_tag=nightly-${stamp}-${short_sha}" >> "${GITHUB_OUTPUT}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            stamp="$(date -u +'%Y%m%d%H%M%S')"
+            channel="${INPUT_CHANNEL:-beta}"
+            immutable_tag="${INPUT_IMMUTABLE_TAG:-manual-${stamp}-${short_sha}}"
+            echo "channel=${channel}" >> "${GITHUB_OUTPUT}"
+            echo "immutable_tag=${immutable_tag}" >> "${GITHUB_OUTPUT}"
+            echo "platform_contract_tag=${immutable_tag}" >> "${GITHUB_OUTPUT}"
           else
             echo "channel=beta" >> "${GITHUB_OUTPUT}"
             echo "immutable_tag=main-${short_sha}" >> "${GITHUB_OUTPUT}"
             echo "platform_contract_tag=main-${short_sha}" >> "${GITHUB_OUTPUT}"
           fi
 
+  reuse-platform-contract:
+    needs: context
+    if: ${{ github.event_name == 'workflow_dispatch' && (inputs.platform_contract_ref != '' || inputs.platform_contract_digest != '' || inputs.application_catalog_ref != '') }}
+    runs-on: ubuntu-latest
+    outputs:
+      catalog_pinned_ref: ${{ steps.contract.outputs.catalog_pinned_ref }}
+      pinned_ref: ${{ steps.contract.outputs.pinned_ref }}
+      digest: ${{ steps.contract.outputs.digest }}
+    steps:
+      - name: Validate manual platform-contract recovery inputs
+        id: contract
+        env:
+          PLATFORM_CONTRACT_REF: ${{ inputs.platform_contract_ref }}
+          PLATFORM_CONTRACT_DIGEST: ${{ inputs.platform_contract_digest }}
+          APPLICATION_CATALOG_REF: ${{ inputs.application_catalog_ref }}
+        run: |
+          set -euo pipefail
+
+          [[ -n "${PLATFORM_CONTRACT_REF}" ]] || {
+            echo "workflow_dispatch recovery requires platform_contract_ref" >&2
+            exit 1
+          }
+          [[ -n "${PLATFORM_CONTRACT_DIGEST}" ]] || {
+            echo "workflow_dispatch recovery requires platform_contract_digest" >&2
+            exit 1
+          }
+          [[ "${PLATFORM_CONTRACT_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
+            echo "platform_contract_ref must be digest-pinned" >&2
+            exit 1
+          }
+          [[ "${PLATFORM_CONTRACT_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "platform_contract_digest must be a sha256 digest" >&2
+            exit 1
+          }
+          [[ "${PLATFORM_CONTRACT_REF##*@}" == "${PLATFORM_CONTRACT_DIGEST}" ]] || {
+            echo "platform_contract_ref and platform_contract_digest do not match" >&2
+            exit 1
+          }
+          if [[ -n "${APPLICATION_CATALOG_REF}" ]] && [[ ! "${APPLICATION_CATALOG_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]]; then
+            echo "application_catalog_ref must be digest-pinned when provided" >&2
+            exit 1
+          fi
+
+          echo "pinned_ref=${PLATFORM_CONTRACT_REF}" >> "${GITHUB_OUTPUT}"
+          echo "digest=${PLATFORM_CONTRACT_DIGEST}" >> "${GITHUB_OUTPUT}"
+          echo "catalog_pinned_ref=${APPLICATION_CATALOG_REF}" >> "${GITHUB_OUTPUT}"
+
   publish-platform-contract:
     needs: context
+    if: ${{ github.event_name != 'workflow_dispatch' || (inputs.platform_contract_ref == '' && inputs.platform_contract_digest == '' && inputs.application_catalog_ref == '') }}
     runs-on: ubuntu-latest
     outputs:
       catalog_pinned_ref: ${{ steps.catalog.outputs.pinned_ref }}
@@ -129,7 +209,7 @@ jobs:
           if-no-files-found: warn
 
   publish:
-    needs: [context, publish-platform-contract]
+    needs: [context, reuse-platform-contract, publish-platform-contract]
     runs-on: [self-hosted, official-heavy, airgap-builder]
     strategy:
       fail-fast: false
@@ -156,8 +236,9 @@ jobs:
       - name: Select compatible application catalog bundle
         id: catalog
         env:
-          EXPECTED_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest }}
-          ORIGINAL_CATALOG_PINNED_REF: ${{ needs.publish-platform-contract.outputs.catalog_pinned_ref }}
+          EXPECTED_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest || needs.reuse-platform-contract.outputs.digest }}
+          ORIGINAL_CATALOG_PINNED_REF: ${{ needs.publish-platform-contract.outputs.catalog_pinned_ref || needs.reuse-platform-contract.outputs.catalog_pinned_ref }}
+          DEFAULT_CATALOG_REPO: ghcr.io/techofourown/sw-ourbox-catalog-demo
         run: |
           set -euo pipefail
 
@@ -208,6 +289,9 @@ jobs:
           fi
 
           catalog_repo="${ORIGINAL_CATALOG_PINNED_REF%@*}"
+          if [[ -z "${catalog_repo}" || "${catalog_repo}" == "${ORIGINAL_CATALOG_PINNED_REF}" ]]; then
+            catalog_repo="${DEFAULT_CATALOG_REPO}"
+          fi
           mutable_ref="${catalog_repo}:latest"
           refreshed_digest="$(oras resolve "${mutable_ref}")"
           refreshed_ref="${catalog_repo}@${refreshed_digest}"
@@ -221,8 +305,8 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
-          OURBOX_PLATFORM_CONTRACT_REF: ${{ needs.publish-platform-contract.outputs.pinned_ref }}
-          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest }}
+          OURBOX_PLATFORM_CONTRACT_REF: ${{ needs.publish-platform-contract.outputs.pinned_ref || needs.reuse-platform-contract.outputs.pinned_ref }}
+          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ needs.publish-platform-contract.outputs.digest || needs.reuse-platform-contract.outputs.digest }}
           OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
         run: |
           set -euo pipefail
