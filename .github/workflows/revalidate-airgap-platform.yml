@@ -39,6 +39,10 @@ on:
         description: Required for recovery publish mode
         required: false
         default: ""
+      arch:
+        description: Optional single architecture to run (arm64 or amd64)
+        required: false
+        default: ""
   schedule:
     - cron: '0 4 * * 0'
 
@@ -68,6 +72,7 @@ jobs:
           INPUT_PLATFORM_CONTRACT_REF: ${{ github.event.inputs.platform_contract_ref }}
           INPUT_IMMUTABLE_TAG: ${{ github.event.inputs.immutable_tag }}
           INPUT_CHANNEL: ${{ github.event.inputs.channel }}
+          INPUT_ARCH: ${{ github.event.inputs.arch }}
         run: |
           set -euo pipefail
 
@@ -75,6 +80,21 @@ jobs:
           [[ -n "${INPUT_SOURCE_REF:-}" ]] && source_ref="${INPUT_SOURCE_REF}"
 
           publish_recovery="${INPUT_PUBLISH_RECOVERY:-false}"
+          arch_filter="${INPUT_ARCH:-}"
+          if [[ -n "${arch_filter}" ]]; then
+            case "${arch_filter}" in
+              arm64|amd64) ;;
+              *)
+                echo "arch input must be arm64 or amd64" >&2
+                exit 1
+                ;;
+            esac
+          fi
+
+          selected="true"
+          if [[ -n "${arch_filter}" && "${arch_filter}" != "${{ matrix.arch }}" ]]; then
+            selected="false"
+          fi
 
           {
             echo "source_ref=${source_ref}"
@@ -82,9 +102,12 @@ jobs:
             echo "platform_contract_ref=${INPUT_PLATFORM_CONTRACT_REF:-}"
             echo "immutable_tag=${INPUT_IMMUTABLE_TAG:-}"
             echo "channel=${INPUT_CHANNEL:-}"
+            echo "arch_filter=${arch_filter}"
+            echo "selected=${selected}"
           } >> "${GITHUB_OUTPUT}"
 
       - name: Checkout requested source ref
+        if: ${{ steps.request.outputs.selected == 'true' }}
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
@@ -92,9 +115,11 @@ jobs:
           ref: ${{ steps.request.outputs.source_ref }}
 
       - name: Install ORAS
+        if: ${{ steps.request.outputs.selected == 'true' }}
         uses: oras-project/setup-oras@v1
 
       - name: Install crane
+        if: ${{ steps.request.outputs.selected == 'true' }}
         run: |
           set -euo pipefail
           CRANE_VERSION="v0.20.7"
@@ -106,9 +131,11 @@ jobs:
           echo "${CRANE_DIR}" >> "${GITHUB_PATH}"
 
       - name: Login to GHCR (for pulling upstream platform images)
+        if: ${{ steps.request.outputs.selected == 'true' }}
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
       - name: Resolve application catalog bundle ref
+        if: ${{ steps.request.outputs.selected == 'true' }}
         id: catalog
         env:
           INPUT_APPLICATION_CATALOG_REF: ${{ github.event.inputs.application_catalog_ref }}
@@ -155,7 +182,7 @@ jobs:
           } >> "${GITHUB_OUTPUT}"
 
       - name: Validate recovery publish inputs
-        if: ${{ steps.request.outputs.publish_recovery == 'true' }}
+        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
         env:
           PLATFORM_CONTRACT_REF: ${{ steps.request.outputs.platform_contract_ref }}
           PLATFORM_CONTRACT_DIGEST: ${{ steps.catalog.outputs.platform_contract_digest }}
@@ -186,17 +213,17 @@ jobs:
           }
 
       - name: Set up Python
-        if: ${{ steps.request.outputs.publish_recovery != 'true' }}
+        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
         uses: actions/setup-python@v5
         with:
           python-version: "3.x"
 
       - name: Install platform-contract build deps
-        if: ${{ steps.request.outputs.publish_recovery != 'true' }}
+        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
         run: python3 -m pip install --disable-pip-version-check pyyaml
 
       - name: Build local platform-contract bundle for airgap binding
-        if: ${{ steps.request.outputs.publish_recovery != 'true' }}
+        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
         env:
           OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
           OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ steps.catalog.outputs.platform_contract_digest }}
@@ -209,7 +236,7 @@ jobs:
           } >> "${GITHUB_ENV}"
 
       - name: Build airgap bundle (no publish)
-        if: ${{ steps.request.outputs.publish_recovery != 'true' }}
+        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
@@ -219,7 +246,7 @@ jobs:
           ARCH="${ARCH}" ./tools/airgap-platform/build.sh
 
       - name: Verify local bundle layout
-        if: ${{ steps.request.outputs.publish_recovery != 'true' }}
+        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
         env:
           ARCH: ${{ matrix.arch }}
         run: |
@@ -242,7 +269,7 @@ jobs:
           grep -q '^platform/images/' "${TAR_LIST}"
 
       - name: Publish immutable candidate bundle
-        if: ${{ steps.request.outputs.publish_recovery == 'true' }}
+        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
@@ -256,7 +283,7 @@ jobs:
             ./tools/airgap-platform/publish.sh "${ARCH}" "${{ steps.request.outputs.immutable_tag }}"
 
       - name: Tag official channel from candidate digest
-        if: ${{ steps.request.outputs.publish_recovery == 'true' }}
+        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
         env:
           ARCH: ${{ matrix.arch }}
           CHANNEL: ${{ steps.request.outputs.channel }}
@@ -270,7 +297,7 @@ jobs:
           oras tag "$(cat "${REF_FILE}")" "${CHANNEL}-${ARCH}" >/dev/null
 
       - name: Update official airgap catalog
-        if: ${{ steps.request.outputs.publish_recovery == 'true' }}
+        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
         env:
           ARCH: ${{ matrix.arch }}
           CHANNEL: ${{ steps.request.outputs.channel }}
@@ -283,7 +310,7 @@ jobs:
             "${{ steps.request.outputs.immutable_tag }}-${ARCH}"
 
       - name: Smoke pull published digest and verify layout
-        if: ${{ steps.request.outputs.publish_recovery == 'true' }}
+        if: ${{ steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
         env:
           ARCH: ${{ matrix.arch }}
         run: |
@@ -321,7 +348,7 @@ jobs:
             | grep -q '^OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:'
 
       - name: Upload revalidation metadata
-        if: ${{ always() && steps.request.outputs.publish_recovery != 'true' }}
+        if: ${{ always() && steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: revalidation-airgap-${{ matrix.arch }}-${{ github.run_id }}
@@ -330,7 +357,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload publish outputs
-        if: ${{ always() && steps.request.outputs.publish_recovery == 'true' }}
+        if: ${{ always() && steps.request.outputs.selected == 'true' && steps.request.outputs.publish_recovery == 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: recovery-airgap-${{ matrix.arch }}-${{ github.run_id }}
