@@ -3,9 +3,16 @@ This directory is generated output in published platform-contract artifacts.
 Authoritative source inputs live under:
 
 - `platform-contract/profiles/`
+- `platform-contract/landing-status/`
+- `tools/platform-contract/render-contract.py`
+
+Legacy local-only fixture assets also remain under:
+
 - `platform-contract/landing/`
 - `platform-contract/todo-bloom/`
-- `tools/platform-contract/render-contract.py`
+
+Current published application catalogs are expected to ship static app content
+inside the selected application images rather than via `asset_dir` overlays.
 
 Build or validate the canonical rendered bundle with:
 

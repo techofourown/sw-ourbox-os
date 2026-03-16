@@ -13,7 +13,7 @@ MERGED_SELECTED_APPS_FILE="${OUT_BASE}/selected-apps-merged.json"
 MERGED_CATALOG_FILE="${OUT_BASE}/catalog-merged.json"
 MERGED_IMAGES_LOCK_FILE="${OUT_BASE}/images-lock-merged.json"
 BROKEN_ASSET_DIR_CATALOG_FILE="${OUT_BASE}/catalog-broken-asset-dir.json"
-BROKEN_ASSET_DIR_LOG="${OUT_BASE}/broken-asset-dir.log"
+UNSUPPORTED_ASSET_DIR_LOG="${OUT_BASE}/unsupported-asset-dir.log"
 IDENTITY_CONTRACT_DIR="${OUT_BASE}/identity-contract"
 trap 'rm -rf "${OUT_BASE}"' EXIT
 FIXTURE_APPLICATION_CATALOG_FILE="${ROOT}/platform-contract/profiles/demo-apps/catalog.json"
@@ -206,14 +206,14 @@ if OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
     --tls-mode "lan-http" \
     --ingress-class "traefik" \
     --storage-class "local-path" \
-    > /dev/null 2> "${BROKEN_ASSET_DIR_LOG}"; then
-  echo "render-contract unexpectedly accepted a missing explicit asset_dir" >&2
+    > /dev/null 2> "${UNSUPPORTED_ASSET_DIR_LOG}"; then
+  echo "render-contract unexpectedly accepted unsupported asset_dir" >&2
   exit 1
 fi
 
-grep -Fq "app 'landing' declares asset_dir 'missing-landing-assets'" "${BROKEN_ASSET_DIR_LOG}" || {
-  echo "render-contract did not report the missing explicit asset_dir clearly" >&2
-  cat "${BROKEN_ASSET_DIR_LOG}" >&2
+grep -Fq "app 'landing' declares unsupported asset_dir 'missing-landing-assets'" "${UNSUPPORTED_ASSET_DIR_LOG}" || {
+  echo "render-contract did not report unsupported asset_dir clearly" >&2
+  cat "${UNSUPPORTED_ASSET_DIR_LOG}" >&2
   exit 1
 }
 

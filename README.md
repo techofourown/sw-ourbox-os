@@ -46,7 +46,7 @@ This repository now produces a platform contract bundle from `platform-contract/
 that can be published to GHCR as an OCI artifact.
 
 - Build locally: `./tools/platform-contract/build.sh`
-- Publish (defaults to `edge`): `./tools/platform-contract/publish.sh [tag]`
+- Publish (requires `OURBOX_APPLICATION_CATALOG_REF` to be a digest-pinned published application catalog bundle ref): `./tools/platform-contract/publish.sh [tag]`
 - Pinned digest output: `dist/platform-contract.ref`
 
 A GitHub Actions workflow publishes:

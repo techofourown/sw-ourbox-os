@@ -781,7 +781,6 @@ def write_routes(path: Path, route_specs: list[dict]) -> None:
 
 def emit_static_http_app(
     manifests_dir: Path,
-    contract_root: Path,
     metadata: dict[str, str],
     profile_env: dict[str, str],
     box_host: str,
@@ -795,23 +794,21 @@ def emit_static_http_app(
     extra_assets: dict[str, LiteralStr] | None = None,
 ) -> None:
     app_id = str(app["id"])
-    renderer = str(app.get("renderer", "")).strip()
     service_name = str(app["service_name"])
     service_port = int(app["service_port"])
     image_ref = resolve_primary_image_ref(app, image_refs, catalog_path=catalog_path)
     asset_dir_name = str(app.get("asset_dir", "")).strip()
 
+    if asset_dir_name:
+        location = f" at {catalog_path}" if catalog_path else ""
+        raise SystemExit(
+            f"application catalog{location} app {app_id!r} declares unsupported asset_dir {asset_dir_name!r}; "
+            "static assets must come from the selected application image"
+        )
+
     volumes = None
     volume_mounts = None
     asset_data: dict[str, LiteralStr] = {}
-    if asset_dir_name:
-        asset_dir = contract_root / asset_dir_name
-        if not asset_dir.is_dir():
-            location = f" at {catalog_path}" if catalog_path else ""
-            raise SystemExit(
-                f"application catalog{location} app {app_id!r} declares asset_dir {asset_dir_name!r} but {asset_dir} is missing"
-            )
-        asset_data.update(load_assets(asset_dir))
     if extra_assets:
         asset_data.update(extra_assets)
     if asset_data:
@@ -831,18 +828,15 @@ def emit_static_http_app(
             ),
         )
         volumes = [{"name": "assets", "configMap": {"name": configmap_name}}]
-        if asset_dir_name:
-            volume_mounts = [{"name": "assets", "mountPath": "/usr/share/nginx/html", "readOnly": True}]
-        else:
-            volume_mounts = [
-                {
-                    "name": "assets",
-                    "mountPath": f"/usr/share/nginx/html/{file_name}",
-                    "subPath": file_name,
-                    "readOnly": True,
-                }
-                for file_name in sorted(asset_data)
-            ]
+        volume_mounts = [
+            {
+                "name": "assets",
+                "mountPath": f"/usr/share/nginx/html/{file_name}",
+                "subPath": file_name,
+                "readOnly": True,
+            }
+            for file_name in sorted(asset_data)
+        ]
 
     yaml_dump(
         manifests_dir / f"{service_name}-deployment.yaml",
@@ -1141,7 +1135,6 @@ def emit_application_manifests(
         if renderer in {"landing", "todo-bloom", "hello-world", "static-http"}:
             emit_static_http_app(
                 manifests_dir,
-                contract_root,
                 metadata,
                 profile_env,
                 box_host,

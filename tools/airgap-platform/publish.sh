@@ -22,8 +22,11 @@ command -v oras >/dev/null 2>&1 || die "oras is required (https://oras.land/)"
 command -v node >/dev/null 2>&1 || die "node is required for schema validation of publish records"
 : "${OURBOX_PLATFORM_CONTRACT_REF:?OURBOX_PLATFORM_CONTRACT_REF is required}"
 : "${OURBOX_PLATFORM_CONTRACT_DIGEST:?OURBOX_PLATFORM_CONTRACT_DIGEST is required}"
+: "${OURBOX_APPLICATION_CATALOG_REF:?OURBOX_APPLICATION_CATALOG_REF is required for publish.sh}"
 [[ "${OURBOX_PLATFORM_CONTRACT_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] \
   || die "OURBOX_PLATFORM_CONTRACT_DIGEST must be a sha256 digest"
+[[ "${OURBOX_APPLICATION_CATALOG_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]] \
+  || die "OURBOX_APPLICATION_CATALOG_REF must be a digest-pinned published application catalog bundle ref"
 
 log "Building bundle for ${ARCH}"
 ARCH="${ARCH}" "${ROOT}/tools/airgap-platform/build.sh"

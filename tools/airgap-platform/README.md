@@ -144,9 +144,11 @@ Build and publish:
 ```bash
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
+OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
 ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 beta
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
+OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
 ARCH=amd64 ./tools/airgap-platform/publish.sh amd64 nightly
 ```
 

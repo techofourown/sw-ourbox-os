@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+die() { echo "ERROR: $*" >&2; exit 1; }
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST_DIR="${ROOT}/dist"
 
@@ -20,6 +22,10 @@ command -v node >/dev/null 2>&1 || {
   echo "node is required for schema validation of publish records." >&2
   exit 1
 }
+
+: "${OURBOX_APPLICATION_CATALOG_REF:?OURBOX_APPLICATION_CATALOG_REF is required for publish.sh}"
+[[ "${OURBOX_APPLICATION_CATALOG_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]] \
+  || die "OURBOX_APPLICATION_CATALOG_REF must be a digest-pinned published application catalog bundle ref"
 
 "${ROOT}/tools/platform-contract/build.sh"
 # shellcheck disable=SC1090
