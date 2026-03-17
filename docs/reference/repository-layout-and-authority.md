@@ -240,7 +240,11 @@ The following paths remain in place by design:
 - `tools/install-defaults/installer-selection-resolver.sh`
 - `tools/installer-ssh-helper.sh`
 
-These are already stable downstream surfaces. They are not being relocated merely to make the tree more symmetrical.
+These are already stable downstream surfaces. `tools/release-control/` is
+intentionally vendored by downstream image repos. The installer helpers remain
+stable upstream-owned seams, but migrated target flows are expected to consume
+them through host-side tooling rather than keep their own copies. They are not
+being relocated merely to make the tree more symmetrical.
 
 ---
 

@@ -28,7 +28,7 @@ This is the shared contract above the hardware seam for:
 - airgap catalog resolution,
 - digest resolution,
 - contract-digest validation,
-- runtime fallback behavior,
+- bundle-source determination,
 - and installed-system airgap provenance.
 
 ## 2. Non-goals
@@ -55,8 +55,9 @@ It owns both:
 - the existing OS payload selection lane,
 - and the airgap-platform selection lane added by this contract.
 
-Consumers may vendor that file into installer media, but the normative behavior
-is defined here and owned by `sw-ourbox-os`.
+Host-side installer tooling may source that file directly. If a downstream
+consumer still carries a copy, the normative behavior is defined here and owned
+by `sw-ourbox-os`.
 
 ## 4. Inputs
 
@@ -66,13 +67,8 @@ The shared airgap selection lane uses the following installer control fields:
 - `AIRGAP_PLATFORM_ARCH`
 - `AIRGAP_PLATFORM_CHANNEL`
 - `AIRGAP_PLATFORM_REF` (optional exact ref override)
-- `AIRGAP_PLATFORM_DEFAULT_REF` (optional pinned default)
 - `AIRGAP_PLATFORM_CATALOG_ENABLED`
 - `AIRGAP_PLATFORM_CATALOG_TAG`
-- `AIRGAP_PLATFORM_CHANNEL_STABLE_TAG`
-- `AIRGAP_PLATFORM_CHANNEL_BETA_TAG`
-- `AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG`
-- `AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG`
 
 The following are local-only installer inputs and MUST NOT appear in the
 published `install-defaults` artifact:
@@ -122,19 +118,6 @@ Catalogs are published in the same OCI repo as the bundle:
 - `ghcr.io/techofourown/sw-ourbox-os/airgap-platform:catalog-arm64`
 - `ghcr.io/techofourown/sw-ourbox-os/airgap-platform:catalog-amd64`
 
-Moving channel tags are:
-
-- `stable-arm64`
-- `beta-arm64`
-- `nightly-arm64`
-- `exp-labs-arm64`
-- `stable-amd64`
-- `beta-amd64`
-- `nightly-amd64`
-- `exp-labs-amd64`
-
-`edge-*` is intentionally out of scope for the installer browser.
-
 The TSV schema for both arch catalogs is:
 
 ```tsv
@@ -156,9 +139,7 @@ Append order is not the contract.
 Shared precedence is:
 
 1. `AIRGAP_PLATFORM_REF`
-2. `AIRGAP_PLATFORM_DEFAULT_REF`
-3. newest valid catalog row for `AIRGAP_PLATFORM_CHANNEL`
-4. channel-tag fallback using `AIRGAP_PLATFORM_CHANNEL_*_TAG`
+2. newest valid catalog row for `AIRGAP_PLATFORM_CHANNEL`
 
 Catalog resolution must also satisfy the contract filter rule in the next
 section.
@@ -198,7 +179,7 @@ If `oras resolve` fails:
 - when that escape hatch is used, provenance must explicitly record
   `OURBOX_AIRGAP_PLATFORM_DIGEST=unresolved`
 
-## 10. Runtime Fallback Rule
+## 10. Bundle-Source Rule
 
 Installers should compare the selected airgap ref with the baked airgap bundle
 already described by the selected OS payload metadata.
@@ -242,14 +223,11 @@ Shared value expectations:
   - `registry`
 - `OURBOX_AIRGAP_PLATFORM_SELECTION_SOURCE`
   - `airgap-platform-ref`
-  - `airgap-platform-default-ref`
   - `catalog`
-  - `channel-tag`
   - `operator-override`
 
 `OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL` should be populated only when channel
-semantics actually participated in selection, typically for `catalog` or
-`channel-tag`.
+semantics actually participated in selection, typically for `catalog`.
 
 ## 12. Current Adoption Boundary
 

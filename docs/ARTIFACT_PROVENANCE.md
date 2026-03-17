@@ -97,11 +97,9 @@ the same artifact identity the promoted airgap bundles were built against.
 
 `install-defaults-promote.yml` is also lightweight. It follows the successful
 `Install Defaults` release publish workflow for the same release tag so it does
-not race sibling release publication. It reads optional curated `OS_DEFAULT_REF`
-values from `release/install-defaults-stable.env` in the checked-out release tag.
-If that file leaves all overrides empty, the workflow promotes the already-published
-versioned bundle into `install-defaults:stable` by digest using the publish run's
-artifact outputs.
+not race sibling release publication. It promotes the already-published
+versioned bundle into `install-defaults:stable` by digest using the publish
+run's artifact outputs.
 
 This repo also carries the canonical shared downstream release-control module in
 `tools/release-control/`. Downstream image repos vendor that directory at a pinned

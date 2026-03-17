@@ -89,33 +89,7 @@ jobs:
           SOURCE_TAG="${{ steps.context.outputs.release_tag }}"
           TARGET_TAG="stable"
 
-          # shellcheck disable=SC1091
-          source ./release/install-defaults-stable.env
-          MATCHBOX_REF="${MATCHBOX_OS_DEFAULT_REF_OVERRIDE:-}"
-          MATCHBOX_AIRGAP_REF="${MATCHBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE:-}"
-          WOODBOX_REF="${WOODBOX_OS_DEFAULT_REF_OVERRIDE:-}"
-          WOODBOX_AIRGAP_REF="${WOODBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE:-}"
-          TINDERBOX_REF="${TINDERBOX_OS_DEFAULT_REF_OVERRIDE:-}"
-
           mkdir -p dist
-
-          if [[ -n "${MATCHBOX_REF}" || -n "${MATCHBOX_AIRGAP_REF}" || -n "${WOODBOX_REF}" || -n "${WOODBOX_AIRGAP_REF}" || -n "${TINDERBOX_REF}" ]]; then
-            TAG="${TARGET_TAG}" \
-            MATCHBOX_OS_DEFAULT_REF_OVERRIDE="${MATCHBOX_REF}" \
-            MATCHBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE="${MATCHBOX_AIRGAP_REF}" \
-            WOODBOX_OS_DEFAULT_REF_OVERRIDE="${WOODBOX_REF}" \
-            WOODBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE="${WOODBOX_AIRGAP_REF}" \
-            TINDERBOX_OS_DEFAULT_REF_OVERRIDE="${TINDERBOX_REF}" \
-              ./tools/install-defaults/publish.sh "${TARGET_TAG}"
-
-            printf '%s\n' "curated-build" > dist/install-defaults.promote.mode
-            printf '%s\n' "refs/tags/${SOURCE_TAG}" > dist/install-defaults.promote.source.ref
-            printf '%s\n' "$(cat dist/install-defaults.ref)" > dist/install-defaults.promote.digest.ref
-            printf '%s\n' "${REF_BASE}:${TARGET_TAG}" > dist/install-defaults.promote.target.ref
-
-            echo "Published curated ${REF_BASE}:${TARGET_TAG} from release tag ${SOURCE_TAG}."
-            exit 0
-          fi
 
           SOURCE_REF="${REF_BASE}:${SOURCE_TAG}"
           SOURCE_REF_FILE="$(find dist/publish-outputs -type f -name 'install-defaults.ref' | head -n1 || true)"
