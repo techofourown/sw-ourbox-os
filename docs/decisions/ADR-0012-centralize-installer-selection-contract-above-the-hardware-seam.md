@@ -3,6 +3,12 @@
 ## Date
 2026-03-07
 
+## Update Note
+As of 2026-03-17, Matchbox no longer vendors the shared selection resolver into
+installer runtime media. Matchbox now consumes host-composed local mission media
+from `sw-ourbox-installer`. The context section below records the pre-migration
+state that motivated this ADR.
+
 ## Context
 
 OurBox currently has multiple installer implementations that all decide which OS payload gets
@@ -59,8 +65,8 @@ Concretely:
      other target-specific handoff logic.
 
 5. Consumers should realize the same policy and provenance vocabulary.
-   - Targets may vendor the upstream reference resolver into their installer image or otherwise
-     consume it in a target-appropriate way.
+   - Targets may vendor the upstream reference resolver into their installer image, call it from
+     a host-side compose tool, or otherwise consume it in a target-appropriate way.
    - What matters is that the contract and behavior stay centralized above the hardware seam.
 
 6. Tinderbox constrains the boundary but does not block the first migration.
@@ -89,8 +95,8 @@ Concretely:
 - Easier future adoption by additional targets without unifying unrelated installer mechanics.
 
 ### Negative
-- Consumers still need to vendor or otherwise carry the upstream resolver into target-specific
-  installer media.
+- Some consumers may still need to vendor or otherwise carry the upstream resolver, while others
+  may instead centralize it in a host-side composer. Cross-repo coordination is still required.
 - The docs surface grows: there is now an explicit installer-selection contract alongside the
   platform-contract and target-integration docs.
 - Refactoring existing consumers requires short-term cross-repo coordination.

@@ -70,8 +70,9 @@ The platform contract SHOULD reference app images by digest in manifests.
 
 ### 3) Install Defaults (installer remote config)
 **Kind:** `install-defaults`  
-**Meaning:** upstream-maintained installer selection metadata per hardware installer ID (catalog repo/tag, default channel, and airgap catalog metadata).
-**Canonical distribution:** OCI artifact identified by digest, consumed at install time as authoritative upstream control-plane data.
+**Meaning:** upstream-maintained installer selection defaults per hardware installer ID (recommended default ref, channel tags, catalog tag, repo override).  
+**Canonical distribution:** OCI artifact identified by digest, consumed by host-side compose tools
+or legacy direct-selection installers.
 
 Recommended OCI repo:
 - `ghcr.io/techofourown/sw-ourbox-os/install-defaults`
@@ -122,10 +123,12 @@ Recommended location:
 - Identity remains digest-based.
 - In an airgapped environment, the device should still be able to answer: "what digests are these bits?"
 
-4) **Installer defaults should be remotely authoritative**
-- Installers may pull `install-defaults` by OCI ref at runtime.
-- Failure to pull or unpack defaults must block install until the upstream control-plane data is available.
-- Boot-media overrides remain highest priority so operators can force custom refs/channels.
+4) **Installer defaults are upstream selection data, not target-runtime state**
+- Host-side compose tools may pull `install-defaults` by OCI ref while selecting artifacts.
+- Legacy direct-selection installers may also consume `install-defaults`, but that is not the
+  preferred direction for migrated targets.
+- Targets that have moved to host-composed local mission media should not depend on
+  target-runtime `install-defaults` fetches.
 - The shared precedence, catalog rules, digest rules, and provenance vocabulary for this decision
   surface are defined by the installer-selection contract in
   `docs/reference/installer-selection-contract.md`.

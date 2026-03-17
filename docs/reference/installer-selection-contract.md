@@ -217,7 +217,13 @@ selection behavior and provenance.
 
 ## 11. Current Adoption Boundary
 
-Matchbox and Woodbox are expected to realize this shared contract directly.
+Woodbox and legacy direct-selection consumers may realize this shared contract
+directly.
+
+Matchbox no longer carries the shared selection resolver inside installer
+runtime media. Matchbox now consumes host-composed local mission media from
+`sw-ourbox-installer`, so the exact OS payload has already been selected and
+staged before the target boots.
 
 Tinderbox is not yet required to consume the shared resolver because its current flow is still a
 host-side Jetson flasher rather than a catalog-driven installer. Tinderbox should document that

@@ -1,7 +1,10 @@
 # Install Defaults Profiles
 
-These profiles are bundled into the `install-defaults` OCI artifact and consumed by installer
-selection/composition tooling.
+These profiles are bundled into the `install-defaults` OCI artifact and consumed by
+host-side compose tools or legacy direct-selection installer runtimes.
+
+Matchbox has migrated to host-composed local mission media and no longer consumes
+an `install-defaults` profile in target runtime media.
 
 This directory owns published profile data only. It does not own executable browsing logic; that
 shared code surface lives in `tools/install-defaults/installer-selection-resolver.sh`.
@@ -51,15 +54,13 @@ Profile files are intentionally data-only. They must remain simple assignment-on
 `KEY=VALUE` content with comments/blank lines only; shell constructs are not allowed.
 
 Each profile must keep `OS_CATALOG_TAG` aligned with the actually published catalog lane for that
-target. Current official examples:
+target. Current official example:
 
-- Matchbox: `rpi-catalog`
 - Woodbox: `x86-catalog`
 
 Each profile must also keep `AIRGAP_PLATFORM_CATALOG_TAG` aligned with the published airgap
 catalog lane for that installer architecture:
 
-- Matchbox: `catalog-arm64`
 - Woodbox: `catalog-amd64`
 
 Catalog rows store the short release channel names in the `channel` column:
@@ -75,6 +76,13 @@ channel names above.
 That compatibility rule does not widen the canonical provenance vocabulary: if a consumer reads a
 legacy row such as `rpi-stable`, it should still record `OURBOX_RELEASE_CHANNEL=stable`.
 
+Channel tags must follow the same published target lanes:
+
+- Woodbox: `x86-stable`, `x86-beta`, `x86-nightly`, `x86-exp-labs`
+
+Airgap-platform channel tags are architecture-specific:
+
+- Woodbox: `stable-amd64`, `beta-amd64`, `nightly-amd64`, `exp-labs-amd64`
 Recommended pattern:
 
 1. Publish digest-pinned catalog rows for each supported release lane.

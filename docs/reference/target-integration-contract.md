@@ -96,8 +96,8 @@ Minimum expectations:
 
 Acceptable implementation shapes:
 - build-time embed,
+- host-composed staged mission media,
 - staged airgap bundle,
-- first-boot fetch with offline fallback,
 - another target-appropriate mechanism.
 
 The mechanism may differ. The provenance may not be ambiguous.
@@ -208,8 +208,9 @@ Recommended location:
 - `/opt/ourbox/airgap/platform/`
 
 If the target does not embed such a bundle, the repo MUST document:
-- how the platform contract is acquired,
-- what the offline fallback is, if any.
+- how the host or compose path stages that contract or bundle before the target
+  boots,
+- and where the target expects to find those staged local bytes.
 
 ### 5.7 Status, health, and observability surfaces
 
