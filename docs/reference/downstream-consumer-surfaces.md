@@ -100,7 +100,7 @@ The path `tools/release-control/` is stable. This repository does not relocate i
 
 ---
 
-## 5. Vendored shared installer helpers
+## 5. Shared installer helpers
 
 The following shared helpers are stable consumer surfaces for installer implementations.
 
@@ -109,10 +109,14 @@ The following shared helpers are stable consumer surfaces for installer implemen
 | Installer selection reference resolver | `tools/install-defaults/installer-selection-resolver.sh` | Shared-above-the-hardware-seam installer selection policy implementation |
 | Installer SSH helper | `tools/installer-ssh-helper.sh` | Shared-above-the-hardware-seam installer SSH normalization, validation, and config rendering |
 
-These helpers are designed to be vendored or carried into installer media by downstream or target-specific repos.
+These helpers are stable upstream-owned seams. The preferred model is for
+host-side installer tooling to source them directly. A target-specific repo
+should only carry a copy when the target runtime truly requires it.
 
 ### Consumption rule
-Consumers MAY vendor these files directly, but when they do, they SHALL treat the upstream copy in this repository as the source of truth.
+Consumers SHOULD treat the upstream copy in this repository as the source of
+truth. If they carry a copy, they SHALL pin the upstream source revision and
+diff-check that copy in CI.
 
 ### Stability rule
 These paths are stable and intentionally preserved.
