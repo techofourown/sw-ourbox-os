@@ -231,7 +231,13 @@ semantics actually participated in selection, typically for `catalog`.
 
 ## 12. Current Adoption Boundary
 
-Matchbox and Woodbox are expected to realize this shared contract directly.
+Woodbox and legacy direct-selection consumers may realize this shared contract
+directly.
+
+Matchbox no longer carries the shared airgap-selection lane inside installer
+runtime media. Matchbox now consumes host-composed local mission media from
+`sw-ourbox-installer`, so the application bundle has already been selected and
+staged before the target boots.
 
 Tinderbox is intentionally outside the first runtime browser rollout because its
 current flow is still a host-side Jetson flasher rather than a catalog-driven

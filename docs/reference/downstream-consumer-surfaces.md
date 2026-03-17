@@ -109,14 +109,15 @@ The following shared helpers are stable consumer surfaces for installer implemen
 | Installer selection reference resolver | `tools/install-defaults/installer-selection-resolver.sh` | Shared-above-the-hardware-seam installer selection policy implementation |
 | Installer SSH helper | `tools/installer-ssh-helper.sh` | Shared-above-the-hardware-seam installer SSH normalization, validation, and config rendering |
 
-These helpers are stable upstream-owned seams. The preferred model is for
-host-side installer tooling to source them directly. A target-specific repo
-should only carry a copy when the target runtime truly requires it.
+These helpers are stable shared code surfaces for downstream or target-specific repos.
+The preferred model is to call the installer selection resolver from a host-side compose tool or
+to vendor it only in legacy direct-selection media that still needs a target-runtime copy.
 
 ### Consumption rule
-Consumers SHOULD treat the upstream copy in this repository as the source of
-truth. If they carry a copy, they SHALL pin the upstream source revision and
-diff-check that copy in CI.
+Consumers MAY vendor these files directly, but when they do, they SHALL treat the upstream copy in
+this repository as the source of truth, pin the upstream source revision, and diff-check that copy
+in CI. New target-runtime flows that have already moved to host-composed mission media do not need
+to keep a vendored runtime copy of the installer selection resolver.
 
 ### Stability rule
 These paths are stable and intentionally preserved.
