@@ -128,13 +128,8 @@ CHANNEL_EXP_LABS_TAG=custom-exp-labs
 AIRGAP_PLATFORM_REPO=ghcr.io/example/custom-airgap-platform
 AIRGAP_PLATFORM_ARCH=amd64
 AIRGAP_PLATFORM_CHANNEL=stable
-AIRGAP_PLATFORM_DEFAULT_REF=
 AIRGAP_PLATFORM_CATALOG_ENABLED=1
 AIRGAP_PLATFORM_CATALOG_TAG=catalog-amd64
-AIRGAP_PLATFORM_CHANNEL_STABLE_TAG=stable-amd64
-AIRGAP_PLATFORM_CHANNEL_BETA_TAG=beta-amd64
-AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG=nightly-amd64
-AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG=exp-labs-amd64
 EOF_PROFILE
   tar -C "${defaults_src}" -czf "${defaults_src}/dist/install-defaults.tar.gz" install-defaults
   export FAKE_ORAS_INSTALL_DEFAULTS_DIR="${defaults_src}"
@@ -150,7 +145,6 @@ EOF_OVERRIDE
   INSTALLER_ID="woodbox"
   INSTALL_DEFAULTS_REF="ghcr.io/example/install-defaults:edge"
   OS_DEFAULT_REF="ghcr.io/example/woodbox-os@sha256:${digest64}"
-  AIRGAP_PLATFORM_DEFAULT_REF="ghcr.io/example/airgap-platform@sha256:${digest64}"
   OS_REPO="ghcr.io/techofourown/ourbox-woodbox-os"
   OS_TARGET="x86"
   OS_CHANNEL="stable"
@@ -167,7 +161,6 @@ EOF_OVERRIDE
   assert_eq "${OS_CATALOG_TAG}" "custom-catalog" "remote defaults should override catalog tag"
   assert_eq "${OS_DEFAULT_REF}" "ghcr.io/example/woodbox-os@sha256:${digest64}" "baked pinned default should survive empty remote OS_DEFAULT_REF"
   assert_eq "${AIRGAP_PLATFORM_REPO}" "ghcr.io/example/custom-airgap-platform" "remote defaults should override airgap-platform repo"
-  assert_eq "${AIRGAP_PLATFORM_DEFAULT_REF}" "ghcr.io/example/airgap-platform@sha256:${digest64}" "baked pinned airgap default should survive empty remote AIRGAP_PLATFORM_DEFAULT_REF"
   assert_eq "${OS_CHANNEL}" "nightly" "override env should win after remote defaults"
 
   rm -rf "${tmp}"
@@ -683,12 +676,24 @@ test_finalize_registry_ref_fails_closed_without_dev_override() {
   rm -rf "${tmp}"
 }
 
-test_airgap_platform_default_precedence_prefers_exact_ref_then_default_ref() {
-  local tmp contract_digest ref_digest default_digest
+test_airgap_platform_default_precedence_prefers_exact_ref_then_catalog() {
+  local tmp fake_oras_dir catalog_src contract_digest ref_digest catalog_digest
   tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  catalog_src="${tmp}/catalog-src"
   contract_digest="sha256:1111111111111111111111111111111111111111111111111111111111111111"
   ref_digest="2222222222222222222222222222222222222222222222222222222222222222"
-  default_digest="3333333333333333333333333333333333333333333333333333333333333333"
+  catalog_digest="3333333333333333333333333333333333333333333333333333333333333333"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+
+  mkdir -p "${catalog_src}"
+  cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
+channel	tag	created	version	revision	arch	platform_contract_digest	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
+stable	stable-arm64	2026-03-09T00:00:00Z	v0.15.0	aaaa1111	arm64	${contract_digest}	demo-apps	v1.35.0+k3s1	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	sha256:${catalog_digest}	ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${catalog_digest}
+EOF_CATALOG
+  export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
   # shellcheck disable=SC1090
   source "${RESOLVER}"
@@ -698,13 +703,8 @@ test_airgap_platform_default_precedence_prefers_exact_ref_then_default_ref() {
   AIRGAP_PLATFORM_CHANNEL="stable"
   AIRGAP_PLATFORM_CATALOG_ENABLED="1"
   AIRGAP_PLATFORM_CATALOG_TAG="catalog-arm64"
-  AIRGAP_PLATFORM_CHANNEL_STABLE_TAG="stable-arm64"
-  AIRGAP_PLATFORM_CHANNEL_BETA_TAG="beta-arm64"
-  AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG="nightly-arm64"
-  AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG="exp-labs-arm64"
 
   AIRGAP_PLATFORM_REF="ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${ref_digest}"
-  AIRGAP_PLATFORM_DEFAULT_REF="ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${default_digest}"
   ourbox_airgap_platform_selection_reset_state
   ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${contract_digest}"
   assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "airgap-platform-ref" "AIRGAP_PLATFORM_REF should have highest precedence"
@@ -713,8 +713,8 @@ test_airgap_platform_default_precedence_prefers_exact_ref_then_default_ref() {
   AIRGAP_PLATFORM_REF=""
   ourbox_airgap_platform_selection_reset_state
   ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${contract_digest}"
-  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "airgap-platform-default-ref" "AIRGAP_PLATFORM_DEFAULT_REF should outrank catalog resolution"
-  assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${default_digest}" "AIRGAP_PLATFORM_DEFAULT_REF should be selected directly"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "catalog" "catalog resolution should supply the default when no exact airgap ref is set"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${catalog_digest}" "catalog resolution should choose the matching digest-pinned row"
 
   rm -rf "${tmp}"
 }
@@ -748,13 +748,8 @@ EOF_CATALOG
   AIRGAP_PLATFORM_ARCH="arm64"
   AIRGAP_PLATFORM_CHANNEL="stable"
   AIRGAP_PLATFORM_REF=""
-  AIRGAP_PLATFORM_DEFAULT_REF=""
   AIRGAP_PLATFORM_CATALOG_ENABLED="1"
   AIRGAP_PLATFORM_CATALOG_TAG="catalog-arm64"
-  AIRGAP_PLATFORM_CHANNEL_STABLE_TAG="stable-arm64"
-  AIRGAP_PLATFORM_CHANNEL_BETA_TAG="beta-arm64"
-  AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG="nightly-arm64"
-  AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG="exp-labs-arm64"
 
   ourbox_airgap_platform_selection_reset_state
   ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${contract_a}"
@@ -766,7 +761,7 @@ EOF_CATALOG
   rm -rf "${tmp}"
 }
 
-test_airgap_platform_channel_falls_back_to_tag_when_catalog_unavailable() {
+test_airgap_platform_channel_requires_catalog_when_no_exact_ref() {
   local tmp fake_oras_dir contract_digest
   tmp="$(mktemp -d)"
   fake_oras_dir="${tmp}/bin"
@@ -783,20 +778,18 @@ test_airgap_platform_channel_falls_back_to_tag_when_catalog_unavailable() {
   AIRGAP_PLATFORM_ARCH="amd64"
   AIRGAP_PLATFORM_CHANNEL="beta"
   AIRGAP_PLATFORM_REF=""
-  AIRGAP_PLATFORM_DEFAULT_REF=""
   AIRGAP_PLATFORM_CATALOG_ENABLED="1"
   AIRGAP_PLATFORM_CATALOG_TAG="catalog-amd64"
-  AIRGAP_PLATFORM_CHANNEL_STABLE_TAG="stable-amd64"
-  AIRGAP_PLATFORM_CHANNEL_BETA_TAG="beta-amd64"
-  AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG="nightly-amd64"
-  AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG="exp-labs-amd64"
 
   ourbox_airgap_platform_selection_reset_state
-  ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${contract_digest}"
+  if ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${contract_digest}"; then
+    printf 'ASSERTION FAILED: airgap selection should require a matching catalog row when no exact ref is set\n' >&2
+    exit 1
+  fi
 
-  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "channel-tag" "airgap selection should fall back to channel tag when the catalog is unavailable"
-  assert_eq "${OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL}" "beta" "airgap channel fallback should preserve the selected release channel"
-  assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:beta-amd64" "airgap channel fallback should use the arch-specific channel tag"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "" "airgap selection should not synthesize a fallback source when the catalog is unavailable"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL}" "" "airgap selection should not record a release channel when no catalog-backed default exists"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "" "airgap selection should leave the selected ref empty when no catalog-backed default exists"
 
   rm -rf "${tmp}"
 }
@@ -826,62 +819,54 @@ EOF_CATALOG
   AIRGAP_PLATFORM_ARCH="arm64"
   AIRGAP_PLATFORM_CHANNEL="stable"
   AIRGAP_PLATFORM_REF=""
-  AIRGAP_PLATFORM_DEFAULT_REF=""
   AIRGAP_PLATFORM_CATALOG_ENABLED="1"
   AIRGAP_PLATFORM_CATALOG_TAG="catalog-arm64"
-  AIRGAP_PLATFORM_CHANNEL_STABLE_TAG="stable-arm64"
-  AIRGAP_PLATFORM_CHANNEL_BETA_TAG="beta-arm64"
-  AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG="nightly-arm64"
-  AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG="exp-labs-arm64"
 
   ourbox_airgap_platform_selection_reset_state
-  ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${required_contract}"
+  if ourbox_airgap_platform_determine_default_ref "${tmp}/catalog" "${required_contract}"; then
+    printf 'ASSERTION FAILED: airgap selection should reject catalog rows whose platform contract digest does not match the selected OS payload\n' >&2
+    exit 1
+  fi
 
-  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "channel-tag" "airgap resolver should reject catalog rows whose platform contract digest does not match the selected OS payload"
-  assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:stable-arm64" "airgap resolver should fall back to the configured channel tag when no contract-matching row exists"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "" "airgap resolver should reject catalog rows whose platform contract digest does not match the selected OS payload"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "" "airgap resolver should leave the selected ref empty when no contract-matching row exists"
 
   rm -rf "${tmp}"
 }
 
-test_airgap_platform_interactive_repo_override_clears_pinned_default() {
-  local tmp captured contract_digest default_digest
+test_airgap_platform_interactive_repo_override_supports_custom_ref_without_catalog_default() {
+  local tmp captured contract_digest custom_digest
   tmp="$(mktemp -d)"
   contract_digest="sha256:7878787878787878787878787878787878787878787878787878787878787878"
-  default_digest="9090909090909090909090909090909090909090909090909090909090909090"
+  custom_digest="9090909090909090909090909090909090909090909090909090909090909090"
 
   captured="$(
-    printf 'o\nlocalhost:5000/custom/airgap-platform\ncustom-catalog\n\n' | bash -lc "
+    printf "o\nlocalhost:5000/custom/airgap-platform\ncustom-catalog\nr\nlocalhost:5000/custom/airgap-platform@sha256:${custom_digest}\n" | bash -lc "
       set -euo pipefail
       source '${RESOLVER}'
       AIRGAP_PLATFORM_REPO='ghcr.io/techofourown/sw-ourbox-os/airgap-platform'
       AIRGAP_PLATFORM_ARCH='arm64'
       AIRGAP_PLATFORM_CHANNEL='stable'
       AIRGAP_PLATFORM_REF=''
-      AIRGAP_PLATFORM_DEFAULT_REF='ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${default_digest}'
       AIRGAP_PLATFORM_CATALOG_ENABLED='0'
       AIRGAP_PLATFORM_CATALOG_TAG='catalog-arm64'
-      AIRGAP_PLATFORM_CHANNEL_STABLE_TAG='stable-arm64'
-      AIRGAP_PLATFORM_CHANNEL_BETA_TAG='beta-arm64'
-      AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG='nightly-arm64'
-      AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG='exp-labs-arm64'
       ourbox_airgap_platform_selection_reset_state
       ourbox_airgap_platform_selection_interactive_select_ref '${tmp}/catalog' '${contract_digest}' >/dev/null
       printf '%s\t%s\t%s\t%s\t%s\n' \"\$OURBOX_AIRGAP_PLATFORM_SELECTED_REF\" \"\$OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL:-}\" \"\$AIRGAP_PLATFORM_REPO\" \"\$AIRGAP_PLATFORM_CATALOG_TAG\"
     " 2>/dev/null
   )"
 
-  assert_eq "${captured}" $'localhost:5000/custom/airgap-platform:stable-arm64\tchannel-tag\tstable\tlocalhost:5000/custom/airgap-platform\tcustom-catalog' "airgap repo override should clear pinned defaults and rederive the default from the overridden repo"
+  assert_eq "${captured}" $'localhost:5000/custom/airgap-platform@sha256:'"${custom_digest}"$'\toperator-override\t\tlocalhost:5000/custom/airgap-platform\tcustom-catalog' "airgap repo override should preserve the overridden repo and allow an explicit custom ref when no catalog-backed default exists"
 
   rm -rf "${tmp}"
 }
 
-test_airgap_platform_interactive_channel_pick_prefers_catalog_row_over_baked_default() {
-  local tmp fake_oras_dir catalog_src captured contract_digest default_digest beta_digest
+test_airgap_platform_interactive_channel_pick_prefers_catalog_row() {
+  local tmp fake_oras_dir catalog_src captured contract_digest beta_digest
   tmp="$(mktemp -d)"
   fake_oras_dir="${tmp}/bin"
   catalog_src="${tmp}/catalog-src"
   contract_digest="sha256:5656565656565656565656565656565656565656565656565656565656565656"
-  default_digest="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   beta_digest="bcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbc"
 
   make_fake_oras "${fake_oras_dir}"
@@ -905,20 +890,15 @@ EOF_CATALOG
       AIRGAP_PLATFORM_ARCH='arm64'
       AIRGAP_PLATFORM_CHANNEL='stable'
       AIRGAP_PLATFORM_REF=''
-      AIRGAP_PLATFORM_DEFAULT_REF='ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:${default_digest}'
       AIRGAP_PLATFORM_CATALOG_ENABLED='1'
       AIRGAP_PLATFORM_CATALOG_TAG='catalog-arm64'
-      AIRGAP_PLATFORM_CHANNEL_STABLE_TAG='stable-arm64'
-      AIRGAP_PLATFORM_CHANNEL_BETA_TAG='beta-arm64'
-      AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG='nightly-arm64'
-      AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG='exp-labs-arm64'
       ourbox_airgap_platform_selection_reset_state
       ourbox_airgap_platform_selection_interactive_select_ref '${tmp}/catalog' '${contract_digest}' >/dev/null
       printf '%s\t%s\t%s\n' \"\$OURBOX_AIRGAP_PLATFORM_SELECTED_REF\" \"\$OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL:-}\"
     " 2>/dev/null
   )"
 
-  assert_eq "${captured}" $'ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:'"${beta_digest}"$'\tcatalog\tbeta' "interactive airgap channel choice should bypass baked defaults and prefer the selected lane's catalog row"
+  assert_eq "${captured}" $'ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:'"${beta_digest}"$'\tcatalog\tbeta' "interactive airgap channel choice should prefer the selected lane's catalog row"
 
   rm -rf "${tmp}"
 }
@@ -1157,12 +1137,12 @@ main() {
   test_finalize_registry_ref_handles_registry_ports_without_tags
   test_finalize_registry_ref_dev_override_marks_unresolved
   test_finalize_registry_ref_fails_closed_without_dev_override
-  test_airgap_platform_default_precedence_prefers_exact_ref_then_default_ref
+  test_airgap_platform_default_precedence_prefers_exact_ref_then_catalog
   test_airgap_platform_catalog_resolution_uses_newest_matching_created_timestamp
-  test_airgap_platform_channel_falls_back_to_tag_when_catalog_unavailable
+  test_airgap_platform_channel_requires_catalog_when_no_exact_ref
   test_airgap_platform_catalog_filters_non_matching_contract_digest
-  test_airgap_platform_interactive_repo_override_clears_pinned_default
-  test_airgap_platform_interactive_channel_pick_prefers_catalog_row_over_baked_default
+  test_airgap_platform_interactive_repo_override_supports_custom_ref_without_catalog_default
+  test_airgap_platform_interactive_channel_pick_prefers_catalog_row
   test_airgap_platform_finalize_registry_ref_resolves_digest
   test_airgap_platform_finalize_registry_ref_dev_override_marks_unresolved
   test_airgap_platform_validate_extracted_bundle_rejects_invalid_manifest_contract_digest

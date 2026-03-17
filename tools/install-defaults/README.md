@@ -14,7 +14,7 @@ directory is the build, publish, validation, and shared resolver layer.
 
 - `build.sh`
   - packages `install-defaults/` into `dist/install-defaults.tar.gz`
-  - can apply curated `OS_DEFAULT_REF` and `AIRGAP_PLATFORM_DEFAULT_REF` overrides during the stable-promotion lane
+  - can apply curated `OS_DEFAULT_REF` overrides during the stable-promotion lane
 - `publish.sh`
   - pushes the tarball to GHCR with OCI annotations
   - records the digest-pinned ref in `dist/install-defaults.ref`
@@ -69,8 +69,7 @@ Publish output:
 ## Stable promotion nuance
 
 `release/install-defaults-stable.env` can provide curated digest-pinned
-`OS_DEFAULT_REF` and `AIRGAP_PLATFORM_DEFAULT_REF` overrides for the moving
-`install-defaults:stable` lane.
+`OS_DEFAULT_REF` overrides for the moving `install-defaults:stable` lane.
 
 - if all overrides are empty, the stable lane re-tags an already-published
   versioned artifact by digest

@@ -56,9 +56,7 @@ mkdir -p "${BUILD_DIR}/install-defaults"
 cp -a "${SRC_DIR}/." "${BUILD_DIR}/install-defaults/"
 
 apply_profile_override "matchbox" "OS_DEFAULT_REF" "${MATCHBOX_OS_DEFAULT_REF_OVERRIDE:-}"
-apply_profile_override "matchbox" "AIRGAP_PLATFORM_DEFAULT_REF" "${MATCHBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE:-}"
 apply_profile_override "woodbox" "OS_DEFAULT_REF" "${WOODBOX_OS_DEFAULT_REF_OVERRIDE:-}"
-apply_profile_override "woodbox" "AIRGAP_PLATFORM_DEFAULT_REF" "${WOODBOX_AIRGAP_PLATFORM_DEFAULT_REF_OVERRIDE:-}"
 apply_profile_override "tinderbox" "OS_DEFAULT_REF" "${TINDERBOX_OS_DEFAULT_REF_OVERRIDE:-}"
 
 bash "${ROOT}/tools/install-defaults/validate-assignment-only.sh" \

@@ -272,12 +272,9 @@ Typical fields include:
 - `CHANNEL_NIGHTLY_TAG`
 - `CHANNEL_EXP_LABS_TAG`
 - `AIRGAP_PLATFORM_REPO`
+- `AIRGAP_PLATFORM_CHANNEL`
 - `AIRGAP_PLATFORM_CATALOG_TAG`
-- `AIRGAP_PLATFORM_DEFAULT_REF`
-- `AIRGAP_PLATFORM_CHANNEL_STABLE_TAG`
-- `AIRGAP_PLATFORM_CHANNEL_BETA_TAG`
-- `AIRGAP_PLATFORM_CHANNEL_NIGHTLY_TAG`
-- `AIRGAP_PLATFORM_CHANNEL_EXP_LABS_TAG`
+- `AIRGAP_PLATFORM_REF`
 
 This bundle is small and separately publishable so the recommended default artifact can change without requiring every installer image to be rebuilt for every recommendation change.
 
