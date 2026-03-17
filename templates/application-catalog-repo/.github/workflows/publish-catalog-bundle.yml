@@ -6,6 +6,10 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: publish-application-catalog-${{ github.repository }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -23,6 +27,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Publish bundle
         run: |
+          set -euo pipefail
           REF="ghcr.io/${GITHUB_REPOSITORY}:latest"
           CATALOG_REF="ghcr.io/${GITHUB_REPOSITORY}:catalog-amd64"
           CATALOG_ARTIFACT_TYPE="application/vnd.techofourown.ourbox.application-catalog.catalog.v1"
@@ -35,19 +40,16 @@ jobs:
             "${IMMUTABLE_REF}" \
             dist/application-catalog-bundle.tar.gz:application/vnd.techofourown.ourbox.application-catalog.v1.tar+gzip
           DIGEST="$(oras resolve "${IMMUTABLE_REF}")"
-          oras tag "${IMMUTABLE_REF}" latest >/dev/null
-          oras tag "${IMMUTABLE_REF}" stable >/dev/null
-          oras tag "${IMMUTABLE_REF}" "${VERSION_TAG}" >/dev/null
-          LATEST_DIGEST="$(oras resolve "${REF}")"
-          [[ "${LATEST_DIGEST}" == "${DIGEST}" ]] || {
-            echo "latest tag did not resolve to the published immutable digest" >&2
-            echo "expected: ${DIGEST}" >&2
-            echo "actual:   ${LATEST_DIGEST}" >&2
-            exit 1
-          }
           EXISTING_CATALOG=""
-          if oras pull "${CATALOG_REF}" -o dist/catalog-existing >/dev/null 2>&1; then
+          rm -rf dist/catalog-existing
+          if oras pull "${CATALOG_REF}" -o dist/catalog-existing >"${RUNNER_TEMP}/catalog-pull.out" 2>"${RUNNER_TEMP}/catalog-pull.err"; then
             EXISTING_CATALOG="$(find dist/catalog-existing -maxdepth 4 -type f -name 'catalog.tsv' | head -n 1 || true)"
+          elif grep -Eiq 'MANIFEST_UNKNOWN|NAME_UNKNOWN|not found|404' "${RUNNER_TEMP}/catalog-pull.err"; then
+            echo "No existing catalog index found at ${CATALOG_REF}; creating a new catalog.tsv"
+          else
+            echo "Failed to pull existing catalog index ${CATALOG_REF}" >&2
+            cat "${RUNNER_TEMP}/catalog-pull.err" >&2
+            exit 1
           fi
           python3 scripts/render-catalog-rows.py \
             --catalog-json catalog/catalog.json \
@@ -67,6 +69,16 @@ jobs:
             --artifact-type "${CATALOG_ARTIFACT_TYPE}" \
             "${CATALOG_REF}" \
             dist/catalog.tsv:text/tab-separated-values
+          oras tag "${IMMUTABLE_REF}" latest >/dev/null
+          oras tag "${IMMUTABLE_REF}" stable >/dev/null
+          oras tag "${IMMUTABLE_REF}" "${VERSION_TAG}" >/dev/null
+          LATEST_DIGEST="$(oras resolve "${REF}")"
+          [[ "${LATEST_DIGEST}" == "${DIGEST}" ]] || {
+            echo "latest tag did not resolve to the published immutable digest" >&2
+            echo "expected: ${DIGEST}" >&2
+            echo "actual:   ${LATEST_DIGEST}" >&2
+            exit 1
+          }
           DIGEST="${DIGEST}" python3 - <<'PY'
           import json
           import os
