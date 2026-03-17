@@ -29,7 +29,7 @@ Use it together with:
 - `.github/workflows/ci.yml`
   - validates bundle rendering and pinned image refs
 - `.github/workflows/publish-catalog-bundle.yml`
-  - publishes the rendered catalog bundle to GHCR
+  - publishes the rendered catalog bundle plus installer-browsable `catalog.tsv` rows to GHCR
 - `catalog/catalog.json`
   - example catalog definition with route and health metadata
 - `catalog/image-sources.json`
@@ -38,14 +38,18 @@ Use it together with:
   - installer-facing default metadata, including the required platform-contract digest binding
 - `scripts/render-catalog-bundle.sh`
   - renders the published tarball
+- `scripts/render-catalog-rows.py`
+  - renders the installer-browsable `catalog.tsv` index for contract-matching bundle lookup
 - `scripts/check-catalog-bundle-smoke.sh`
   - validates bundle shape and metadata coherence
 - `scripts/check-image-refs-exist.sh`
   - verifies the pinned image refs resolve
+- `scripts/check-publish-workflow.sh`
+  - enforces the stable/latest tagging and catalog-row publication invariants
 
 ## Recommended next steps when instantiating
 
 1. Replace the example catalog metadata with the real app entries.
 2. Update `image-sources.json` to the real source refs from your app repos.
 3. Keep `profile.env` in sync with `catalog.json`.
-4. Publish the bundle and hand its pinned ref to the installer flow.
+4. Publish the bundle and its `catalog.tsv` rows so installers can resolve it by contract.

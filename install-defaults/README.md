@@ -27,6 +27,7 @@ Each `defaults/<installer-id>.env` file can define:
 - `OS_REPO`
 - `OS_CATALOG_TAG`
 - `OS_DEFAULT_REF` (optional digest-pinned default)
+- `APPLICATION_CATALOG_DEFAULT_IDS` (optional comma-separated official catalog ids)
 - `AIRGAP_PLATFORM_REPO`
 - `AIRGAP_PLATFORM_ARCH`
 - `AIRGAP_PLATFORM_CHANNEL`
