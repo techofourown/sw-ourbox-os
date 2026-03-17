@@ -23,7 +23,7 @@ It exists because:
 
 This is the contract above the hardware seam for:
 
-- install-defaults overlay behavior,
+- install-defaults profile consumption,
 - default-selection precedence,
 - catalog resolution,
 - digest resolution,
@@ -49,8 +49,9 @@ The upstream shell reference resolver lives at:
 
 - `tools/install-defaults/installer-selection-resolver.sh`
 
-Targets may vendor or otherwise carry that file into installer media, but the normative behavior is
-defined here and owned by `sw-ourbox-os`.
+Host-side installer tooling may source that file directly. If a downstream
+consumer still carries a copy, the normative behavior is defined here and owned
+by `sw-ourbox-os`.
 
 The reference resolver also exposes reusable interactive browsing helpers for installers that want
 the shared default/channel/catalog/custom-ref menu. Surrounding installer screens and confirmation
@@ -65,14 +66,9 @@ The shared selection contract is defined in terms of the following inputs:
 - `OS_TARGET`
 - `OS_CHANNEL`
 - `OS_REF` (optional exact ref override)
-- `OS_DEFAULT_REF` (optional pinned default)
 - `OS_CATALOG_ENABLED`
 - `OS_CATALOG_TAG`
-- `INSTALL_DEFAULTS_REF` (optional remote install-defaults bundle)
-- `CHANNEL_STABLE_TAG`
-- `CHANNEL_BETA_TAG`
-- `CHANNEL_NIGHTLY_TAG`
-- `CHANNEL_EXP_LABS_TAG`
+- `INSTALL_DEFAULTS_REF` (required remote install-defaults bundle)
 - `OURBOX_ALLOW_UNRESOLVED_PULL` (dev/test escape hatch only)
 
 Targets may have additional local inputs for hardware-specific behavior, but those are outside this
@@ -92,39 +88,27 @@ That tarball expands to:
 
 Consumers must treat this as the authoritative upstream shape.
 
-### Remote overlay rule
+Consumers must fail closed if the install-defaults bundle cannot be fetched,
+cannot be unpacked, or does not contain the matching installer profile.
 
-If a remote profile is fetched successfully:
-
-1. baked defaults are loaded first,
-2. the matching remote profile overlays those baked defaults,
-3. local operator overrides are applied last.
-
-### Pinned baked default preservation rule
-
-If baked defaults already carry a non-empty `OS_DEFAULT_REF`, that baked pinned ref remains
-authoritative unless the remote profile explicitly replaces it with another non-empty
-`OS_DEFAULT_REF`.
-
-This preserves deterministic official-installer behavior while still allowing remote defaults to
-override other selection controls.
+After a remote profile is applied, local operator overrides may still replace
+the selected repo, channel, catalog tag, or exact ref.
 
 ## 6. Selection Precedence
 
 Shared precedence is:
 
 1. `OS_REF`
-2. `OS_DEFAULT_REF`
-3. newest valid catalog row for `OS_CHANNEL`
-4. channel-tag fallback using `CHANNEL_*_TAG`
+2. newest valid catalog row for `OS_CHANNEL`
+3. fail closed if no valid catalog row exists
 
 This contract defines the default selection path. Hardware-specific operator prompts may still allow
 the user to choose a different exact ref, but those overrides must be recorded distinctly in
 provenance.
 
 If an operator explicitly chooses a release lane (`stable`, `beta`, `nightly`, or `exp-labs`), that
-lane choice should reuse the same channel-resolution rule as steps 3-4: prefer the newest valid
-digest-pinned catalog row for that lane, then fall back to the configured channel tag only if the
+lane choice should reuse the same channel-resolution rule as step 2: require
+the newest valid digest-pinned catalog row for that lane and fail closed if the
 catalog is unavailable or lacks a valid row.
 
 ## 7. Catalog Resolution Rules
@@ -136,7 +120,7 @@ Rules:
 1. filter rows by the selected `channel`,
 2. require a valid digest-pinned `pinned_ref`,
 3. choose the newest matching row by explicit `created` timestamp,
-4. if no valid matching row exists, fall back to the configured channel tag.
+4. if no valid matching row exists, fail closed.
 
 The `channel` column stores the short release channel vocabulary:
 
@@ -204,18 +188,15 @@ Shared value expectations:
   - `registry`
   - `embedded`
 - `OURBOX_INSTALL_DEFAULTS_SOURCE`
-  - `baked`
   - `remote`
 - `OURBOX_INSTALL_SELECTION_SOURCE`
   - `os-ref`
-  - `os-default-ref`
   - `catalog`
-  - `channel-tag`
   - `operator-override`
   - `embedded`
 
 `OURBOX_RELEASE_CHANNEL` should be populated only when channel semantics actually participated in
-selection, typically for `catalog` or `channel-tag`.
+selection, typically for `catalog`.
 When populated, it should use the short release-channel vocabulary (`stable`, `beta`, `nightly`,
 `exp-labs`). Compatibility acceptance of legacy catalog row names does not widen the recorded
 provenance vocabulary.

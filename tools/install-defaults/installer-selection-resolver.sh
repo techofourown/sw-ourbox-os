@@ -39,7 +39,7 @@ ourbox_selection_reset_lane_state() {
 }
 
 ourbox_selection_reset_state() {
-  OURBOX_INSTALL_DEFAULTS_SOURCE="baked"
+  OURBOX_INSTALL_DEFAULTS_SOURCE=""
   OURBOX_INSTALL_DEFAULTS_PROFILE=""
   ourbox_selection_reset_lane_state \
     OURBOX_INSTALL_SELECTION_SOURCE \
@@ -87,21 +87,6 @@ ourbox_selection_is_sha256_digest() {
   return 0
 }
 
-ourbox_selection_channel_tag() {
-  local channel="${1:-}"
-  local target="${OS_TARGET:-}"
-  local tag=""
-  case "${channel}" in
-    stable) tag="${CHANNEL_STABLE_TAG:-}"; [[ -n "${tag}" ]] || tag="${target}-stable" ;;
-    beta) tag="${CHANNEL_BETA_TAG:-}"; [[ -n "${tag}" ]] || tag="${target}-beta" ;;
-    nightly) tag="${CHANNEL_NIGHTLY_TAG:-}"; [[ -n "${tag}" ]] || tag="${target}-nightly" ;;
-    exp-labs) tag="${CHANNEL_EXP_LABS_TAG:-}"; [[ -n "${tag}" ]] || tag="${target}-exp-labs" ;;
-    *) tag="${target}-${channel}" ;;
-  esac
-  [[ -n "${tag}" ]] || ourbox_selection_die "unable to resolve channel tag for '${channel}'"
-  printf '%s\n' "${tag}"
-}
-
 ourbox_selection_normalize_release_channel() {
   local channel="${1:-}"
   local target="${OS_TARGET:-}"
@@ -129,13 +114,13 @@ ourbox_selection_load_remote_install_defaults() {
   local pull_dir="$1"
   local extract_dir="$2"
   local override_env="${3:-}"
-  local baked_os_default_ref="${OS_DEFAULT_REF:-}"
   local expected_installer_id="${INSTALLER_ID:-}"
 
-  OURBOX_INSTALL_DEFAULTS_SOURCE="baked"
+  OURBOX_INSTALL_DEFAULTS_SOURCE=""
   OURBOX_INSTALL_DEFAULTS_PROFILE=""
 
-  [[ -n "${INSTALL_DEFAULTS_REF:-}" ]] || return 0
+  [[ -n "${INSTALL_DEFAULTS_REF:-}" ]] || ourbox_selection_die "INSTALL_DEFAULTS_REF is required"
+  [[ -n "${expected_installer_id}" ]] || ourbox_selection_die "INSTALLER_ID is required"
 
   ourbox_selection_need_cmd oras
   rm -rf "${pull_dir}" "${extract_dir}"
@@ -143,8 +128,7 @@ ourbox_selection_load_remote_install_defaults() {
 
   ourbox_selection_log "Pulling installer defaults: ${INSTALL_DEFAULTS_REF}"
   if ! oras pull "${INSTALL_DEFAULTS_REF}" -o "${pull_dir}" >/dev/null 2>&1; then
-    ourbox_selection_log "Install defaults pull failed; using baked defaults."
-    return 0
+    ourbox_selection_die "Install defaults pull failed: ${INSTALL_DEFAULTS_REF}"
   fi
 
   local tarball=""
@@ -154,28 +138,23 @@ ourbox_selection_load_remote_install_defaults() {
     tarball="$(find "${pull_dir}" -maxdepth 4 -type f -name 'install-defaults.tar.gz' | head -n 1 || true)"
   fi
   [[ -n "${tarball}" && -f "${tarball}" ]] || {
-    ourbox_selection_log "Install defaults artifact missing tarball; using baked defaults."
-    return 0
+    ourbox_selection_die "Install defaults artifact missing tarball: ${INSTALL_DEFAULTS_REF}"
   }
 
   if ! tar -xzf "${tarball}" -C "${extract_dir}" >/dev/null 2>&1; then
-    ourbox_selection_log "Install defaults tar extraction failed; using baked defaults."
-    return 0
+    ourbox_selection_die "Install defaults tar extraction failed: ${tarball}"
   fi
 
   [[ -f "${extract_dir}/install-defaults/schema.env" ]] || {
-    ourbox_selection_log "Install defaults artifact missing schema.env; using baked defaults."
-    return 0
+    ourbox_selection_die "Install defaults artifact missing schema.env: ${INSTALL_DEFAULTS_REF}"
   }
   [[ -f "${extract_dir}/install-defaults/manifest.env" ]] || {
-    ourbox_selection_log "Install defaults artifact missing manifest.env; using baked defaults."
-    return 0
+    ourbox_selection_die "Install defaults artifact missing manifest.env: ${INSTALL_DEFAULTS_REF}"
   }
 
   local profile="${extract_dir}/install-defaults/defaults/${expected_installer_id}.env"
   if [[ ! -f "${profile}" ]]; then
-    ourbox_selection_log "No install-defaults profile for installer '${expected_installer_id}'; using baked defaults."
-    return 0
+    ourbox_selection_die "No install-defaults profile for installer '${expected_installer_id}' in ${INSTALL_DEFAULTS_REF}"
   fi
 
   # shellcheck disable=SC1090
@@ -188,12 +167,6 @@ ourbox_selection_load_remote_install_defaults() {
 
   if declare -F normalize_payload_config >/dev/null 2>&1; then
     normalize_payload_config
-  fi
-
-  # A baked pinned default ref remains authoritative unless the remote profile
-  # explicitly replaces it with another non-empty ref.
-  if [[ -n "${baked_os_default_ref}" && -z "${OS_DEFAULT_REF:-}" ]]; then
-    OS_DEFAULT_REF="${baked_os_default_ref}"
   fi
 
   # shellcheck disable=SC2034  # output state consumed by the sourcing installer
@@ -268,7 +241,6 @@ ourbox_selection_catalog_newest_ref() {
 ourbox_selection_resolve_channel_ref() {
   local catalog_dir="$1"
   local channel="$2"
-  local channel_tag_ref=""
   local catalog_tsv=""
   local catalog_ref=""
 
@@ -278,29 +250,27 @@ ourbox_selection_resolve_channel_ref() {
   # shellcheck disable=SC2034  # output state consumed by the sourcing installer
   OURBOX_CATALOG_REF=""
 
-  channel_tag_ref="${OS_REPO}:$(ourbox_selection_channel_tag "${channel}")"
-
-  if [[ "${OS_CATALOG_ENABLED:-1}" == "1" ]]; then
-    if ourbox_selection_pull_catalog "${catalog_dir}"; then
-      catalog_tsv="${catalog_dir}/catalog.tsv"
-      catalog_ref="$(ourbox_selection_catalog_newest_ref "${catalog_tsv}" "${channel}" || true)"
-      if ourbox_selection_is_digest_pinned_ref "${catalog_ref}"; then
-        OURBOX_INSTALL_SELECTION_SOURCE="catalog"
-        OURBOX_RELEASE_CHANNEL="${channel}"
-        OURBOX_SELECTED_REF="${catalog_ref}"
-        return 0
-      fi
-      ourbox_selection_log "Catalog has no valid digest-pinned entry for channel '${channel}'; falling back to channel tag."
-    else
-      ourbox_selection_log "Catalog unavailable; falling back to channel tag."
-    fi
+  if [[ "${OS_CATALOG_ENABLED:-1}" != "1" ]]; then
+    ourbox_selection_log "OS catalog browsing is disabled; no catalog-backed default is available."
+    return 1
   fi
 
-  # shellcheck disable=SC2034  # output state consumed by the sourcing installer
-  OURBOX_INSTALL_SELECTION_SOURCE="channel-tag"
-  # shellcheck disable=SC2034  # output state consumed by the sourcing installer
+  if ! ourbox_selection_pull_catalog "${catalog_dir}"; then
+    ourbox_selection_log "Catalog unavailable for ${OS_REPO}:${OS_CATALOG_TAG}."
+    return 1
+  fi
+
+  catalog_tsv="${catalog_dir}/catalog.tsv"
+  catalog_ref="$(ourbox_selection_catalog_newest_ref "${catalog_tsv}" "${channel}" || true)"
+  if ! ourbox_selection_is_digest_pinned_ref "${catalog_ref}"; then
+    ourbox_selection_log "Catalog has no valid digest-pinned entry for channel '${channel}'."
+    return 1
+  fi
+
+  OURBOX_INSTALL_SELECTION_SOURCE="catalog"
   OURBOX_RELEASE_CHANNEL="${channel}"
-  OURBOX_SELECTED_REF="${channel_tag_ref}"
+  OURBOX_SELECTED_REF="${catalog_ref}"
+  return 0
 }
 
 ourbox_selection_determine_default_ref() {
@@ -318,35 +288,33 @@ ourbox_selection_determine_default_ref() {
     return 0
   fi
 
-  if [[ -n "${OS_DEFAULT_REF:-}" ]]; then
-    OURBOX_INSTALL_SELECTION_SOURCE="os-default-ref"
-    OURBOX_SELECTED_REF="${OS_DEFAULT_REF}"
-    return 0
-  fi
-
   ourbox_selection_resolve_channel_ref "${catalog_dir}" "${OS_CHANNEL}"
-}
-
-ourbox_selection_ref_from_tag() {
-  local tag="$1"
-  printf '%s:%s\n' "${OS_REPO}" "${tag}"
 }
 
 ourbox_selection_show_default_choice() {
   local ref="$1"
+  local default_available="${2:-1}"
 
   echo
-  if [[ "${OURBOX_INSTALL_DEFAULTS_SOURCE:-baked}" == "remote" ]]; then
+  if [[ "${OURBOX_INSTALL_DEFAULTS_SOURCE:-}" == "remote" ]]; then
     echo "Install defaults: remote (${INSTALL_DEFAULTS_REF:-})"
     echo "Profile        : ${OURBOX_INSTALL_DEFAULTS_PROFILE:-}"
+  elif [[ -n "${INSTALL_DEFAULTS_REF:-}" ]]; then
+    echo "Install defaults: not loaded (${INSTALL_DEFAULTS_REF})"
   else
-    echo "Install defaults: baked defaults"
+    echo "Install defaults: caller-supplied local config"
   fi
-  echo "Default source : ${OURBOX_INSTALL_SELECTION_SOURCE:-pending}"
-  echo "Default: install '${ref}'"
+  echo "Default source : ${OURBOX_INSTALL_SELECTION_SOURCE:-unavailable}"
+  if [[ "${default_available}" == "1" ]]; then
+    echo "Default: install '${ref}'"
+  else
+    echo "Default: unavailable without a matching catalog row or explicit ref"
+  fi
   echo "Options:"
-  echo "  [ENTER] Use default"
-  echo "  c       Choose channel (prefers newest catalog row for that lane)"
+  if [[ "${default_available}" == "1" ]]; then
+    echo "  [ENTER] Use default"
+  fi
+  echo "  c       Choose channel (requires a matching catalog row for that lane)"
   echo "  l       List from catalog (if available)"
   echo "  r       Enter custom OCI ref (tag or digest)"
   echo "  o       Override OS repo (custom registry/fork)"
@@ -367,9 +335,7 @@ ourbox_selection_override_repo_interactive() {
 
   OS_REPO="${next_repo}"
 
-  # A repo override intentionally clears pinned defaults from upstream profile.
   OS_REF=""
-  OS_DEFAULT_REF=""
 
   read -r -p "Catalog tag [${next_catalog}]: " user_catalog
   if [[ -n "${user_catalog}" ]]; then
@@ -384,16 +350,14 @@ ourbox_selection_override_repo_interactive() {
 ourbox_selection_choose_channel_interactive() {
   local catalog_dir="$1"
   local pick=""
-  local custom_tag=""
 
   echo "Channels:"
-  echo "  1) stable (${CHANNEL_STABLE_TAG:-$(ourbox_selection_channel_tag stable)}) (recommended)"
-  echo "  2) beta (${CHANNEL_BETA_TAG:-$(ourbox_selection_channel_tag beta)})"
-  echo "  3) nightly (${CHANNEL_NIGHTLY_TAG:-$(ourbox_selection_channel_tag nightly)})"
-  echo "  4) exp-labs (${CHANNEL_EXP_LABS_TAG:-$(ourbox_selection_channel_tag exp-labs)})"
-  echo "  5) custom tag name"
+  echo "  1) stable (recommended)"
+  echo "  2) beta"
+  echo "  3) nightly"
+  echo "  4) exp-labs"
 
-  read -r -p "Select channel [1-5]: " pick
+  read -r -p "Select channel [1-4]: " pick
   case "${pick}" in
     1|"")
       ourbox_selection_resolve_channel_ref "${catalog_dir}" "stable"
@@ -406,16 +370,6 @@ ourbox_selection_choose_channel_interactive() {
       ;;
     4)
       ourbox_selection_resolve_channel_ref "${catalog_dir}" "exp-labs"
-      ;;
-    5)
-      read -r -p "Enter tag: " custom_tag
-      [[ -n "${custom_tag}" ]] || {
-        ourbox_selection_log "Tag cannot be empty."
-        return 1
-      }
-      OURBOX_SELECTED_REF="$(ourbox_selection_ref_from_tag "${custom_tag}")"
-      OURBOX_INSTALL_SELECTION_SOURCE="channel-tag"
-      OURBOX_RELEASE_CHANNEL=""
       ;;
     *)
       ourbox_selection_log "Invalid choice."
@@ -503,26 +457,38 @@ ourbox_selection_interactive_select_ref() {
   local default_ref=""
   local default_source=""
   local default_channel=""
+  local default_available="0"
 
   OURBOX_SELECTED_REF=""
   OURBOX_INSTALL_SELECTION_SOURCE=""
   OURBOX_RELEASE_CHANNEL=""
 
   while [[ -z "${OURBOX_SELECTED_REF}" ]]; do
-    ourbox_selection_determine_default_ref "${default_catalog_dir}"
-    default_ref="${OURBOX_SELECTED_REF}"
-    default_source="${OURBOX_INSTALL_SELECTION_SOURCE}"
-    default_channel="${OURBOX_RELEASE_CHANNEL}"
+    if ourbox_selection_determine_default_ref "${default_catalog_dir}"; then
+      default_ref="${OURBOX_SELECTED_REF}"
+      default_source="${OURBOX_INSTALL_SELECTION_SOURCE}"
+      default_channel="${OURBOX_RELEASE_CHANNEL}"
+      default_available="1"
+    else
+      default_ref=""
+      default_source=""
+      default_channel=""
+      default_available="0"
+    fi
     OURBOX_SELECTED_REF=""
 
-    ourbox_selection_show_default_choice "${default_ref}"
+    ourbox_selection_show_default_choice "${default_ref}" "${default_available}"
     read -r -p "Choice: " choice
 
     case "${choice}" in
       "")
-        OURBOX_SELECTED_REF="${default_ref}"
-        OURBOX_INSTALL_SELECTION_SOURCE="${default_source}"
-        OURBOX_RELEASE_CHANNEL="${default_channel}"
+        if [[ "${default_available}" == "1" ]]; then
+          OURBOX_SELECTED_REF="${default_ref}"
+          OURBOX_INSTALL_SELECTION_SOURCE="${default_source}"
+          OURBOX_RELEASE_CHANNEL="${default_channel}"
+        else
+          ourbox_selection_log "No catalog-backed default is available. Choose c, l, r, o, or q."
+        fi
         ;;
       c)
         ourbox_selection_choose_channel_interactive "${channel_catalog_dir}" || true
@@ -615,7 +581,7 @@ ourbox_selection_finalize_registry_ref_common() {
   ourbox_selection_die "Cannot establish ${label} identity: oras resolve failed for ${selected_ref}
   The installer requires a digest-pinned artifact ref to ensure provenance.
   Options:
-    1. Use a digest-pinned ref (catalog or baked default usually provides this)
+    1. Use a digest-pinned ref (catalog or explicit pinned ref usually provides this)
     2. Check registry connectivity and retry
     3. Set OURBOX_ALLOW_UNRESOLVED_PULL=1 to skip this check (dev/testing only)"
 }
@@ -783,11 +749,13 @@ ourbox_airgap_platform_selection_show_default_choice() {
   local default_available="${2:-1}"
 
   echo
-  if [[ "${OURBOX_INSTALL_DEFAULTS_SOURCE:-baked}" == "remote" ]]; then
+  if [[ "${OURBOX_INSTALL_DEFAULTS_SOURCE:-}" == "remote" ]]; then
     echo "Install defaults: remote (${INSTALL_DEFAULTS_REF:-})"
     echo "Profile        : ${OURBOX_INSTALL_DEFAULTS_PROFILE:-}"
+  elif [[ -n "${INSTALL_DEFAULTS_REF:-}" ]]; then
+    echo "Install defaults: not loaded (${INSTALL_DEFAULTS_REF})"
   else
-    echo "Install defaults: baked defaults"
+    echo "Install defaults: caller-supplied local config"
   fi
   echo "Default source : ${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE:-unavailable}"
   if [[ "${default_available}" == "1" ]]; then
@@ -835,32 +803,19 @@ ourbox_airgap_platform_selection_choose_channel_interactive() {
   local catalog_dir="$1"
   local required_contract_digest="$2"
   local pick=""
-  local custom_tag=""
 
   echo "Channels:"
   echo "  1) stable (recommended)"
   echo "  2) beta"
   echo "  3) nightly"
   echo "  4) exp-labs"
-  echo "  5) custom tag name"
 
-  read -r -p "Select channel [1-5]: " pick
+  read -r -p "Select channel [1-4]: " pick
   case "${pick}" in
     1|"") AIRGAP_PLATFORM_CHANNEL="stable" ;;
     2) AIRGAP_PLATFORM_CHANNEL="beta" ;;
     3) AIRGAP_PLATFORM_CHANNEL="nightly" ;;
     4) AIRGAP_PLATFORM_CHANNEL="exp-labs" ;;
-    5)
-      read -r -p "Enter tag: " custom_tag
-      [[ -n "${custom_tag}" ]] || {
-        ourbox_selection_log "Tag cannot be empty."
-        return 1
-      }
-      OURBOX_AIRGAP_PLATFORM_SELECTED_REF="${AIRGAP_PLATFORM_REPO}:${custom_tag}"
-      OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE="operator-override"
-      OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL=""
-      return 0
-      ;;
     *)
       ourbox_selection_log "Invalid choice."
       return 1

@@ -266,15 +266,9 @@ Typical fields include:
 - `INSTALLER_ID`
 - `OS_REPO`
 - `OS_CATALOG_TAG`
-- `OS_DEFAULT_REF`
-- `CHANNEL_STABLE_TAG`
-- `CHANNEL_BETA_TAG`
-- `CHANNEL_NIGHTLY_TAG`
-- `CHANNEL_EXP_LABS_TAG`
 - `AIRGAP_PLATFORM_REPO`
 - `AIRGAP_PLATFORM_CHANNEL`
 - `AIRGAP_PLATFORM_CATALOG_TAG`
-- `AIRGAP_PLATFORM_REF`
 
 This bundle is small and separately publishable so the recommended default artifact can change without requiring every installer image to be rebuilt for every recommendation change.
 
@@ -359,7 +353,7 @@ This gives downstream image repos a stable upstream integration contract.
 
 ### Step 2: `sw-ourbox-os` publishes install-defaults
 
-`sw-ourbox-os` also publishes the install-defaults bundle that maps installer profiles to default payload repos, catalog tags, and optional pinned references.
+`sw-ourbox-os` also publishes the install-defaults bundle that maps installer profiles to default payload repos, catalog tags, and airgap selection catalogs.
 
 This acts as the upstream control plane for "where should this installer look by default?"
 
@@ -428,9 +422,7 @@ The standard public path looks like this:
 1. the operator starts a target-specific installer or flasher
 2. the installer identifies its profile (for example via `INSTALLER_ID`)
 3. the installer resolves its defaults
-4. the installer chooses either:
-   - an explicit default pinned ref, or
-   - a moving channel resolved through a catalog
+4. the installer resolves the selected release lane through the appropriate catalog into a pinned immutable ref
 5. the installer acquires the payload
 6. the installer performs the target-specific installation
 7. the installed system records the relevant artifact identities locally
@@ -476,11 +468,8 @@ A profile can answer:
 
 - which repo is the default source of OS payloads?
 - which catalog tag should be consulted?
-- is there a pinned preferred default ref?
-- which moving channel tags are available?
 - which airgap-platform repo and catalog should be used after OS selection?
-- is there a pinned preferred airgap-platform ref?
-- which airgap-platform moving channel tags are available?
+- which release lane should be treated as the default channel?
 
 ### 8.3 Current intended precedence
 
@@ -492,16 +481,9 @@ At a public-model level, the intended precedence is:
    - command-line override
    - other target-appropriate forced selection mechanism
 2. resolved install-defaults profile
-   - remote install-defaults if available
-   - otherwise baked local fallback
-3. pinned default ref, if provided
-   - if `OS_DEFAULT_REF` is set, it is the direct default
-4. channel resolution through catalog
-   - if no pinned default ref exists, use the selected channel tag and resolve it through the catalog to an immutable reference
-
-Local fallback must remain sufficient.
-
-Failure to refresh remote defaults should not make the installer unable to function if it has a valid local fallback.
+3. channel resolution through catalog
+   - use the selected release lane and resolve it through the catalog to an immutable reference
+4. fail closed if the required upstream metadata is unavailable or incompatible
 
 This is the intended public model even if specific targets may realize parts of it incrementally.
 
@@ -513,7 +495,6 @@ The normative contracts for this resolver behavior now live in:
 They define, among other things:
 
 - the remote install-defaults bundle shape,
-- the rule that baked pinned defaults stay authoritative unless explicitly replaced,
 - row-order-independent catalog resolution by `created`,
 - fail-closed digest resolution,
 - the rule that airgap catalog rows and extracted bundles must match the

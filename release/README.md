@@ -10,8 +10,6 @@ These files are intentionally lightweight, human-reviewable control surfaces.
 - `approved-upstream-inputs.json`
   - the canonical approved upstream snapshot for downstream official image builds
   - records approved `platform-contract` and `airgap-platform` refs and digests
-- `install-defaults-stable.env`
-  - optional curated stable defaults for the moving `install-defaults:stable` lane
 - `REVALIDATION_TRIGGER`
   - documented escape hatch for forcing an official republish without a substantive
     source change
@@ -33,18 +31,6 @@ Consumed by:
 Purpose:
 
 - keeps official downstream image repos pinned to one approved upstream snapshot
-
-### `install-defaults-stable.env`
-
-Consumed by:
-
-- `.github/workflows/install-defaults-promote.yml`
-- `tools/install-defaults/build.sh`
-
-Purpose:
-
-- allows release-time curated `OS_DEFAULT_REF` overrides for `install-defaults:stable`
-- if left empty, stable promotion can remain a pure digest retag
 
 ### `REVALIDATION_TRIGGER`
 

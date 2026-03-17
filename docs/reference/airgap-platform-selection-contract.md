@@ -28,7 +28,7 @@ This is the shared contract above the hardware seam for:
 - airgap catalog resolution,
 - digest resolution,
 - contract-digest validation,
-- runtime fallback behavior,
+- bundle-source determination,
 - and installed-system airgap provenance.
 
 ## 2. Non-goals
@@ -55,8 +55,9 @@ It owns both:
 - the existing OS payload selection lane,
 - and the airgap-platform selection lane added by this contract.
 
-Consumers may vendor that file into installer media, but the normative behavior
-is defined here and owned by `sw-ourbox-os`.
+Host-side installer tooling may source that file directly. If a downstream
+consumer still carries a copy, the normative behavior is defined here and owned
+by `sw-ourbox-os`.
 
 ## 4. Inputs
 
@@ -178,7 +179,7 @@ If `oras resolve` fails:
 - when that escape hatch is used, provenance must explicitly record
   `OURBOX_AIRGAP_PLATFORM_DIGEST=unresolved`
 
-## 10. Runtime Fallback Rule
+## 10. Bundle-Source Rule
 
 Installers should compare the selected airgap ref with the baked airgap bundle
 already described by the selected OS payload metadata.

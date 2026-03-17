@@ -97,15 +97,13 @@ EOF_ORAS
 }
 
 test_remote_defaults_bundle_shape() {
-  local tmp pull_dir extract_dir fake_oras_dir defaults_src override_env digest64
+  local tmp pull_dir extract_dir fake_oras_dir defaults_src override_env
   tmp="$(mktemp -d)"
   pull_dir="${tmp}/pull"
   extract_dir="${tmp}/extract"
   fake_oras_dir="${tmp}/bin"
   defaults_src="${tmp}/defaults-src"
   override_env="${tmp}/override.env"
-  digest64="1111111111111111111111111111111111111111111111111111111111111111"
-
   make_fake_oras "${fake_oras_dir}"
   export PATH="${fake_oras_dir}:${PATH}"
 
@@ -120,11 +118,6 @@ EOF_MANIFEST
 INSTALLER_ID=woodbox
 OS_REPO=ghcr.io/example/custom-woodbox-os
 OS_CATALOG_TAG=custom-catalog
-OS_DEFAULT_REF=
-CHANNEL_STABLE_TAG=custom-stable
-CHANNEL_BETA_TAG=custom-beta
-CHANNEL_NIGHTLY_TAG=custom-nightly
-CHANNEL_EXP_LABS_TAG=custom-exp-labs
 AIRGAP_PLATFORM_REPO=ghcr.io/example/custom-airgap-platform
 AIRGAP_PLATFORM_ARCH=amd64
 AIRGAP_PLATFORM_CHANNEL=stable
@@ -144,14 +137,9 @@ EOF_OVERRIDE
 
   INSTALLER_ID="woodbox"
   INSTALL_DEFAULTS_REF="ghcr.io/example/install-defaults:edge"
-  OS_DEFAULT_REF="ghcr.io/example/woodbox-os@sha256:${digest64}"
   OS_REPO="ghcr.io/techofourown/ourbox-woodbox-os"
   OS_TARGET="x86"
   OS_CHANNEL="stable"
-  CHANNEL_STABLE_TAG="x86-stable"
-  CHANNEL_BETA_TAG="x86-beta"
-  CHANNEL_NIGHTLY_TAG="x86-nightly"
-  CHANNEL_EXP_LABS_TAG="x86-exp-labs"
 
   ourbox_selection_reset_state
   ourbox_selection_load_remote_install_defaults "${pull_dir}" "${extract_dir}" "${override_env}"
@@ -159,20 +147,27 @@ EOF_OVERRIDE
   assert_eq "${OURBOX_INSTALL_DEFAULTS_SOURCE}" "remote" "remote defaults should apply"
   assert_eq "${OS_REPO}" "ghcr.io/example/custom-woodbox-os" "remote defaults should override repo"
   assert_eq "${OS_CATALOG_TAG}" "custom-catalog" "remote defaults should override catalog tag"
-  assert_eq "${OS_DEFAULT_REF}" "ghcr.io/example/woodbox-os@sha256:${digest64}" "baked pinned default should survive empty remote OS_DEFAULT_REF"
   assert_eq "${AIRGAP_PLATFORM_REPO}" "ghcr.io/example/custom-airgap-platform" "remote defaults should override airgap-platform repo"
   assert_eq "${OS_CHANNEL}" "nightly" "override env should win after remote defaults"
 
   rm -rf "${tmp}"
 }
 
-test_precedence_prefers_os_ref_then_os_default_ref() {
-  local tmp fake_oras_dir
+test_precedence_prefers_os_ref_then_catalog() {
+  local tmp fake_oras_dir catalog_src
   tmp="$(mktemp -d)"
   fake_oras_dir="${tmp}/bin"
+  catalog_src="${tmp}/catalog-src"
 
   make_fake_oras "${fake_oras_dir}"
   export PATH="${fake_oras_dir}:${PATH}"
+
+  mkdir -p "${catalog_src}"
+  cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
+channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111	stable-row
+EOF_CATALOG
+  export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
   # shellcheck disable=SC1090
   source "${RESOLVER}"
@@ -182,13 +177,8 @@ test_precedence_prefers_os_ref_then_os_default_ref() {
   OS_CHANNEL="stable"
   OS_CATALOG_ENABLED="1"
   OS_CATALOG_TAG="rpi-catalog"
-  CHANNEL_STABLE_TAG="rpi-stable"
-  CHANNEL_BETA_TAG="rpi-beta"
-  CHANNEL_NIGHTLY_TAG="rpi-nightly"
-  CHANNEL_EXP_LABS_TAG="rpi-exp-labs"
 
   OS_REF="ghcr.io/example/custom-os:demo"
-  OS_DEFAULT_REF="ghcr.io/example/custom-os@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   ourbox_selection_reset_state
   ourbox_selection_determine_default_ref "${tmp}/catalog"
   assert_eq "${OURBOX_INSTALL_SELECTION_SOURCE}" "os-ref" "OS_REF should have highest precedence"
@@ -197,8 +187,8 @@ test_precedence_prefers_os_ref_then_os_default_ref() {
   OS_REF=""
   ourbox_selection_reset_state
   ourbox_selection_determine_default_ref "${tmp}/catalog"
-  assert_eq "${OURBOX_INSTALL_SELECTION_SOURCE}" "os-default-ref" "OS_DEFAULT_REF should outrank catalog"
-  assert_eq "${OURBOX_SELECTED_REF}" "ghcr.io/example/custom-os@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" "OS_DEFAULT_REF should be selected"
+  assert_eq "${OURBOX_INSTALL_SELECTION_SOURCE}" "catalog" "catalog should supply the default when no exact ref is set"
+  assert_eq "${OURBOX_SELECTED_REF}" "ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111" "catalog row should be selected"
 
   rm -rf "${tmp}"
 }
@@ -231,11 +221,6 @@ EOF_CATALOG
   OS_CATALOG_ENABLED="1"
   OS_CATALOG_TAG="x86-catalog"
   OS_REF=""
-  OS_DEFAULT_REF=""
-  CHANNEL_STABLE_TAG="x86-stable"
-  CHANNEL_BETA_TAG="x86-beta"
-  CHANNEL_NIGHTLY_TAG="x86-nightly"
-  CHANNEL_EXP_LABS_TAG="x86-exp-labs"
 
   ourbox_selection_reset_state
   ourbox_selection_determine_default_ref "${tmp}/catalog"
@@ -272,11 +257,6 @@ EOF_CATALOG
   OS_CATALOG_ENABLED="1"
   OS_CATALOG_TAG="rpi-catalog"
   OS_REF=""
-  OS_DEFAULT_REF=""
-  CHANNEL_STABLE_TAG="rpi-stable"
-  CHANNEL_BETA_TAG="rpi-beta"
-  CHANNEL_NIGHTLY_TAG="rpi-nightly"
-  CHANNEL_EXP_LABS_TAG="rpi-exp-labs"
 
   ourbox_selection_reset_state
   ourbox_selection_determine_default_ref "${tmp}/catalog"
@@ -288,7 +268,7 @@ EOF_CATALOG
   rm -rf "${tmp}"
 }
 
-test_missing_channel_tags_fall_back_to_target_defaults() {
+test_catalog_disabled_leaves_no_default() {
   local tmp
   tmp="$(mktemp -d)"
 
@@ -300,19 +280,20 @@ test_missing_channel_tags_fall_back_to_target_defaults() {
   OS_CHANNEL="stable"
   OS_CATALOG_ENABLED="0"
   OS_REF=""
-  OS_DEFAULT_REF=""
-  unset CHANNEL_STABLE_TAG CHANNEL_BETA_TAG CHANNEL_NIGHTLY_TAG CHANNEL_EXP_LABS_TAG
 
   ourbox_selection_reset_state
-  ourbox_selection_determine_default_ref "${tmp}/catalog"
+  if ourbox_selection_determine_default_ref "${tmp}/catalog"; then
+    printf 'ASSERTION FAILED: OS selection should require a catalog-backed default when no exact ref is set\n' >&2
+    exit 1
+  fi
 
-  assert_eq "${OURBOX_INSTALL_SELECTION_SOURCE}" "channel-tag" "missing channel vars should fall back to OS_TARGET-derived tag"
-  assert_eq "${OURBOX_SELECTED_REF}" "ghcr.io/techofourown/ourbox-woodbox-os:x86-stable" "stable fallback tag should be derived from target"
+  assert_eq "${OURBOX_INSTALL_SELECTION_SOURCE}" "" "disabled catalog should leave the selection source empty"
+  assert_eq "${OURBOX_SELECTED_REF}" "" "disabled catalog should leave the selected ref empty"
 
   rm -rf "${tmp}"
 }
 
-test_catalog_falls_back_to_channel_tag_without_valid_digest_row() {
+test_catalog_requires_valid_digest_row() {
   local tmp fake_oras_dir catalog_src
   tmp="$(mktemp -d)"
   fake_oras_dir="${tmp}/bin"
@@ -336,23 +317,21 @@ EOF_CATALOG
   OS_CATALOG_ENABLED="1"
   OS_CATALOG_TAG="rpi-catalog"
   OS_REF=""
-  OS_DEFAULT_REF=""
-  CHANNEL_STABLE_TAG="rpi-stable"
-  CHANNEL_BETA_TAG="rpi-beta"
-  CHANNEL_NIGHTLY_TAG="rpi-nightly"
-  CHANNEL_EXP_LABS_TAG="rpi-exp-labs"
 
   ourbox_selection_reset_state
-  ourbox_selection_determine_default_ref "${tmp}/catalog"
+  if ourbox_selection_determine_default_ref "${tmp}/catalog"; then
+    printf 'ASSERTION FAILED: OS selection should reject catalog rows without digest-pinned refs\n' >&2
+    exit 1
+  fi
 
-  assert_eq "${OURBOX_INSTALL_SELECTION_SOURCE}" "channel-tag" "invalid catalog rows should fall back to channel tag"
-  assert_eq "${OURBOX_RELEASE_CHANNEL}" "stable" "channel fallback should preserve release channel"
-  assert_eq "${OURBOX_SELECTED_REF}" "ghcr.io/techofourown/ourbox-matchbox-os:rpi-stable" "channel fallback should use the configured stable tag"
+  assert_eq "${OURBOX_INSTALL_SELECTION_SOURCE}" "" "invalid catalog rows should not synthesize a selection source"
+  assert_eq "${OURBOX_RELEASE_CHANNEL}" "" "invalid catalog rows should not record a release channel"
+  assert_eq "${OURBOX_SELECTED_REF}" "" "invalid catalog rows should leave the selected ref empty"
 
   rm -rf "${tmp}"
 }
 
-test_matchbox_style_command_substitution_keeps_stdout_clean_on_catalog_fallback() {
+test_matchbox_style_command_substitution_keeps_stdout_clean_on_catalog_failure() {
   local tmp fake_oras_dir stderr_file captured
   tmp="$(mktemp -d)"
   fake_oras_dir="${tmp}/bin"
@@ -371,93 +350,107 @@ test_matchbox_style_command_substitution_keeps_stdout_clean_on_catalog_fallback(
   OS_CATALOG_ENABLED="1"
   OS_CATALOG_TAG="rpi-catalog"
   OS_REF=""
-  OS_DEFAULT_REF=""
-  CHANNEL_STABLE_TAG="rpi-stable"
-  CHANNEL_BETA_TAG="rpi-beta"
-  CHANNEL_NIGHTLY_TAG="rpi-nightly"
-  CHANNEL_EXP_LABS_TAG="rpi-exp-labs"
 
   matchbox_style_default_payload_ref() {
-    ourbox_selection_determine_default_ref "${tmp}/catalog"
+    if ! ourbox_selection_determine_default_ref "${tmp}/catalog"; then
+      :
+    fi
     printf '%s\n' "${OURBOX_SELECTED_REF}"
   }
 
   captured="$(matchbox_style_default_payload_ref 2>"${stderr_file}")"
 
-  assert_eq "${captured}" "ghcr.io/techofourown/ourbox-matchbox-os:rpi-stable" "catalog fallback should leave stdout machine-readable for Matchbox-style command substitution"
-  assert_contains "$(cat "${stderr_file}")" "Catalog unavailable; falling back to channel tag." "catalog fallback log should be routed to stderr"
+  assert_eq "${captured}" "" "catalog failure should leave stdout machine-readable for Matchbox-style command substitution"
+  assert_contains "$(cat "${stderr_file}")" "Catalog unavailable for ghcr.io/techofourown/ourbox-matchbox-os:rpi-catalog." "catalog failure log should be routed to stderr"
 
   rm -rf "${tmp}"
 }
 
 test_interactive_accepts_default_ref() {
-  local tmp captured digest
+  local tmp fake_oras_dir catalog_src captured digest
   tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  catalog_src="${tmp}/catalog-src"
   digest="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+
+  mkdir -p "${catalog_src}"
+  cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
+channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:${digest}	stable-row
+EOF_CATALOG
+  export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
   captured="$(
     printf '\n' | bash -lc "
       set -euo pipefail
+      PATH='${fake_oras_dir}':\"\$PATH\"
+      export FAKE_ORAS_CATALOG_DIR='${catalog_src}'
       source '${RESOLVER}'
       OS_REPO='ghcr.io/techofourown/ourbox-matchbox-os'
       OS_TARGET='rpi'
       OS_CHANNEL='stable'
-      OS_CATALOG_ENABLED='0'
+      OS_CATALOG_ENABLED='1'
       OS_CATALOG_TAG='rpi-catalog'
       OS_REF=''
-      OS_DEFAULT_REF='ghcr.io/techofourown/ourbox-matchbox-os@sha256:${digest}'
-      CHANNEL_STABLE_TAG='rpi-stable'
-      CHANNEL_BETA_TAG='rpi-beta'
-      CHANNEL_NIGHTLY_TAG='rpi-nightly'
-      CHANNEL_EXP_LABS_TAG='rpi-exp-labs'
       ourbox_selection_reset_state
       ourbox_selection_interactive_select_ref '${tmp}/catalog' >/dev/null
       printf '%s\t%s\t%s\n' \"\$OURBOX_SELECTED_REF\" \"\$OURBOX_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_RELEASE_CHANNEL:-}\"
     " 2>/dev/null
   )"
 
-  assert_eq "${captured}" $'ghcr.io/techofourown/ourbox-matchbox-os@sha256:'"${digest}"$'\tos-default-ref\t' "interactive Enter should keep the resolved default ref"
+  assert_eq "${captured}" $'ghcr.io/techofourown/ourbox-matchbox-os@sha256:'"${digest}"$'\tcatalog\tstable' "interactive Enter should keep the resolved catalog-backed default ref"
 
   rm -rf "${tmp}"
 }
 
-test_interactive_repo_override_clears_pinned_default() {
-  local tmp captured digest
+test_interactive_repo_override_rederives_catalog_default() {
+  local tmp fake_oras_dir catalog_src captured digest
   tmp="$(mktemp -d)"
+  fake_oras_dir="${tmp}/bin"
+  catalog_src="${tmp}/catalog-src"
   digest="bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+
+  make_fake_oras "${fake_oras_dir}"
+  export PATH="${fake_oras_dir}:${PATH}"
+
+  mkdir -p "${catalog_src}"
+  cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
+channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	localhost:5000/custom/ourbox-matchbox-os@sha256:${digest}	stable-row
+EOF_CATALOG
+  export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
   captured="$(
     printf 'o\nlocalhost:5000/custom/ourbox-matchbox-os\ncustom-catalog\n\n' | bash -lc "
       set -euo pipefail
+      PATH='${fake_oras_dir}':\"\$PATH\"
+      export FAKE_ORAS_CATALOG_DIR='${catalog_src}'
       source '${RESOLVER}'
       OS_REPO='ghcr.io/techofourown/ourbox-matchbox-os'
       OS_TARGET='rpi'
       OS_CHANNEL='stable'
-      OS_CATALOG_ENABLED='0'
+      OS_CATALOG_ENABLED='1'
       OS_CATALOG_TAG='rpi-catalog'
       OS_REF=''
-      OS_DEFAULT_REF='ghcr.io/techofourown/ourbox-matchbox-os@sha256:${digest}'
-      CHANNEL_STABLE_TAG='rpi-stable'
-      CHANNEL_BETA_TAG='rpi-beta'
-      CHANNEL_NIGHTLY_TAG='rpi-nightly'
-      CHANNEL_EXP_LABS_TAG='rpi-exp-labs'
       ourbox_selection_reset_state
       ourbox_selection_interactive_select_ref '${tmp}/catalog' >/dev/null
       printf '%s\t%s\t%s\t%s\t%s\n' \"\$OURBOX_SELECTED_REF\" \"\$OURBOX_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_RELEASE_CHANNEL:-}\" \"\$OS_REPO\" \"\$OS_CATALOG_TAG\"
     " 2>/dev/null
   )"
 
-  assert_eq "${captured}" $'localhost:5000/custom/ourbox-matchbox-os:rpi-stable\tchannel-tag\tstable\tlocalhost:5000/custom/ourbox-matchbox-os\tcustom-catalog' "repo override should clear pinned defaults and rederive the default from the overridden repo"
+  assert_eq "${captured}" $'localhost:5000/custom/ourbox-matchbox-os@sha256:'"${digest}"$'\tcatalog\tstable\tlocalhost:5000/custom/ourbox-matchbox-os\tcustom-catalog' "repo override should rederive the default from the overridden repo's catalog"
 
   rm -rf "${tmp}"
 }
 
-test_interactive_channel_pick_prefers_catalog_row_over_baked_default() {
-  local tmp fake_oras_dir catalog_src captured default_digest beta_digest
+test_interactive_channel_pick_prefers_selected_catalog_row() {
+  local tmp fake_oras_dir catalog_src captured beta_digest
   tmp="$(mktemp -d)"
   fake_oras_dir="${tmp}/bin"
   catalog_src="${tmp}/catalog-src"
-  default_digest="aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   beta_digest="2222222222222222222222222222222222222222222222222222222222222222"
 
   make_fake_oras "${fake_oras_dir}"
@@ -483,18 +476,13 @@ EOF_CATALOG
       OS_CATALOG_ENABLED='1'
       OS_CATALOG_TAG='rpi-catalog'
       OS_REF=''
-      OS_DEFAULT_REF='ghcr.io/techofourown/ourbox-matchbox-os@sha256:${default_digest}'
-      CHANNEL_STABLE_TAG='rpi-stable'
-      CHANNEL_BETA_TAG='rpi-beta'
-      CHANNEL_NIGHTLY_TAG='rpi-nightly'
-      CHANNEL_EXP_LABS_TAG='rpi-exp-labs'
       ourbox_selection_reset_state
       ourbox_selection_interactive_select_ref '${tmp}/catalog' >/dev/null
       printf '%s\t%s\t%s\n' \"\$OURBOX_SELECTED_REF\" \"\$OURBOX_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_RELEASE_CHANNEL:-}\"
     " 2>/dev/null
   )"
 
-  assert_eq "${captured}" $'ghcr.io/techofourown/ourbox-matchbox-os@sha256:'"${beta_digest}"$'\tcatalog\tbeta' "interactive channel choice should bypass baked defaults and prefer the selected lane's catalog row"
+  assert_eq "${captured}" $'ghcr.io/techofourown/ourbox-matchbox-os@sha256:'"${beta_digest}"$'\tcatalog\tbeta' "interactive channel choice should prefer the selected lane's catalog row"
 
   rm -rf "${tmp}"
 }
@@ -528,11 +516,6 @@ EOF_CATALOG
       OS_CATALOG_ENABLED='1'
       OS_CATALOG_TAG='rpi-catalog'
       OS_REF=''
-      OS_DEFAULT_REF=''
-      CHANNEL_STABLE_TAG='rpi-stable'
-      CHANNEL_BETA_TAG='rpi-beta'
-      CHANNEL_NIGHTLY_TAG='rpi-nightly'
-      CHANNEL_EXP_LABS_TAG='rpi-exp-labs'
       ourbox_selection_reset_state
       ourbox_selection_interactive_select_ref '${tmp}/catalog' >/dev/null
       printf '%s\t%s\t%s\n' \"\$OURBOX_SELECTED_REF\" \"\$OURBOX_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_RELEASE_CHANNEL:-}\"
@@ -572,11 +555,6 @@ EOF_CATALOG
       OS_CATALOG_ENABLED='1'
       OS_CATALOG_TAG='rpi-catalog'
       OS_REF=''
-      OS_DEFAULT_REF=''
-      CHANNEL_STABLE_TAG='rpi-stable'
-      CHANNEL_BETA_TAG='rpi-beta'
-      CHANNEL_NIGHTLY_TAG='rpi-nightly'
-      CHANNEL_EXP_LABS_TAG='rpi-exp-labs'
       ourbox_selection_reset_state
       ourbox_selection_interactive_select_ref '${tmp}/catalog' >/dev/null
       printf '%s\t%s\t%s\n' \"\$OURBOX_SELECTED_REF\" \"\$OURBOX_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_RELEASE_CHANNEL:-}\"
@@ -787,7 +765,7 @@ test_airgap_platform_channel_requires_catalog_when_no_exact_ref() {
     exit 1
   fi
 
-  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "" "airgap selection should not synthesize a fallback source when the catalog is unavailable"
+  assert_eq "${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}" "" "airgap selection should not synthesize a selection source when the catalog is unavailable"
   assert_eq "${OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL}" "" "airgap selection should not record a release channel when no catalog-backed default exists"
   assert_eq "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" "" "airgap selection should leave the selected ref empty when no catalog-backed default exists"
 
@@ -1122,15 +1100,15 @@ EOF_MANIFEST
 
 main() {
   test_remote_defaults_bundle_shape
-  test_precedence_prefers_os_ref_then_os_default_ref
+  test_precedence_prefers_os_ref_then_catalog
   test_catalog_resolution_uses_newest_valid_created_timestamp
   test_catalog_resolution_accepts_legacy_target_qualified_channel_rows
-  test_missing_channel_tags_fall_back_to_target_defaults
-  test_catalog_falls_back_to_channel_tag_without_valid_digest_row
-  test_matchbox_style_command_substitution_keeps_stdout_clean_on_catalog_fallback
+  test_catalog_disabled_leaves_no_default
+  test_catalog_requires_valid_digest_row
+  test_matchbox_style_command_substitution_keeps_stdout_clean_on_catalog_failure
   test_interactive_accepts_default_ref
-  test_interactive_repo_override_clears_pinned_default
-  test_interactive_channel_pick_prefers_catalog_row_over_baked_default
+  test_interactive_repo_override_rederives_catalog_default
+  test_interactive_channel_pick_prefers_selected_catalog_row
   test_interactive_catalog_pick_returns_pinned_ref
   test_interactive_catalog_pick_normalizes_legacy_channel_name
   test_finalize_registry_ref_resolves_digest

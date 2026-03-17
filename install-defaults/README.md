@@ -1,7 +1,7 @@
 # Install Defaults Profiles
 
 These profiles are bundled into the `install-defaults` OCI artifact and consumed by installer
-runtimes.
+selection/composition tooling.
 
 This directory owns published profile data only. It does not own executable browsing logic; that
 shared code surface lives in `tools/install-defaults/installer-selection-resolver.sh`.
@@ -24,20 +24,20 @@ Artifact shape:
 
 Each `defaults/<installer-id>.env` file can define:
 
+- `INSTALLER_ID`
 - `OS_REPO`
 - `OS_CATALOG_TAG`
-- `OS_DEFAULT_REF` (optional digest-pinned default)
 - `APPLICATION_CATALOG_DEFAULT_IDS` (optional comma-separated official catalog ids)
 - `AIRGAP_PLATFORM_REPO`
 - `AIRGAP_PLATFORM_ARCH`
 - `AIRGAP_PLATFORM_CHANNEL`
-- `AIRGAP_PLATFORM_REF`
 - `AIRGAP_PLATFORM_CATALOG_ENABLED`
 - `AIRGAP_PLATFORM_CATALOG_TAG`
-- `CHANNEL_STABLE_TAG`, `CHANNEL_BETA_TAG`, `CHANNEL_NIGHTLY_TAG`, `CHANNEL_EXP_LABS_TAG`
 
 Out of scope:
 
+- `OS_REF`
+- `AIRGAP_PLATFORM_REF`
 - any `OURBOX_INSTALLER_SSH_*` key
 - `AIRGAP_PLATFORM_REGISTRY_USERNAME`
 - `AIRGAP_PLATFORM_REGISTRY_PASSWORD`
@@ -75,32 +75,18 @@ channel names above.
 That compatibility rule does not widen the canonical provenance vocabulary: if a consumer reads a
 legacy row such as `rpi-stable`, it should still record `OURBOX_RELEASE_CHANNEL=stable`.
 
-Channel tags must follow the same published target lanes:
-
-- Matchbox: `rpi-stable`, `rpi-beta`, `rpi-nightly`, `rpi-exp-labs`
-- Woodbox: `x86-stable`, `x86-beta`, `x86-nightly`, `x86-exp-labs`
-
 Recommended pattern:
 
-1. Use `OS_DEFAULT_REF` for the casual-user default when promoting a known-good stable artifact.
-2. Keep `CHANNEL_STABLE_TAG` available as the human-readable stable lane.
-3. Publish `beta` as the latest official mainline build from pinned inputs.
-4. Reserve `nightly` for true integration previews built from floating upstream `edge` inputs.
-5. Keep `exp-labs` available for explicit experimental/promoted artifacts.
+1. Publish digest-pinned catalog rows for each supported release lane.
+2. Keep `OS_CATALOG_TAG` aligned with the official lane-specific catalog for that target.
+3. Keep `AIRGAP_PLATFORM_CATALOG_TAG` aligned with the official lane-specific catalog for that installer architecture.
+4. Let consumers resolve the newest contract-compatible pinned ref from those catalogs.
+5. Fail closed when the required upstream catalog data is missing or incompatible.
 
 CI publishing strategy:
 - `install-defaults:edge` updates on `main`
 - version tags can be published from release/tag events
 - `install-defaults:stable` is promoted by `.github/workflows/install-defaults-promote.yml`
   after the successful `Install Defaults` release publish for the same published release tag
-- `release/install-defaults-stable.env` carries the optional curated pinned
-  `OS_DEFAULT_REF` values used for that promotion
-- if every override in `release/install-defaults-stable.env` is empty, the
-  workflow re-tags the already-published versioned bundle into `stable`
-- if any override is non-empty, the workflow rebuilds `install-defaults:stable`
-  from the checked-out release tag with those curated pinned defaults
-
-Baked installer defaults and boot-media overrides remain fallback/override controls.
-
-A baked non-empty `OS_DEFAULT_REF` remains authoritative unless the remote profile explicitly
-replaces it with another non-empty `OS_DEFAULT_REF`.
+- stable promotion is a digest retag of the already-published versioned bundle
+- the install-defaults artifact does not inject curated pinned default refs during promotion
