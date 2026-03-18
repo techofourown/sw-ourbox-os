@@ -99,6 +99,7 @@ make_platform_contract_artifact() {
     "${dst}/payload/platform-contract/landing" \
     "${dst}/payload/platform-contract/rendered/defaults/demo-apps/verification" \
     "${dst}/dist"
+  touch "${dst}/payload/platform-contract/rendered/defaults/demo-apps/selected-app-surface.json"
   cat > "${dst}/payload/platform-contract/landing/index.html" <<EOF_HTML
 <!doctype html>
 <html><body>${marker}</body></html>
