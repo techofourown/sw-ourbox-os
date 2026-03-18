@@ -74,6 +74,13 @@ def verify_platform_contract(platform_contract: dict[str, str]) -> None:
         if not routes_tsv.is_file():
             raise SystemExit(f"Missing rendered verification routes file: {routes_tsv}")
 
+        app_surface = contract_root / "rendered" / "defaults" / "demo-apps" / "selected-app-surface.json"
+        if not app_surface.is_file():
+            raise SystemExit(
+                f"Platform contract is missing required runtime surface file: {app_surface}\n"
+                "Approve a platform contract at v0.20.0 or later."
+            )
+
         found_landing_route = False
         for raw_line in routes_tsv.read_text(encoding="utf-8").splitlines():
             if not raw_line or raw_line.startswith("host\t"):
