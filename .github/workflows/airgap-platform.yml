@@ -188,6 +188,16 @@ jobs:
           echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
           echo "catalog_pinned_ref=${catalog_pinned_ref}" >> "${GITHUB_OUTPUT}"
 
+          mkdir -p dist
+          printf '%s\n' "${pinned_ref}" > dist/platform-contract.ref
+
+      - name: Upload platform-contract ref for promote workflow
+        uses: actions/upload-artifact@v4
+        with:
+          name: platform-contract-for-airgap-${{ github.run_id }}
+          path: dist/platform-contract.ref
+          if-no-files-found: error
+
   publish:
     needs: [context, recovery-request, approved-contract]
     if: >
