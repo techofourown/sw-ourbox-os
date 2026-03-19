@@ -51,9 +51,11 @@ jobs:
             exit 0
           fi
 
-          echo "skip=false" >> "${GITHUB_OUTPUT}"
-          echo "release_tag=${resolved_tag}" >> "${GITHUB_OUTPUT}"
-          echo "publish_run_id=${{ github.event.workflow_run.id }}" >> "${GITHUB_OUTPUT}"
+          {
+            echo "skip=false"
+            echo "release_tag=${resolved_tag}"
+            echo "publish_run_id=${{ github.event.workflow_run.id }}"
+          } >> "${GITHUB_OUTPUT}"
 
       - name: Checkout
         if: steps.context.outputs.skip != 'true'
