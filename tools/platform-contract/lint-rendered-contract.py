@@ -115,7 +115,7 @@ def expected_landing_apps(render_dir: Path, selected_app_ids: list[str], box_hos
         apps: list[dict[str, str]] = []
         for app_id in selected_app_ids:
             app = app_by_id.get(app_id)
-            if not app or bool(app.get("default_backend", False)):
+            if not app:
                 continue
             apps.append(
                 {
@@ -189,17 +189,6 @@ def app_by_id_from_catalog(catalog: dict | None) -> dict[str, dict]:
     return {str(app["id"]): app for app in catalog.get("apps", [])}
 
 
-def selected_landing_app_id(app_by_id: dict[str, dict], selected_app_ids: list[str]) -> str | None:
-    landing_ids = [
-        app_id
-        for app_id in selected_app_ids
-        if str(app_by_id.get(app_id, {}).get("renderer", "")).strip() == "landing"
-    ]
-    if not landing_ids:
-        return None
-    return landing_ids[0]
-
-
 def main() -> int:
     parser = argparse.ArgumentParser(description="Lint a rendered platform contract bundle.")
     parser.add_argument("--contract-root", required=True)
@@ -228,8 +217,6 @@ def main() -> int:
         selected_app_ids = {"landing", "todo-bloom", "dufs", "flatnotes"}
     render_env = load_env_file(render_dir / "render.env")
     box_host = render_env.get("BOX_HOST", "")
-    landing_app_id = selected_landing_app_id(app_by_id, selected_app_ids_list)
-
     resources = load_resources(manifests_dir)
     resources_by_key = {resource_key(resource): resource for resource in resources}
     deployments = [resource for resource in resources if resource["kind"] == "Deployment"]
@@ -281,32 +268,23 @@ def main() -> int:
         )
         if selected_app_surface.get("default_backend_app_id") != expected_default_backend_id:
             errors.append("selected-app-surface.json default_backend_app_id does not match the selected app set")
-        if bool(selected_app_surface.get("landing_selected", False)) != (landing_app_id is not None):
-            errors.append("selected-app-surface.json landing_selected does not match the selected app set")
-        if selected_app_surface.get("landing_app_id") != landing_app_id:
-            errors.append("selected-app-surface.json landing_app_id does not match the selected app set")
-
         status_route = selected_app_surface.get("status_route")
-        if landing_app_id is None:
-            if status_route is not None:
-                errors.append("selected-app-surface.json status_route must be null when no landing app is selected")
+        if not isinstance(status_route, dict):
+            errors.append("selected-app-surface.json must declare status_route")
         else:
-            if not isinstance(status_route, dict):
-                errors.append("selected-app-surface.json must declare status_route when landing is selected")
-            else:
-                expected_status_route = {
-                    "host": box_host,
-                    "path": "/_ourbox/app-status.json",
-                    "path_type": "Exact",
-                    "service_name": "landing-status",
-                    "service_port": 8080,
-                    "expected_status": 200,
-                    "body_marker": "ourbox-landing-status",
-                    "description": "landing-app-status",
-                }
-                for key, expected_value in expected_status_route.items():
-                    if status_route.get(key) != expected_value:
-                        errors.append(f"selected-app-surface.json status_route {key} does not match expected runtime surface")
+            expected_status_route = {
+                "host": box_host,
+                "path": "/_ourbox/app-status.json",
+                "path_type": "Exact",
+                "service_name": "landing-status",
+                "service_port": 8080,
+                "expected_status": 200,
+                "body_marker": "ourbox-landing-status",
+                "description": "landing-app-status",
+            }
+            for key, expected_value in expected_status_route.items():
+                if status_route.get(key) != expected_value:
+                    errors.append(f"selected-app-surface.json status_route {key} does not match expected runtime surface")
 
         surface_by_id = {str(app.get("id", "")): app for app in surface_apps}
         for app_id in selected_app_ids_list:
@@ -325,16 +303,15 @@ def main() -> int:
             expected_flags = {
                 "display_name": str(catalog_app["display_name"]),
                 "description": str(catalog_app["description"]),
-                "renderer": str(catalog_app["renderer"]),
                 "host": expected_host,
                 "path": expected_path,
                 "url": expected_url,
                 "service_name": str(catalog_app["service_name"]),
                 "service_port": int(catalog_app["service_port"]),
                 "default_backend": expected_default_backend,
-                "show_on_landing": not expected_default_backend,
+                "show_on_landing": True,
                 "publish_mdns_alias": expected_host != box_host,
-                "include_in_status": not expected_default_backend,
+                "include_in_status": True,
             }
             for key, expected_value in expected_flags.items():
                 if surface_app.get(key) != expected_value:
@@ -379,13 +356,12 @@ def main() -> int:
         )
 
     configmap_names = {(resource["metadata"].get("namespace", ""), resource["metadata"]["name"]) for resource in configmaps}
-    expected_asset_maps = {}
-    if landing_app_id is not None:
-        expected_asset_maps[("ourbox-system", "landing-assets")] = {"ourbox-apps.json"}
-        expected_asset_maps[("ourbox-system", "landing-status-assets")] = {
+    expected_asset_maps = {
+        ("ourbox-system", "landing-assets"): {"ourbox-apps.json"},
+        ("ourbox-system", "landing-status-assets"): {
             path.name for path in sorted((contract_root / "landing-status").iterdir()) if path.is_file()
-        }
-        expected_asset_maps[("ourbox-system", "landing-status-assets")].add("ourbox-app-targets.json")
+        } | {"ourbox-app-targets.json"},
+    }
     for key, expected_files in expected_asset_maps.items():
         if key not in configmap_names:
             errors.append(f"Missing asset ConfigMap {key[1]}")
@@ -527,8 +503,8 @@ def main() -> int:
                 for app_id in selected_app_ids_list
                 if app_id in app_by_id and str(app_by_id[app_id].get("route_description", "")).strip()
             }
-            if landing_app_id is not None:
-                expected_route_descriptions.add("landing-app-status")
+            expected_route_descriptions.add("landing-app-status")
+            expected_route_descriptions.add("landing-root")
             missing_descriptions = sorted(expected_route_descriptions - seen_descriptions)
             if missing_descriptions:
                 errors.append(

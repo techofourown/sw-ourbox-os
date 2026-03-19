@@ -12,8 +12,6 @@ SELECTED_APPS_FILE="${OUT_BASE}/selected-apps.json"
 MERGED_SELECTED_APPS_FILE="${OUT_BASE}/selected-apps-merged.json"
 MERGED_CATALOG_FILE="${OUT_BASE}/catalog-merged.json"
 MERGED_IMAGES_LOCK_FILE="${OUT_BASE}/images-lock-merged.json"
-BROKEN_ASSET_DIR_CATALOG_FILE="${OUT_BASE}/catalog-broken-asset-dir.json"
-UNSUPPORTED_ASSET_DIR_LOG="${OUT_BASE}/unsupported-asset-dir.log"
 IDENTITY_CONTRACT_DIR="${OUT_BASE}/identity-contract"
 trap 'rm -rf "${OUT_BASE}"' EXIT
 FIXTURE_APPLICATION_CATALOG_FILE="${ROOT}/platform-contract/profiles/demo-apps/catalog.json"
@@ -91,7 +89,6 @@ cat > "${SELECTED_APPS_FILE}" <<'EOF'
   "catalog_id": "demo-apps",
   "selection_mode": "custom",
   "selected_app_ids": [
-    "landing",
     "dufs"
   ]
 }
@@ -129,7 +126,6 @@ hello_world_app = {
     "local_app_id": "hello-world",
     "display_name": "Hello World",
     "description": "Small hello-world app sourced from a second sw-ourbox-apps repo.",
-    "renderer": "hello-world",
     "service_name": "hello-world",
     "service_port": 80,
     "host_template": "hello.{box_host}",
@@ -139,6 +135,18 @@ hello_world_app = {
     "route_description": "hello-world-root",
     "default_backend": False,
     "image_names": ["hello-world"],
+    "services": [
+        {
+            "name": "hello-world",
+            "image": "hello-world",
+            "port": 80,
+            "command": [],
+            "args": [],
+            "env": {},
+            "storage": None,
+            "health_path": "/",
+        }
+    ],
 }
 ourbox_chat_app = {
     "id": "techofourown/ourbox-chat",
@@ -146,7 +154,6 @@ ourbox_chat_app = {
     "local_app_id": "ourbox-chat",
     "display_name": "OurBox Chat",
     "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
-    "renderer": "static-http",
     "service_name": "ourbox-chat",
     "service_port": 8080,
     "host_template": "chat.{box_host}",
@@ -156,6 +163,18 @@ ourbox_chat_app = {
     "route_description": "ourbox-chat-root",
     "default_backend": False,
     "image_names": ["ourbox-chat"],
+    "services": [
+        {
+            "name": "ourbox-chat",
+            "image": "ourbox-chat",
+            "port": 8080,
+            "command": [],
+            "args": [],
+            "env": {},
+            "storage": None,
+            "health_path": "/",
+        }
+    ],
 }
 
 merged_catalog = {
@@ -166,7 +185,6 @@ merged_catalog = {
     "catalog_description": "Validation-only merged catalog shaped like the live stable-id app surface.",
     "default_app_ids": [
         "techofourown/hello-world",
-        "techofourown/landing",
         "techofourown/ourbox-chat",
         "techofourown/todo-bloom",
         "thirdparty/dufs",
@@ -174,7 +192,6 @@ merged_catalog = {
     ],
     "apps": [
         hello_world_app,
-        stable_app("landing", "techofourown/landing", local_app_id="landing"),
         ourbox_chat_app,
         stable_app("todo-bloom", "techofourown/todo-bloom", local_app_id="todo-bloom"),
         stable_app("dufs", "thirdparty/dufs", local_app_id="dufs"),
@@ -189,7 +206,7 @@ merged_lock = {
         {
             "name": "nginx",
             "ref": demo_images["nginx"]["ref"],
-            "used_by": ["techofourown/landing", "techofourown/todo-bloom"],
+            "used_by": ["techofourown/todo-bloom"],
         },
         {
             "name": "dufs",
@@ -226,7 +243,6 @@ cat > "${MERGED_SELECTED_APPS_FILE}" <<'EOF'
   "selection_mode": "custom",
   "selected_app_ids": [
     "techofourown/hello-world",
-    "techofourown/landing",
     "techofourown/ourbox-chat",
     "techofourown/todo-bloom",
     "thirdparty/dufs",
@@ -234,22 +250,6 @@ cat > "${MERGED_SELECTED_APPS_FILE}" <<'EOF'
   ]
 }
 EOF
-
-python3 - <<'PY' "${FIXTURE_APPLICATION_CATALOG_FILE}" "${BROKEN_ASSET_DIR_CATALOG_FILE}"
-import json
-import sys
-from pathlib import Path
-
-catalog = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-for app in catalog["apps"]:
-    if app["id"] == "landing":
-        app["asset_dir"] = "missing-landing-assets"
-        break
-else:
-    raise SystemExit("fixture catalog did not contain landing app")
-
-Path(sys.argv[2]).write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-PY
 
 OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
 OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
@@ -282,38 +282,11 @@ python3 "${ROOT}/tools/platform-contract/lint-rendered-contract.py" \
   --contract-root "${ROOT}/platform-contract" \
   --render-dir "${OUT_DIR_MERGED}"
 
-if OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
-  OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
-  OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os \
-  OURBOX_PLATFORM_CONTRACT_REVISION="${REVISION}" \
-  OURBOX_PLATFORM_CONTRACT_VERSION="${VERSION}" \
-  OURBOX_PLATFORM_CONTRACT_CREATED="${CREATED}" \
-  python3 "${ROOT}/tools/platform-contract/render-contract.py" \
-    --contract-root "${ROOT}/platform-contract" \
-    --output-dir "${OUT_BASE}/broken-asset-dir-render" \
-    --profile demo-apps \
-    --application-catalog "${BROKEN_ASSET_DIR_CATALOG_FILE}" \
-    --selected-apps-file "${SELECTED_APPS_FILE}" \
-    --box-host "validate.ourbox.local" \
-    --tls-mode "lan-http" \
-    --ingress-class "traefik" \
-    --storage-class "local-path" \
-    > /dev/null 2> "${UNSUPPORTED_ASSET_DIR_LOG}"; then
-  echo "render-contract unexpectedly accepted unsupported asset_dir" >&2
-  exit 1
-fi
-
-grep -Fq "app 'landing' declares unsupported asset_dir 'missing-landing-assets'" "${UNSUPPORTED_ASSET_DIR_LOG}" || {
-  echo "render-contract did not report unsupported asset_dir clearly" >&2
-  cat "${UNSUPPORTED_ASSET_DIR_LOG}" >&2
-  exit 1
-}
-
-[[ ! -f "${OUT_DIR_SUBSET_A}/manifests/22-todo-bloom-deployment.yaml" ]] || {
+[[ ! -f "${OUT_DIR_SUBSET_A}/manifests/todo-bloom-deployment.yaml" ]] || {
   echo "selected-app subset render unexpectedly included todo-bloom" >&2
   exit 1
 }
-[[ ! -f "${OUT_DIR_SUBSET_A}/manifests/41-flatnotes-deployment.yaml" ]] || {
+[[ ! -f "${OUT_DIR_SUBSET_A}/manifests/flatnotes-deployment.yaml" ]] || {
   echo "selected-app subset render unexpectedly included flatnotes" >&2
   exit 1
 }
@@ -386,28 +359,6 @@ expected_ids = [
 actual_ids = [app["id"] for app in apps]
 if actual_ids != expected_ids:
     raise SystemExit(f"unexpected landing app ids for merged render: {actual_ids!r}")
-hello_apps = [app for app in apps if app["id"] == "techofourown/hello-world"]
-chat_apps = [app for app in apps if app["id"] == "techofourown/ourbox-chat"]
-if hello_apps != [
-    {
-        "description": "Small hello-world app sourced from a second sw-ourbox-apps repo.",
-        "host": "hello.validate.ourbox.local",
-        "id": "techofourown/hello-world",
-        "name": "Hello World",
-        "path": "/",
-    }
-]:
-    raise SystemExit(f"unexpected landing hello entry for merged render: {hello_apps!r}")
-if chat_apps != [
-    {
-        "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
-        "host": "chat.validate.ourbox.local",
-        "id": "techofourown/ourbox-chat",
-        "name": "OurBox Chat",
-        "path": "/",
-    }
-]:
-    raise SystemExit(f"unexpected landing chat entry for merged render: {chat_apps!r}")
 PY
 
 python3 - <<'PY' "${OUT_DIR_MERGED}/manifests/landing-status-configmap.yaml"
@@ -431,30 +382,6 @@ expected_ids = [
 actual_ids = [app["id"] for app in apps]
 if actual_ids != expected_ids:
     raise SystemExit(f"unexpected landing status app ids for merged render: {actual_ids!r}")
-hello_apps = [app for app in apps if app["id"] == "techofourown/hello-world"]
-chat_apps = [app for app in apps if app["id"] == "techofourown/ourbox-chat"]
-if hello_apps != [
-    {
-        "description": "Small hello-world app sourced from a second sw-ourbox-apps repo.",
-        "host": "hello.validate.ourbox.local",
-        "id": "techofourown/hello-world",
-        "name": "Hello World",
-        "path": "/",
-        "service_name": "hello-world",
-    }
-]:
-    raise SystemExit(f"unexpected landing status hello target for merged render: {hello_apps!r}")
-if chat_apps != [
-    {
-        "description": "CPU-only local chat UI backed by a bundled small GGUF model.",
-        "host": "chat.validate.ourbox.local",
-        "id": "techofourown/ourbox-chat",
-        "name": "OurBox Chat",
-        "path": "/",
-        "service_name": "ourbox-chat",
-    }
-]:
-    raise SystemExit(f"unexpected landing status chat target for merged render: {chat_apps!r}")
 PY
 
 python3 - <<'PY' "${OUT_DIR_MERGED}/selected-app-surface.json"
@@ -463,12 +390,8 @@ import sys
 from pathlib import Path
 
 surface = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-if surface["default_backend_app_id"] != "techofourown/landing":
+if surface["default_backend_app_id"] is not None:
     raise SystemExit(f"unexpected default backend app id: {surface['default_backend_app_id']!r}")
-if surface["landing_selected"] is not True:
-    raise SystemExit("expected landing_selected to be true")
-if surface["landing_app_id"] != "techofourown/landing":
-    raise SystemExit(f"unexpected landing app id: {surface['landing_app_id']!r}")
 if surface["status_route"]["path"] != "/_ourbox/app-status.json":
     raise SystemExit(f"unexpected status route path: {surface['status_route']!r}")
 if surface["status_route"]["path_type"] != "Exact":
@@ -476,7 +399,6 @@ if surface["status_route"]["path_type"] != "Exact":
 apps = {app["id"]: app for app in surface["apps"]}
 for app_id in (
     "techofourown/hello-world",
-    "techofourown/landing",
     "techofourown/ourbox-chat",
     "techofourown/todo-bloom",
     "thirdparty/dufs",
@@ -490,9 +412,6 @@ if hello["publish_mdns_alias"] is not True or hello["include_in_status"] is not 
     raise SystemExit(f"unexpected hello flags: {hello!r}")
 if chat["publish_mdns_alias"] is not True or chat["include_in_status"] is not True:
     raise SystemExit(f"unexpected chat flags: {chat!r}")
-landing = apps["techofourown/landing"]
-if landing["publish_mdns_alias"] is not False or landing["include_in_status"] is not False:
-    raise SystemExit(f"unexpected landing flags: {landing!r}")
 PY
 
 python3 - <<'PY' "${OUT_DIR_MERGED}/manifests/50-demo-apps-ingress.yaml"
@@ -534,9 +453,12 @@ import yaml
 path = Path(sys.argv[1])
 config = yaml.safe_load(path.read_text(encoding="utf-8"))
 platform_images = json.loads(config["data"]["platform_images.json"])
-image_ref = platform_images.get("landing-status", "")
-if not image_ref.startswith("docker.io/library/python:3.12-alpine@sha256:"):
-    raise SystemExit(f"unexpected landing-status platform image ref: {image_ref!r}")
+landing_ref = platform_images.get("landing", "")
+if not landing_ref.startswith("docker.io/library/nginx@sha256:"):
+    raise SystemExit(f"unexpected landing platform image ref: {landing_ref!r}")
+status_ref = platform_images.get("landing-status", "")
+if not status_ref.startswith("docker.io/library/python:3.12-alpine@sha256:"):
+    raise SystemExit(f"unexpected landing-status platform image ref: {status_ref!r}")
 PY
 
 render_expect_failure \

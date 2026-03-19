@@ -311,20 +311,37 @@ Required per-app integration fields:
 | `body_marker` | short marker string proving the app responded correctly |
 | `route_description` | human-readable route label used in validation output |
 | `image_names` | list of image names that must exist in the generated `images.lock.json` |
+| `services` | array of service definitions (see below) |
 
 Optional but commonly used:
 
 | Field | Meaning |
 |---|---|
-| `renderer` | app-specific renderer hint |
 | `default_backend` | whether this app is the default ingress backend |
+
+Each entry in the `services` array must have all of the following keys:
+
+| Key | Type | Meaning |
+|---|---|---|
+| `name` | string | Kubernetes Deployment and Service name |
+| `image` | string | image name (must appear in `image_names`) |
+| `port` | integer | container port |
+| `command` | array | container command override (empty array = image default) |
+| `args` | array | container args override (empty array = image default) |
+| `env` | object | environment variables as key-value pairs (empty object = none) |
+| `storage` | null or object | persistent storage; `null` for no storage, or `{"mount_path": "/data", "size": "5Gi"}` |
+| `health_path` | string | HTTP path for readiness and liveness probes |
+
+Every key is required, even when the value is null or empty. This makes the
+full deployment surface visible to catalog authors.
 
 Important behavior:
 
 - `display_name` and `description` are what the landing page shows.
 - `service_name` is what the landing-page status surface uses to correlate the
   app with runtime state.
-- `image_names[0]` is the primary image ref consumed by the platform renderer.
+- `services` drives the Kubernetes Deployment, Service, and optional PVC for
+  each container in the app.
 
 ### 4.8 Declare image source refs in `image-sources.json`
 
@@ -546,7 +563,9 @@ The important behaviors are:
   `service_port`,
 - landing cards come from `display_name`, `description`, and `host_template`,
 - landing status targets use `service_name`,
-- image refs come from `image_names[0]` mapped through `images.lock.json`.
+- each entry in `services` produces a Deployment + Service + optional PVC,
+- image refs come from each service's `image` field mapped through
+  `images.lock.json`.
 
 If an app is selected but absent from the catalog inputs, the renderer will
 fail rather than silently inventing a route.
@@ -701,12 +720,6 @@ ghcr.io/johnbenac/anagolay-catalog:latest
 
 The installer will pull the bundle, validate the platform contract digest
 binding, and make the catalog's apps available for selection.
-
-**Renderer support.** The platform contract renderer in `sw-ourbox-os` must
-support the `renderer` value declared in the catalog's `app` entry. If you
-declare a renderer that does not yet exist (e.g., a custom one), the catalog
-bundle will publish and validate correctly, but platform contract rendering
-will fail until a matching renderer is added to `sw-ourbox-os`.
 
 ## 14. Minimal supported authoring surface
 
