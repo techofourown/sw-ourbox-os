@@ -11,15 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: rhysd/actionlint@v1.7.11
       - uses: oras-project/setup-oras@v1
-      - name: Validate script syntax
-        run: bash -n scripts/render-catalog-bundle.sh scripts/check-catalog-bundle-smoke.sh scripts/check-image-refs-exist.sh scripts/check-publish-workflow.sh
-      - name: Validate catalog-row helper syntax
-        run: python3 -m py_compile scripts/render-catalog-rows.py
-      - name: Validate publish workflow invariants
-        run: bash scripts/check-publish-workflow.sh
-      - name: Validate and render catalog bundle
-        run: bash scripts/check-catalog-bundle-smoke.sh
-      - name: Validate referenced images exist
-        run: bash scripts/check-image-refs-exist.sh
+      - run: bash bootstrap.sh
+      - run: bash scripts/validate-catalog-repo.sh

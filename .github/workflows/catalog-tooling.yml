@@ -1,0 +1,84 @@
+name: Catalog Tooling
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - 'catalog-tooling/**'
+      - 'tools/catalog-tooling/**'
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: catalog-tooling-${{ github.event_name }}-${{ github.ref_name || github.event.release.tag_name || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Resolve publish tag
+        id: resolve-tag
+        run: |
+          set -euo pipefail
+
+          TAG=edge
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            TAG="${{ github.event.release.tag_name }}"
+          fi
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            TAG="${GITHUB_REF_NAME}"
+          fi
+
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+
+      - name: Publish catalog-tooling bundle
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.resolve-tag.outputs.tag }}" ./tools/catalog-tooling/publish.sh "${{ steps.resolve-tag.outputs.tag }}"
+
+      - name: Self-test published artifact
+        run: |
+          set -euo pipefail
+
+          REF_FILE="dist/catalog-tooling.ref"
+          if [[ ! -f "${REF_FILE}" ]]; then
+            echo "No ${REF_FILE} found (publish may have been skipped)."
+            exit 0
+          fi
+
+          REF="$(cat "${REF_FILE}")"
+          echo "Self-testing: ${REF}"
+          ./tools/catalog-tooling/self-test.sh "${REF}"
+
+      - name: Upload publish outputs
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: catalog-tooling-${{ github.run_id }}
+          path: |
+            dist/catalog-tooling.ref
+            dist/catalog-tooling.push.log
+            dist/catalog-tooling.publish-record.json
+          if-no-files-found: warn

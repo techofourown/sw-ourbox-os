@@ -32,6 +32,7 @@ This contract applies to the upstream artifact families published from `sw-ourbo
 - platform-contract
 - airgap-platform
 - install-defaults
+- catalog-tooling
 
 It does not replace downstream `candidate-provenance` records owned by `tools/release-control/`. Those are a separate downstream module contract.
 
@@ -46,6 +47,7 @@ Each artifact family MUST emit the following record file in `dist/`.
 | platform-contract | `dist/platform-contract.publish-record.json` |
 | install-defaults | `dist/install-defaults.publish-record.json` |
 | airgap-platform | `dist/airgap-platform.<arch>.publish-record.json` |
+| catalog-tooling | `dist/catalog-tooling.publish-record.json` |
 
 For airgap-platform, `<arch>` is required and is currently one of:
 
@@ -72,6 +74,11 @@ The following existing outputs remain valid and must not be removed during this 
 - `dist/airgap-platform.meta.env`
 - `dist/airgap-platform.<arch>.ref`
 - `dist/airgap-platform.<arch>.push.log`
+
+### Catalog-tooling
+- `dist/catalog-tooling.meta.env`
+- `dist/catalog-tooling.ref`
+- `dist/catalog-tooling.push.log`
 
 These outputs remain useful for shell consumption and human inspection.
 
@@ -121,6 +128,7 @@ Allowed values:
 - `platform-contract`
 - `airgap-platform`
 - `install-defaults`
+- `catalog-tooling`
 
 #### `artifact_type`
 The OCI artifact type used in the publish step.
@@ -129,6 +137,7 @@ Examples:
 - `application/vnd.techofourown.ourbox.platform-contract.v1.tar+gzip`
 - `application/vnd.techofourown.ourbox.airgap-platform.v1.tar+gzip`
 - `application/vnd.techofourown.ourbox.install-defaults.v1.tar+gzip`
+- `application/vnd.techofourown.ourbox.catalog-tooling.v1.tar+gzip`
 
 #### `artifact_repo`
 The OCI repository path without tag or digest.
@@ -137,6 +146,7 @@ Examples:
 - `ghcr.io/techofourown/sw-ourbox-os/platform-contract`
 - `ghcr.io/techofourown/sw-ourbox-os/airgap-platform`
 - `ghcr.io/techofourown/sw-ourbox-os/install-defaults`
+- `ghcr.io/techofourown/sw-ourbox-os/catalog-tooling`
 
 #### `artifact_ref`
 The tagged ref published during this invocation.
@@ -260,6 +270,27 @@ artifact identity.
 
 If the build can truthfully surface additional contract-input metadata, it
 should include it here.
+
+#### Required `dist_files` keys
+- `payload`
+- `meta_env`
+- `push_log`
+- `pinned_ref`
+
+### 5.4 Catalog-tooling
+
+#### Required `artifact_metadata` keys
+- `OURBOX_CATALOG_TOOLING_SOURCE`
+- `OURBOX_CATALOG_TOOLING_REVISION`
+- `OURBOX_CATALOG_TOOLING_VERSION`
+- `OURBOX_CATALOG_TOOLING_CREATED`
+- `OURBOX_CATALOG_TOOLING_INTERFACE_VERSION`
+
+#### Required `input_metadata` keys
+- `SCRIPT_COUNT`
+- `SCRIPT_NAMES`
+
+`SCRIPT_NAMES` is a stable human-readable list of bundled script filenames.
 
 #### Required `dist_files` keys
 - `payload`

@@ -26,26 +26,32 @@ Use it together with:
 
 ## Template contents
 
+- `bootstrap.sh`
+  - pulls the catalog-tooling OCI artifact and extracts shared scripts
 - `.github/workflows/ci.yml`
-  - validates bundle rendering and pinned image refs
+  - bootstraps tooling, then runs `validate-catalog-repo.sh`
 - `.github/workflows/publish-catalog-bundle.yml`
-  - publishes the rendered catalog bundle plus installer-browsable `catalog.tsv` rows to GHCR
+  - bootstraps tooling, then runs `publish-catalog-bundle.sh`
 - `catalog/catalog.json`
   - example catalog definition with route and health metadata
 - `catalog/image-sources.json`
   - example image-source file resolved into the published `images.lock.json`
 - `catalog/profile.env`
-  - installer-facing default metadata, including the required platform-contract digest binding
-- `scripts/render-catalog-bundle.sh`
-  - renders the published tarball
-- `scripts/render-catalog-rows.py`
-  - renders the installer-browsable `catalog.tsv` index for contract-matching bundle lookup
-- `scripts/check-catalog-bundle-smoke.sh`
-  - validates bundle shape and metadata coherence
-- `scripts/check-image-refs-exist.sh`
-  - verifies the pinned image refs resolve
-- `scripts/check-publish-workflow.sh`
-  - enforces the stable/latest tagging and catalog-row publication invariants
+  - installer-facing default metadata
+
+## How shared tooling works
+
+All business logic scripts come from the **catalog-tooling** OCI artifact
+published by `sw-ourbox-os`. The `bootstrap.sh` script:
+
+1. Pulls the artifact from `ghcr.io/techofourown/sw-ourbox-os/catalog-tooling:stable`
+2. Validates the interface version for compatibility
+3. Extracts scripts into `scripts/` (gitignored)
+
+To override the tooling channel for testing:
+```bash
+OURBOX_CATALOG_TOOLING_REF=ghcr.io/techofourown/sw-ourbox-os/catalog-tooling:edge bash bootstrap.sh
+```
 
 ## Recommended next steps when instantiating
 

@@ -1,0 +1,131 @@
+name: Catalog Tooling Promote Stable
+
+on:
+  workflow_run:
+    workflows: ["Catalog Tooling"]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  packages: write
+
+concurrency:
+  group: catalog-tooling-promote-stable-${{ github.event.workflow_run.id || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve release context
+        id: context
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          RELEASE_TAG="${{ github.event.workflow_run.display_title }}"
+          if [[ "${RELEASE_TAG}" != v* ]]; then
+            echo "Workflow run title '${RELEASE_TAG}' is not a version tag; skipping."
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          json="$(gh release view "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --json tagName,isDraft,isPrerelease)" \
+            || {
+              echo "Unable to resolve GitHub Release ${RELEASE_TAG}" >&2
+              exit 1
+            }
+
+          read -r resolved_tag is_draft is_prerelease < <(
+            python3 -c 'import json,sys; data=json.load(sys.stdin); print(data["tagName"], str(data["isDraft"]).lower(), str(data["isPrerelease"]).lower())' \
+              <<<"${json}"
+          )
+
+          if [[ "${is_draft}" == "true" || "${is_prerelease}" == "true" ]]; then
+            echo "Release ${resolved_tag} is not a published stable authorization; skipping."
+            echo "skip=true" >> "${GITHUB_OUTPUT}"
+            exit 0
+          fi
+
+          echo "skip=false" >> "${GITHUB_OUTPUT}"
+          echo "release_tag=${resolved_tag}" >> "${GITHUB_OUTPUT}"
+          echo "publish_run_id=${{ github.event.workflow_run.id }}" >> "${GITHUB_OUTPUT}"
+
+      - name: Checkout
+        if: steps.context.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: refs/tags/${{ steps.context.outputs.release_tag }}
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Install ORAS
+        if: steps.context.outputs.skip != 'true'
+        uses: oras-project/setup-oras@v1
+
+      - name: Login to GHCR
+        if: steps.context.outputs.skip != 'true'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Download publish outputs
+        if: steps.context.outputs.skip != 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: catalog-tooling-${{ steps.context.outputs.publish_run_id }}
+          path: dist/publish-outputs
+          run-id: ${{ steps.context.outputs.publish_run_id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Promote tag
+        if: steps.context.outputs.skip != 'true'
+        run: |
+          set -euo pipefail
+
+          REF_BASE="ghcr.io/techofourown/sw-ourbox-os/catalog-tooling"
+          SOURCE_TAG="${{ steps.context.outputs.release_tag }}"
+          TARGET_TAG="stable"
+
+          mkdir -p dist
+
+          SOURCE_REF="${REF_BASE}:${SOURCE_TAG}"
+          SOURCE_REF_FILE="$(find dist/publish-outputs -type f -name 'catalog-tooling.ref' | head -n1 || true)"
+          [[ -f "${SOURCE_REF_FILE}" ]] || {
+            echo "Missing catalog-tooling.ref in Catalog Tooling publish outputs" >&2
+            exit 1
+          }
+          SOURCE_PINNED="$(cat "${SOURCE_REF_FILE}")"
+          SOURCE_REPO="${SOURCE_PINNED%@*}"
+          DIGEST="${SOURCE_PINNED##*@}"
+          [[ "${SOURCE_REPO}" == "${REF_BASE}" ]] || {
+            echo "Unexpected catalog-tooling source repo in ${SOURCE_REF_FILE}: ${SOURCE_PINNED}" >&2
+            exit 1
+          }
+          [[ "${DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
+            echo "Catalog Tooling publish output is not digest-pinned: ${SOURCE_PINNED}" >&2
+            exit 1
+          }
+
+          oras tag "${SOURCE_PINNED}" "${TARGET_TAG}"
+
+          printf '%s\n' "retag" > dist/catalog-tooling.promote.mode
+          printf '%s\n' "${SOURCE_REF}" > dist/catalog-tooling.promote.source.ref
+          printf '%s\n' "${SOURCE_PINNED}" > dist/catalog-tooling.promote.digest.ref
+          printf '%s\n' "${REF_BASE}:${TARGET_TAG}" > dist/catalog-tooling.promote.target.ref
+
+          echo "Promoted ${SOURCE_REF} (${DIGEST}) -> ${REF_BASE}:${TARGET_TAG}"
+
+      - name: Upload promote outputs
+        uses: actions/upload-artifact@v4
+        if: steps.context.outputs.skip != 'true' && always()
+        with:
+          name: catalog-tooling-promote-${{ steps.context.outputs.release_tag || github.run_id }}
+          path: |
+            dist/catalog-tooling.promote.mode
+            dist/catalog-tooling.promote.source.ref
+            dist/catalog-tooling.promote.digest.ref
+            dist/catalog-tooling.promote.target.ref
+          if-no-files-found: warn
