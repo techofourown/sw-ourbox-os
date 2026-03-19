@@ -13,7 +13,6 @@
       "app_uid": "example/example-app",
       "display_name": "Example App",
       "description": "Replace this entry with your real app metadata.",
-      "renderer": "static-http",
       "service_name": "example-app",
       "service_port": 80,
       "host_template": "example.{box_host}",
@@ -24,6 +23,18 @@
       "default_backend": false,
       "image_names": [
         "example-app"
+      ],
+      "services": [
+        {
+          "name": "example-app",
+          "image": "example-app",
+          "port": 80,
+          "command": [],
+          "args": [],
+          "env": {},
+          "storage": null,
+          "health_path": "/"
+        }
       ]
     }
   ]
