@@ -38,6 +38,7 @@ The following published artifact families are stable consumer surfaces.
 | platform-contract | `ghcr.io/techofourown/sw-ourbox-os/platform-contract` | `platform-contract/` + `tools/platform-contract/` | `tools/platform-contract/build.sh`, `tools/platform-contract/publish.sh` | `dist/platform-contract.publish-record.json` |
 | airgap-platform | `ghcr.io/techofourown/sw-ourbox-os/airgap-platform` | `tools/airgap-platform/` + `platform-contract/profiles/demo-apps/` + rendered contract inputs | `tools/airgap-platform/build.sh`, `tools/airgap-platform/publish.sh`, `tools/airgap-platform/promote.sh` | `dist/airgap-platform.<arch>.publish-record.json` |
 | install-defaults | `ghcr.io/techofourown/sw-ourbox-os/install-defaults` | `install-defaults/` + `tools/install-defaults/` | `tools/install-defaults/build.sh`, `tools/install-defaults/publish.sh` | `dist/install-defaults.publish-record.json` |
+| catalog-tooling | `ghcr.io/techofourown/sw-ourbox-os/catalog-tooling` | `catalog-tooling/` + `tools/catalog-tooling/` | `tools/catalog-tooling/build.sh`, `tools/catalog-tooling/publish.sh` | `dist/catalog-tooling.publish-record.json` |
 
 ### Consumption rule
 Downstreams SHALL consume published artifacts by digest or by an approved pinned ref, not by assuming a moving tag is stable.
@@ -128,6 +129,7 @@ Downstream consumers SHALL pin the following things explicitly.
 - Platform-contract by digest or approved pinned ref
 - Airgap-platform by digest or approved pinned ref
 - Install-defaults by pinned ref when exact identity matters
+- Catalog-tooling by channel tag (default: `stable`); digests are resolved at bootstrap time
 
 ### 7.2 Vendored shared module revision
 Downstream repos that vendor `tools/release-control/` SHALL pin the upstream commit they vendor from.

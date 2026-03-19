@@ -41,7 +41,9 @@ The following directory map is the repository contract.
 | `types/` | GraphMD source | authoritative | no | GraphMD types |
 | `platform-contract/` | artifact source | authoritative | indirectly, via published artifact | source inputs for the platform-contract artifact |
 | `install-defaults/` | artifact source | authoritative | indirectly, via published artifact | data content for the install-defaults artifact |
+| `catalog-tooling/` | artifact source | authoritative | indirectly, via published artifact | source inputs for the catalog-tooling artifact |
 | `release/` | control-plane source | authoritative | yes, for selected files | release-control inputs |
+| `tools/catalog-tooling/` | artifact toolchain | authoritative repo-local tooling | no direct downstream contract | build/publish/promote/self-test toolchain for catalog-tooling |
 | `tools/platform-contract/` | artifact toolchain | authoritative repo-local tooling | no direct downstream contract | build/publish/validate toolchain for platform-contract |
 | `tools/airgap-platform/` | artifact toolchain | authoritative repo-local tooling | no direct downstream contract | build/publish/promote toolchain for airgap-platform |
 | `tools/install-defaults/` | artifact toolchain + shared helper ownership | authoritative | selected files yes | build/publish toolchain plus upstream-owned installer selection helper |
@@ -87,12 +89,20 @@ Authoritative source:
 - `tools/airgap-platform/`
 - relevant platform-contract profile inputs used by that build
 
-### 3.5 Shared downstream release-control module
+### 3.5 Catalog-tooling artifact
+Authoritative source:
+
+- `catalog-tooling/`
+- `tools/catalog-tooling/`
+
+Published artifact identity is the consumer surface, not the raw source tree.
+
+### 3.6 Shared downstream release-control module
 Authoritative source:
 
 - `tools/release-control/`
 
-### 3.7 Shared installer helpers
+### 3.8 Shared installer helpers
 Authoritative source:
 
 - `tools/install-defaults/installer-selection-resolver.sh`
@@ -263,7 +273,7 @@ Use this mental model and keep it intact.
 `docs/`, `records/`, and `types/` explain the system.
 
 ### 9.2 Artifact source trees and toolchains
-`platform-contract/`, `install-defaults/`, and the artifact-specific `tools/*/` directories define what gets built and published.
+`platform-contract/`, `install-defaults/`, `catalog-tooling/`, and the artifact-specific `tools/*/` directories define what gets built and published.
 
 ### 9.3 Release-control surfaces
 `release/` controls release-level inputs such as the revalidation trigger.

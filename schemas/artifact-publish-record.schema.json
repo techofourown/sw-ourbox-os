@@ -28,7 +28,8 @@
       "enum": [
         "platform-contract",
         "airgap-platform",
-        "install-defaults"
+        "install-defaults",
+        "catalog-tooling"
       ]
     },
     "artifact_type": {

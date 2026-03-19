@@ -34,6 +34,7 @@ python3 - <<'PY' \
   "${GENERATED_IMAGES_LOCK}" \
   "${BUNDLE_DIR}/manifest.env"
 import json
+import os
 import re
 import subprocess
 import sys
@@ -92,9 +93,9 @@ if profile.get("OURBOX_APPLICATION_CATALOG_NAME_SLUG") != name_slug:
 if profile.get("OURBOX_APPLICATION_CATALOG_DEFAULT_APP_IDS") != ",".join(default_app_ids):
     raise SystemExit("profile.env default app ids do not match catalog.json")
 
-platform_contract_digest = str(profile.get("OURBOX_PLATFORM_CONTRACT_DIGEST", "")).strip()
+platform_contract_digest = os.environ.get("OURBOX_PLATFORM_CONTRACT_DIGEST", "").strip()
 if not DIGEST_RE.fullmatch(platform_contract_digest):
-    raise SystemExit("profile.env must declare a digest-pinned OURBOX_PLATFORM_CONTRACT_DIGEST")
+    raise SystemExit("OURBOX_PLATFORM_CONTRACT_DIGEST must be set in the environment")
 
 app_ids: set[str] = set()
 image_names_used_by_catalog: dict[str, set[str]] = {}

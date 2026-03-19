@@ -142,6 +142,67 @@ Current concrete repos:
 - `sw-ourbox-catalog-demo`
 - `sw-ourbox-catalog-hello-world`
 
+## Shared tooling consumption
+
+Application catalog repositories consume shared business logic from the
+**catalog-tooling** OCI artifact published by `sw-ourbox-os`.
+
+### Bootstrap mechanism
+
+Each catalog repo checks in a single `bootstrap.sh` (~25 lines) that pulls
+the catalog-tooling artifact from GHCR and extracts the scripts into
+`scripts/`. The default channel is `stable`.
+
+### Interface version compatibility
+
+The tooling artifact carries an interface version in `manifest.env`
+(`OURBOX_CATALOG_TOOLING_INTERFACE_VERSION`). Bootstrap validates this
+against the expected interface version and fails loudly if they do not match.
+
+Breaking changes bump the interface version and require consumer repos to
+update `EXPECTED_INTERFACE_VERSION` in `bootstrap.sh`.
+
+### Tooling provenance
+
+Catalog-bundle publish records include both the requested tooling ref and
+the resolved digest, providing full traceability of which tooling version
+produced each published bundle.
+
+### What stays per-catalog (not extracted)
+
+- `catalog/catalog.json` — app definitions
+- `catalog/image-sources.json` — image refs
+- `catalog/profile.env` — catalog identity env vars
+- `.github/workflows/*.yml` — truly thin CI wrappers
+- `bootstrap.sh` — tooling artifact pull and validation
+
+## Naming
+
+Recommended user-facing terms:
+
+- `application catalog`
+- `application catalog bundle`
+- `selected applications`
+
+Recommended repository family:
+
+- `sw-ourbox-catalog-<catalog>`
+
+Examples:
+
+- `sw-ourbox-catalog-demo`
+- `sw-ourbox-catalog-hello-world`
+- `sw-ourbox-catalog-core`
+
+Expected upstream inputs:
+
+- published images from one or more `sw-ourbox-apps-*` repositories
+
+Current concrete repos:
+
+- `sw-ourbox-catalog-demo`
+- `sw-ourbox-catalog-hello-world`
+
 Avoid using:
 
 - `airgap bundle` as the primary user-facing term
