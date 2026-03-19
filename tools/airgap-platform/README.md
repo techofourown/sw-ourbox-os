@@ -186,8 +186,8 @@ promotions of an already-published digest, not a second heavy rebuild.
 
 ## Consumers
 
-This artifact is consumed downstream by image-build repos through digest-pinned
-refs, now synchronized from `release/approved-upstream-inputs.json`.
+This artifact is consumed downstream by image-build repos, which resolve the
+appropriate channel tag dynamically at build time via `oras resolve`.
 
 Primary consumers today:
 

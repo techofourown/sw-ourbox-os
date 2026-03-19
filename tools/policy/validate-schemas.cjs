@@ -191,18 +191,12 @@ function main() {
   const repoRoot = path.resolve(__dirname, '..', '..');
   const args = process.argv.slice(2);
 
-  const approvedInputs = [];
   const publishRecordFiles = [];
   let discoverPublishRecords = false;
   let checkRootGeneratedClean = false;
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
-    if (arg === '--approved-upstream-inputs' && args[i + 1]) {
-      approvedInputs.push(resolveRepoPath(repoRoot, args[i + 1]));
-      i += 1;
-      continue;
-    }
     if (arg === '--publish-record' && args[i + 1]) {
       publishRecordFiles.push(resolveRepoPath(repoRoot, args[i + 1]));
       i += 1;
@@ -218,17 +212,12 @@ function main() {
     }
   }
 
-  const noTargets = approvedInputs.length === 0 && publishRecordFiles.length === 0 && !discoverPublishRecords;
+  const noTargets = publishRecordFiles.length === 0 && !discoverPublishRecords;
   if (noTargets) {
-    approvedInputs.push(path.resolve(repoRoot, 'release', 'approved-upstream-inputs.json'));
     discoverPublishRecords = true;
   }
 
   let ok = true;
-
-  for (const approvedPath of approvedInputs) {
-    ok = validateFile(path.resolve(repoRoot, 'schemas', 'approved-upstream-inputs.schema.json'), approvedPath) && ok;
-  }
 
   const discovered = [];
   if (discoverPublishRecords) {
