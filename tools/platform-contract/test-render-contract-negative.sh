@@ -64,7 +64,7 @@ from pathlib import Path
 path = Path(sys.argv[1])
 catalog = json.loads(path.read_text(encoding="utf-8"))
 for app in catalog["apps"]:
-    if app["id"] == "landing":
+    if app["id"] == "todo-bloom":
         app.pop("host_template", None)
         break
 path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -84,7 +84,7 @@ from pathlib import Path
 
 path = Path(sys.argv[1])
 catalog = json.loads(path.read_text(encoding="utf-8"))
-catalog["default_app_ids"] = ["landing", "missing-app"]
+catalog["default_app_ids"] = ["todo-bloom", "missing-app"]
 path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
 render_expect_failure \
@@ -138,6 +138,7 @@ from pathlib import Path
 
 path = Path(sys.argv[1])
 catalog = json.loads(path.read_text(encoding="utf-8"))
+catalog["apps"][0]["default_backend"] = True
 catalog["apps"][1]["default_backend"] = True
 path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 PY
@@ -156,7 +157,7 @@ cat > "${TMP_ROOT}/selected-apps-unknown.json" <<'EOF_SELECTED'
   "catalog_id": "demo-apps",
   "selection_mode": "custom",
   "selected_app_ids": [
-    "landing",
+    "todo-bloom",
     "does-not-exist"
   ]
 }
@@ -175,7 +176,7 @@ cat > "${TMP_ROOT}/selected-apps-bad-mode.json" <<'EOF_SELECTED_BAD_MODE'
   "catalog_id": "demo-apps",
   "selection_mode": "surprise-mode",
   "selected_app_ids": [
-    "landing"
+    "todo-bloom"
   ]
 }
 EOF_SELECTED_BAD_MODE
