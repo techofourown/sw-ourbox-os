@@ -205,6 +205,27 @@ render_expect_failure \
   "${contract_bad_images}" \
   "${TMP_ROOT}/out-bad-images"
 
+contract_bad_service_name="${TMP_ROOT}/contract-bad-service-name"
+prepare_contract_root "${contract_bad_service_name}"
+python3 - <<'PY' "${contract_bad_service_name}/profiles/demo-apps/catalog.json"
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+catalog = json.loads(path.read_text(encoding="utf-8"))
+for app in catalog["apps"]:
+    if app["id"] == "todo-bloom":
+        app["service_name"] = "wrong-service"
+        break
+path.write_text(json.dumps(catalog, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+PY
+render_expect_failure \
+  bad-service-name \
+  "does not match any services entry" \
+  "${contract_bad_service_name}" \
+  "${TMP_ROOT}/out-bad-service-name"
+
 contract_missing_catalog="${TMP_ROOT}/contract-missing-catalog"
 prepare_contract_root "${contract_missing_catalog}"
 rm -f "${contract_missing_catalog}/profiles/demo-apps/catalog.json"

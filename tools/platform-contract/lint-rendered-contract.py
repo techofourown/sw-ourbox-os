@@ -115,7 +115,7 @@ def expected_landing_apps(render_dir: Path, selected_app_ids: list[str], box_hos
         apps: list[dict[str, str]] = []
         for app_id in selected_app_ids:
             app = app_by_id.get(app_id)
-            if not app or bool(app.get("default_backend", False)):
+            if not app:
                 continue
             apps.append(
                 {

@@ -175,6 +175,14 @@ def load_application_catalog(profile_dir: Path, catalog_override: str | None) ->
                     f"application catalog at {catalog_path} app {app_id!r} service {svc_name!r} must declare a port"
                 )
 
+        service_names = {str(svc.get("name", "")).strip() for svc in services}
+        top_service_name = str(app.get("service_name", "")).strip()
+        if top_service_name and top_service_name not in service_names:
+            raise SystemExit(
+                f"application catalog at {catalog_path} app {app_id!r} declares service_name {top_service_name!r} "
+                f"which does not match any services entry {sorted(service_names)!r}"
+            )
+
         app_ids.append(app_id)
         app_uids.add(app_uid)
         if bool(app.get("default_backend", False)):
