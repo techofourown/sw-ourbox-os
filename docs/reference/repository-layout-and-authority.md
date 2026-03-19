@@ -41,11 +41,10 @@ The following directory map is the repository contract.
 | `types/` | GraphMD source | authoritative | no | GraphMD types |
 | `platform-contract/` | artifact source | authoritative | indirectly, via published artifact | source inputs for the platform-contract artifact |
 | `install-defaults/` | artifact source | authoritative | indirectly, via published artifact | data content for the install-defaults artifact |
-| `release/` | control-plane source | authoritative | yes, for selected files | approved upstream snapshot and release-control inputs |
+| `release/` | control-plane source | authoritative | yes, for selected files | release-control inputs |
 | `tools/platform-contract/` | artifact toolchain | authoritative repo-local tooling | no direct downstream contract | build/publish/validate toolchain for platform-contract |
 | `tools/airgap-platform/` | artifact toolchain | authoritative repo-local tooling | no direct downstream contract | build/publish/promote toolchain for airgap-platform |
 | `tools/install-defaults/` | artifact toolchain + shared helper ownership | authoritative | selected files yes | build/publish toolchain plus upstream-owned installer selection helper |
-| `tools/approved-upstream-inputs/` | control-plane toolchain | authoritative | no direct downstream contract | validation and downstream-sync tooling for approved upstream snapshot |
 | `tools/release-control/` | vendorable shared module | authoritative | yes | downstream shared release-control module |
 | `tools/installer-ssh-helper.sh` | shared helper | authoritative | yes | installer SSH shared helper |
 | `tools/requirements/` | repo-local toolchain | authoritative repo-local tooling | no | requirements build/validation toolchain |
@@ -88,12 +87,7 @@ Authoritative source:
 - `tools/airgap-platform/`
 - relevant platform-contract profile inputs used by that build
 
-### 3.5 Downstream official upstream approval
-Authoritative source:
-
-- `release/approved-upstream-inputs.json`
-
-### 3.6 Shared downstream release-control module
+### 3.5 Shared downstream release-control module
 Authoritative source:
 
 - `tools/release-control/`
@@ -272,7 +266,7 @@ Use this mental model and keep it intact.
 `platform-contract/`, `install-defaults/`, and the artifact-specific `tools/*/` directories define what gets built and published.
 
 ### 9.3 Release-control surfaces
-`release/` and `tools/approved-upstream-inputs/` control what downstream official consumers are allowed to use.
+`release/` controls release-level inputs such as the revalidation trigger.
 
 ### 9.4 Shared downstream modules
 `tools/release-control/` and the shared installer helpers are the stable code surfaces that downstream repos may vendor.

@@ -47,35 +47,7 @@ The `.meta.env`, `.ref`, and `.push.log` outputs remain valid compatibility surf
 
 ---
 
-## 3. Approved upstream snapshot
-
-The approved upstream snapshot is a stable consumer surface.
-
-**Path:**
-- `release/approved-upstream-inputs.json`
-
-This file is the single approved upstream-control snapshot for downstream official image-build repos.
-
-It defines the approved:
-
-- platform-contract artifact ref and digest,
-- airgap-platform arm64 ref and digest,
-- airgap-platform amd64 ref and digest,
-- required route marker used for validation.
-
-### Consumption rule
-Official downstream image-build repos SHALL derive their pinned upstream lockfiles from this file rather than maintaining separate hand-written approval ledgers.
-
-### Validation rule
-This file is defined by:
-- `schemas/approved-upstream-inputs.schema.json`
-
-and validated by:
-- `tools/approved-upstream-inputs/validate.py`
-
----
-
-## 4. Vendored shared downstream module
+## 3. Vendored shared downstream module
 
 The following path is a stable vendorable downstream module.
 
@@ -157,10 +129,7 @@ Downstream consumers SHALL pin the following things explicitly.
 - Airgap-platform by digest or approved pinned ref
 - Install-defaults by pinned ref when exact identity matters
 
-### 7.2 Approved upstream snapshot
-Official downstream image-build repos SHALL treat `release/approved-upstream-inputs.json` as the upstream approval source of truth.
-
-### 7.3 Vendored shared module revision
+### 7.2 Vendored shared module revision
 Downstream repos that vendor `tools/release-control/` SHALL pin the upstream commit they vendor from.
 
 ---

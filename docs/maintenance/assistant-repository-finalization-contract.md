@@ -48,9 +48,6 @@ Do **not** move the following stable surfaces during this cleanup:
 - `tools/platform-contract/`
 - `tools/airgap-platform/`
 - `tools/install-defaults/`
-- `tools/approved-upstream-inputs/`
-- `release/approved-upstream-inputs.json`
-
 This is deliberate. Path stability for downstream consumers now outranks cosmetic symmetry.
 
 ### 2.5 There is one public machine-readable publish record contract
@@ -59,9 +56,6 @@ Every published upstream artifact family in this repository SHALL emit a JSON pu
 The publish record SHALL become the canonical machine-readable publication surface.
 
 Existing `.meta.env`, `.ref`, and `.push.log` outputs SHALL remain in place for shell compatibility and human inspection.
-
-### 2.6 Approved upstream inputs have a formal schema
-`release/approved-upstream-inputs.json` SHALL be defined by a formal JSON schema stored in this repository and validated in local/CI flows before semantic network checks run.
 
 ### 2.7 Repository boundaries are documented once, clearly
 The repository SHALL contain one reference document explaining:
@@ -136,7 +130,6 @@ Create a top-level `schemas/` directory.
 
 It SHALL contain, at minimum:
 
-- `schemas/approved-upstream-inputs.schema.json`
 - `schemas/artifact-publish-record.schema.json`
 
 This directory is for stable repo-owned JSON schemas that define machine-readable contract surfaces.
@@ -164,7 +157,6 @@ You SHALL add the following files and keep them current:
 - `docs/reference/repository-layout-and-authority.md`
 - `docs/reference/artifact-publish-record-contract.md`
 - `generated/requirements/README.md`
-- `schemas/approved-upstream-inputs.schema.json`
 - `schemas/artifact-publish-record.schema.json`
 
 Those files are part of this finalization contract and are not optional.
@@ -214,24 +206,11 @@ Update all of the following so they document the new JSON publish record outputs
 - `tools/airgap-platform/README.md`
 - `tools/install-defaults/README.md`
 
-### 5.7 `tools/approved-upstream-inputs/README.md`
-Update it so it states that:
-
-- the approved snapshot is defined by a schema,
-- validation is two-stage:
-  1. schema validation,
-  2. semantic/digest/content validation.
-
 ---
 
 ## 6. Required machine-readable outputs
 
-### 6.1 Approved upstream inputs schema
-`release/approved-upstream-inputs.json` SHALL be validated against `schemas/approved-upstream-inputs.schema.json` before any bespoke semantic checks run.
-
-Schema validation SHALL be part of local and CI validation.
-
-### 6.2 Artifact publish records
+### 6.1 Artifact publish records
 Each published upstream artifact family SHALL emit the following JSON file:
 
 - platform contract:
@@ -270,9 +249,8 @@ At minimum:
 
 Add or update package scripts so there is an explicit schema-validation entrypoint.
 
-The repository’s CI should fail if:
+The repository's CI should fail if:
 
-- the approved-upstream-inputs file violates its schema,
 - a publish record violates its schema,
 - generated requirements outputs appear at repo root,
 - docs reference stale moved tool paths.
