@@ -1,7 +1,7 @@
 # OurBox App Authoring Guide
 
 - Status: Stable
-- Audience: app authors, catalog maintainers, and maintainers creating new `sw-ourbox-apps-*` or `sw-ourbox-catalog-*` repositories
+- Audience: app authors, catalog maintainers, and maintainers creating new apps or catalog repositories — whether inside the `techofourown` org or in any external GitHub org or user account
 - Related:
   - [Apps repository contract](./apps-repository-contract.md)
   - [Application catalog repository contract](./application-catalog-repository-contract.md)
@@ -369,6 +369,27 @@ This file is installer-facing catalog metadata. At minimum it should include:
 
 Keep it in sync with `catalog.json`.
 
+**Finding the platform contract digest.** The digest identifies the platform
+contract bundle that this catalog's apps are designed to run against. Use the
+digest of the current stable release:
+
+```
+oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:stable
+```
+
+Or use the `edge` channel for pre-release development:
+
+```
+oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
+```
+
+The digest in `profile.env` is validated by the installer's
+`validate-media.sh` at compose time. If a mismatch is detected between the
+catalog bundle's digest and the OS payload's declared contract digest, the
+installer will reject the media. When the platform contract is updated,
+bump `OURBOX_PLATFORM_CONTRACT_DIGEST` in `profile.env`, re-run the publish
+workflow, and use the new catalog bundle ref in the installer.
+
 ### 4.10 Publish the catalog bundle
 
 Minimum publish behavior:
@@ -641,7 +662,53 @@ Cause:
 - the image source refs no longer resolved to the intended digest,
 - or the generated `images.lock.json` was never refreshed and republished.
 
-## 13. Minimal supported authoring surface
+## 13. External-org and third-party catalogs
+
+The apps repo and catalog repo patterns work for any GitHub org or user
+account, not just `techofourown`. Nothing in the publish pipeline requires
+the `techofourown` namespace.
+
+**Naming.** `sw-ourbox-apps-*` and `sw-ourbox-catalog-*` are the recommended
+naming conventions for first-party repositories. External maintainers may use
+any repository name. The catalog repo template uses `${GITHUB_REPOSITORY}` for
+all GHCR paths, so the repo name becomes the OCI namespace automatically.
+
+**`app_uid` namespace.** For apps not owned by `techofourown`, use an
+`app_uid` of the form `<github-user-or-org>/<app-name>`, e.g.,
+`anagolay/macula`. This must be globally unique across all catalogs that may
+be merged by the installer.
+
+**`image_repo` namespace.** Images in an external apps repo publish to
+`ghcr.io/<github-user-or-org>/<repo-name>/<app-id>`. The catalog's
+`image-sources.json` references these refs directly; no `techofourown`
+namespace is required.
+
+**Platform contract digest.** External catalog maintainers must still pin the
+same `OURBOX_PLATFORM_CONTRACT_DIGEST` as the OS payload they expect to run
+on. Obtain the digest from:
+
+```
+oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:stable
+```
+
+**Selecting an external catalog in the installer.** At the application catalog
+selection step, choose `r` (custom ref) and enter the OCI ref published by
+the catalog repo's CI, for example:
+
+```
+ghcr.io/johnbenac/anagolay-catalog:latest
+```
+
+The installer will pull the bundle, validate the platform contract digest
+binding, and make the catalog's apps available for selection.
+
+**Renderer support.** The platform contract renderer in `sw-ourbox-os` must
+support the `renderer` value declared in the catalog's `app` entry. If you
+declare a renderer that does not yet exist (e.g., a custom one), the catalog
+bundle will publish and validate correctly, but platform contract rendering
+will fail until a matching renderer is added to `sw-ourbox-os`.
+
+## 14. Minimal supported authoring surface
 
 If you want the smallest possible supported path, the minimum is:
 
