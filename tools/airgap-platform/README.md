@@ -127,6 +127,15 @@ Catalog maintenance:
 
 ## Entrypoints
 
+Candidate publication behavior:
+
+- the Airgap publish workflow first checks whether the selected catalog bundle is
+  already bound to the resolved `platform-contract:edge` digest
+- if not, it requests a refresh in the catalog repo and waits for
+  `sw-ourbox-catalog-demo:latest` to converge to a compatible bundle
+- publication still fails closed if no compatible bundle appears within the
+  configured timeout
+
 Build:
 
 ```bash
