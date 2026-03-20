@@ -3,7 +3,7 @@
 This directory contains the canonical shared downstream release-control module
 owned by `sw-ourbox-os`.
 
-Unlike `platform-contract`, `airgap-platform`, and `install-defaults`, this is
+Unlike `platform-contract`, `ourbox-substrate`, and `install-defaults`, this is
 not published as an OCI artifact. It is consumed by downstream repos through
 vendoring at a pinned upstream revision.
 

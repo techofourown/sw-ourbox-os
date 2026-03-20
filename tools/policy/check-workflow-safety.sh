@@ -55,7 +55,7 @@ while IFS= read -r wf; do
   name="$(basename "${wf}")"
 
   # Is this an official publish/promote workflow?
-  if ! grep -qE 'tools/[^/]+/(publish|promote)\.sh|tools/airgap-platform/(publish|promote)\.sh' "${wf}"; then
+  if ! grep -qE 'tools/[^/]+/(publish|promote)\.sh|tools/ourbox-substrate/(publish|promote)\.sh' "${wf}"; then
     continue
   fi
 
@@ -73,7 +73,7 @@ while IFS= read -r wf; do
   name="$(basename "${wf}")"
 
   # Is this an official publish workflow?
-  if ! grep -qE 'tools/[^/]+/publish\.sh|tools/airgap-platform/publish\.sh' "${wf}"; then
+  if ! grep -qE 'tools/[^/]+/publish\.sh|tools/ourbox-substrate/publish\.sh' "${wf}"; then
     continue
   fi
 

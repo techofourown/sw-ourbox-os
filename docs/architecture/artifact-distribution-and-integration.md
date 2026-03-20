@@ -100,7 +100,7 @@ They SHOULD document how they satisfy the target integration contract:
 - persistent data contract,
 - bootstrap behavior,
 - status and observability surfaces,
-- airgap behavior where relevant.
+- substrate bundle behavior where relevant.
 
 ### Required (documented now; implemented later)
 

@@ -1,7 +1,7 @@
 # REVALIDATION_TRIGGER
 #
 # Edit this file to force an official publish from a PR that contains no other
-# source changes. Any change to this file triggers airgap-platform.yml,
+# source changes. Any change to this file triggers ourbox-substrate.yml,
 # platform-contract.yml, and install-defaults.yml because `release/` is NOT
 # in the paths-ignore list.
 #

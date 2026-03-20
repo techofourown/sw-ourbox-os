@@ -27,7 +27,7 @@
       "type": "string",
       "enum": [
         "platform-contract",
-        "airgap-platform",
+        "ourbox-substrate",
         "install-defaults",
         "catalog-tooling"
       ]

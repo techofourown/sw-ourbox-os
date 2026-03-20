@@ -170,7 +170,7 @@ class ReleaseControlTests(unittest.TestCase):
                 [
                     str(ROOT / "tools" / "release-control" / "resolve-promotion-context.sh"),
                     "versioned",
-                    "Airgap Platform",
+                    "OurBox Substrate",
                     str(output_path),
                 ],
                 cwd=ROOT,
@@ -427,7 +427,7 @@ class ReleaseControlTests(unittest.TestCase):
                 )
             self.assertFalse((capture_dir / "catalog.tsv").exists())
 
-    def test_update_catalog_renders_append_only_airgap_rows(self) -> None:
+    def test_update_catalog_renders_append_only_substrate_rows(self) -> None:
         with tempfile.TemporaryDirectory(prefix="release-control-test-") as tmpdir:
             tmp = Path(tmpdir)
             stub_dir = tmp / "bin"
@@ -439,22 +439,22 @@ class ReleaseControlTests(unittest.TestCase):
 
             artifact_record = {
                 "schema": 1,
-                "artifact_family": "airgap-platform",
-                "artifact_type": "application/vnd.techofourown.ourbox.airgap-platform.v1.tar+gzip",
-                "artifact_repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
-                "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:main-6472fb5919d1-arm64",
-                "artifact_pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:3f228e4a091b017f156224c663648158d774c7dfcefefdc1cda303023ce20014",
+                "artifact_family": "ourbox-substrate",
+                "artifact_type": "application/vnd.techofourown.ourbox.substrate.v1.tar+gzip",
+                "artifact_repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
+                "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate:main-6472fb5919d1-arm64",
+                "artifact_pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:3f228e4a091b017f156224c663648158d774c7dfcefefdc1cda303023ce20014",
                 "artifact_digest": "sha256:3f228e4a091b017f156224c663648158d774c7dfcefefdc1cda303023ce20014",
                 "source_repo": "https://github.com/techofourown/sw-ourbox-os",
                 "source_commit": "6472fb5919d187daf832082eeaef6086b336a632",
                 "source_version": "dev",
                 "created": "2026-03-11T04:56:15Z",
                 "artifact_metadata": {
-                    "OURBOX_AIRGAP_PLATFORM_SOURCE": "https://github.com/techofourown/sw-ourbox-os",
-                    "OURBOX_AIRGAP_PLATFORM_REVISION": "6472fb5919d187daf832082eeaef6086b336a632",
-                    "OURBOX_AIRGAP_PLATFORM_VERSION": "dev",
-                    "OURBOX_AIRGAP_PLATFORM_CREATED": "2026-03-11T04:56:15Z",
-                    "AIRGAP_PLATFORM_ARCH": "arm64",
+                    "OURBOX_SUBSTRATE_SOURCE": "https://github.com/techofourown/sw-ourbox-os",
+                    "OURBOX_SUBSTRATE_REVISION": "6472fb5919d187daf832082eeaef6086b336a632",
+                    "OURBOX_SUBSTRATE_VERSION": "dev",
+                    "OURBOX_SUBSTRATE_CREATED": "2026-03-11T04:56:15Z",
+                    "OURBOX_SUBSTRATE_ARCH": "arm64",
                 },
                 "input_metadata": {
                     "K3S_VERSION": "v1.35.0+k3s1",
@@ -463,10 +463,10 @@ class ReleaseControlTests(unittest.TestCase):
                     "OURBOX_PLATFORM_IMAGES_LOCK_SHA256": "f6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118",
                 },
                 "dist_files": {
-                    "payload": "dist/airgap-platform.tar.gz",
-                    "meta_env": "dist/airgap-platform.meta.env",
-                    "push_log": "dist/airgap-platform.arm64.push.log",
-                    "pinned_ref": "dist/airgap-platform.arm64.ref",
+                    "payload": "dist/ourbox-substrate.tar.gz",
+                    "meta_env": "dist/ourbox-substrate.meta.env",
+                    "push_log": "dist/ourbox-substrate.arm64.push.log",
+                    "pinned_ref": "dist/ourbox-substrate.arm64.ref",
                 },
             }
             artifact_record_path = tmp / "artifact-record.json"
@@ -474,7 +474,7 @@ class ReleaseControlTests(unittest.TestCase):
             existing_catalog = "\n".join(
                 [
                     "channel\ttag\tcreated\tversion\trevision\tarch\tplatform_contract_digest\tplatform_profile\tk3s_version\tplatform_images_lock_sha256\tartifact_digest\tpinned_ref",
-                    "beta\tmain-old-arm64\t2026-03-10T00:00:00Z\tv0.15.0\t1111111111111111111111111111111111111111\tarm64\tsha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157\tdemo-apps\tv1.35.0+k3s1\t1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\tsha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\tghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "beta\tmain-old-arm64\t2026-03-10T00:00:00Z\tv0.15.0\t1111111111111111111111111111111111111111\tarm64\tsha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157\tdemo-apps\tv1.35.0+k3s1\t1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\tsha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\tghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 ]
             )
             env = {
@@ -489,15 +489,15 @@ class ReleaseControlTests(unittest.TestCase):
                     [
                         "update-catalog",
                         "--catalog-family",
-                        "airgap-platform",
+                        "ourbox-substrate",
                         "--artifact-record",
                         str(artifact_record_path),
                         "--artifact-repo",
-                        "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
+                        "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
                         "--catalog-tag",
                         "catalog-arm64",
                         "--catalog-artifact-type",
-                        "application/vnd.techofourown.ourbox.airgap-platform.catalog.v1",
+                        "application/vnd.techofourown.ourbox.substrate.catalog.v1",
                         "--channel-tag",
                         "stable",
                         "--channel-mode",
@@ -516,8 +516,8 @@ class ReleaseControlTests(unittest.TestCase):
                 "\n".join(
                     [
                         "channel\ttag\tcreated\tversion\trevision\tarch\tplatform_contract_digest\tplatform_profile\tk3s_version\tplatform_images_lock_sha256\tartifact_digest\tpinned_ref",
-                        "beta\tmain-old-arm64\t2026-03-10T00:00:00Z\tv0.15.0\t1111111111111111111111111111111111111111\tarm64\tsha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157\tdemo-apps\tv1.35.0+k3s1\t1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\tsha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\tghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                        "stable\tv0.15.1-arm64\t2026-03-11T05:00:00Z\tv0.15.1\t6472fb5919d187daf832082eeaef6086b336a632\tarm64\tsha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157\tdemo-apps\tv1.35.0+k3s1\tf6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118\tsha256:3f228e4a091b017f156224c663648158d774c7dfcefefdc1cda303023ce20014\tghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:3f228e4a091b017f156224c663648158d774c7dfcefefdc1cda303023ce20014",
+                        "beta\tmain-old-arm64\t2026-03-10T00:00:00Z\tv0.15.0\t1111111111111111111111111111111111111111\tarm64\tsha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157\tdemo-apps\tv1.35.0+k3s1\t1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\tsha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\tghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        "stable\tv0.15.1-arm64\t2026-03-11T05:00:00Z\tv0.15.1\t6472fb5919d187daf832082eeaef6086b336a632\tarm64\tsha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157\tdemo-apps\tv1.35.0+k3s1\tf6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118\tsha256:3f228e4a091b017f156224c663648158d774c7dfcefefdc1cda303023ce20014\tghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:3f228e4a091b017f156224c663648158d774c7dfcefefdc1cda303023ce20014",
                         "",
                     ]
                 ),

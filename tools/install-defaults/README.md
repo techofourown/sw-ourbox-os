@@ -20,7 +20,7 @@ directory is the build, publish, validation, and shared resolver layer.
 - `validate-assignment-only.sh`
   - enforces that profile files remain assignment-only env data
 - `installer-selection-resolver.sh`
-  - upstream shared reference resolver for the installer-selection and airgap-platform selection contracts
+  - upstream shared reference resolver for the installer-selection and ourbox-substrate selection contracts
 - `test-installer-selection-resolver.sh`
   - upstream resolver smoke/tests
 
@@ -86,7 +86,7 @@ bash ./tools/install-defaults/test-installer-selection-resolver.sh
 
 - [install-defaults/README.md](../../install-defaults/README.md)
 - [installer-selection-contract.md](../../docs/reference/installer-selection-contract.md)
-- [airgap-platform-selection-contract.md](../../docs/reference/airgap-platform-selection-contract.md)
+- [ourbox-substrate-selection-contract.md](../../docs/reference/ourbox-substrate-selection-contract.md)
 - [downstream-consumer-surfaces.md](../../docs/reference/downstream-consumer-surfaces.md)
 - [repository-layout-and-authority.md](../../docs/reference/repository-layout-and-authority.md)
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)

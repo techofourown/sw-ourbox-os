@@ -45,7 +45,7 @@ The following directory map is the repository contract.
 | `release/` | control-plane source | authoritative | yes, for selected files | release-control inputs |
 | `tools/catalog-tooling/` | artifact toolchain | authoritative repo-local tooling | no direct downstream contract | build/publish/promote/self-test toolchain for catalog-tooling |
 | `tools/platform-contract/` | artifact toolchain | authoritative repo-local tooling | no direct downstream contract | build/publish/validate toolchain for platform-contract |
-| `tools/airgap-platform/` | artifact toolchain | authoritative repo-local tooling | no direct downstream contract | build/publish/promote toolchain for airgap-platform |
+| `tools/ourbox-substrate/` | artifact toolchain | authoritative repo-local tooling | no direct downstream contract | build/publish/promote toolchain for ourbox-substrate |
 | `tools/install-defaults/` | artifact toolchain + shared helper ownership | authoritative | selected files yes | build/publish toolchain plus upstream-owned installer selection helper |
 | `tools/release-control/` | vendorable shared module | authoritative | yes | downstream shared release-control module |
 | `tools/installer-ssh-helper.sh` | shared helper | authoritative | yes | installer SSH shared helper |
@@ -83,10 +83,10 @@ Authoritative source:
 - `install-defaults/`
 - `tools/install-defaults/`
 
-### 3.4 Airgap-platform artifact
+### 3.4 OurBox Substrate artifact
 Authoritative source:
 
-- `tools/airgap-platform/`
+- `tools/ourbox-substrate/`
 - relevant platform-contract profile inputs used by that build
 
 ### 3.5 Catalog-tooling artifact
@@ -220,7 +220,7 @@ If a file exists to build, publish, promote, or validate one specific artifact f
 
 Examples:
 - `tools/platform-contract/`
-- `tools/airgap-platform/`
+- `tools/ourbox-substrate/`
 - `tools/install-defaults/`
 
 ### 6.7 Stable vendorable downstream modules

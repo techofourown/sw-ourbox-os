@@ -46,7 +46,7 @@ Do **not** move the following stable surfaces during this cleanup:
 - `tools/install-defaults/installer-selection-resolver.sh`
 - `tools/installer-ssh-helper.sh`
 - `tools/platform-contract/`
-- `tools/airgap-platform/`
+- `tools/ourbox-substrate/`
 - `tools/install-defaults/`
 This is deliberate. Path stability for downstream consumers now outranks cosmetic symmetry.
 
@@ -203,7 +203,7 @@ Update any artifact output descriptions that now include publish-record JSON out
 Update all of the following so they document the new JSON publish record outputs:
 
 - `tools/platform-contract/README.md`
-- `tools/airgap-platform/README.md`
+- `tools/ourbox-substrate/README.md`
 - `tools/install-defaults/README.md`
 
 ---
@@ -217,8 +217,8 @@ Each published upstream artifact family SHALL emit the following JSON file:
   - `dist/platform-contract.publish-record.json`
 - install-defaults:
   - `dist/install-defaults.publish-record.json`
-- airgap-platform:
-  - `dist/airgap-platform.<arch>.publish-record.json`
+- ourbox-substrate:
+  - `dist/ourbox-substrate.<arch>.publish-record.json`
 
 These records SHALL match `schemas/artifact-publish-record.schema.json`.
 

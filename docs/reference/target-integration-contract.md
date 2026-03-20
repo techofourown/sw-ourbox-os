@@ -33,7 +33,7 @@ This document is concerned with target integration surfaces such as:
 - installed-system provenance,
 - persistent data expectations,
 - bootstrap phases,
-- airgap packaging behavior,
+- substrate bundle packaging behavior,
 - operator-visible status and health surfaces,
 - access-mode realization and routing posture.
 
@@ -97,7 +97,7 @@ Minimum expectations:
 Acceptable implementation shapes:
 - build-time embed,
 - host-composed staged mission media,
-- staged airgap bundle,
+- staged substrate bundle,
 - another target-appropriate mechanism.
 
 The mechanism may differ. The provenance may not be ambiguous.
@@ -199,13 +199,13 @@ Targets remain free to differ in:
 
 That lifecycle and UX behavior remains target-local below the hardware seam.
 
-### 5.6 Airgap platform bundle behavior
+### 5.6 OurBox Substrate bundle behavior
 
-If a target embeds the platform contract or a platform airgap bundle into the installed image, the
+If a target embeds the platform contract or a substrate bundle into the installed image, the
 bundle location SHOULD be stable and documented.
 
 Recommended location:
-- `/opt/ourbox/airgap/platform/`
+- `/opt/ourbox/substrate/`
 
 If the target does not embed such a bundle, the repo MUST document:
 - how the host or compose path stages that contract or bundle before the target

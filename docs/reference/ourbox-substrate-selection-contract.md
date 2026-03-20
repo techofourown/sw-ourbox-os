@@ -1,4 +1,4 @@
-# Airgap Platform Selection Contract
+# OurBox Substrate Selection Contract
 
 - Status: Draft
 - Audience: `sw-ourbox-os` maintainers, `img-*` maintainers, downstream builders
@@ -10,13 +10,13 @@
 
 ## 1. Purpose
 
-This document defines the shared policy for choosing an `airgap-platform` bundle
+This document defines the shared policy for choosing an `ourbox-substrate` bundle
 after the OS payload has already been selected.
 
 It exists because:
 
-- the selected OS payload already carries one baked airgap bundle,
-- operators may want to browse newer or different app bundles,
+- the selected OS payload already carries one baked substrate bundle,
+- operators may want to browse newer or different substrate bundles,
 - that browsing must stay bounded by the selected OS payload's
   `OURBOX_PLATFORM_CONTRACT_DIGEST`,
 - and installed systems need a consistent provenance vocabulary describing which
@@ -25,11 +25,11 @@ It exists because:
 This is the shared contract above the hardware seam for:
 
 - baked-versus-remote bundle selection,
-- airgap catalog resolution,
+- substrate catalog resolution,
 - digest resolution,
 - contract-digest validation,
 - bundle-source determination,
-- and installed-system airgap provenance.
+- and installed-system substrate provenance.
 
 ## 2. Non-goals
 
@@ -53,7 +53,7 @@ The shared shell reference resolver lives at:
 It owns both:
 
 - the existing OS payload selection lane,
-- and the airgap-platform selection lane added by this contract.
+- and the ourbox-substrate selection lane added by this contract.
 
 Host-side installer tooling may source that file directly. If a downstream
 consumer still carries a copy, the normative behavior is defined here and owned
@@ -61,20 +61,20 @@ by `sw-ourbox-os`.
 
 ## 4. Inputs
 
-The shared airgap selection lane uses the following installer control fields:
+The shared substrate selection lane uses the following installer control fields:
 
-- `AIRGAP_PLATFORM_REPO`
-- `AIRGAP_PLATFORM_ARCH`
-- `AIRGAP_PLATFORM_CHANNEL`
-- `AIRGAP_PLATFORM_REF` (optional exact ref override)
-- `AIRGAP_PLATFORM_CATALOG_ENABLED`
-- `AIRGAP_PLATFORM_CATALOG_TAG`
+- `OURBOX_SUBSTRATE_REPO`
+- `OURBOX_SUBSTRATE_ARCH`
+- `OURBOX_SUBSTRATE_CHANNEL`
+- `OURBOX_SUBSTRATE_REF` (optional exact ref override)
+- `OURBOX_SUBSTRATE_CATALOG_ENABLED`
+- `OURBOX_SUBSTRATE_CATALOG_TAG`
 
 The following are local-only installer inputs and MUST NOT appear in the
 published `install-defaults` artifact:
 
-- `AIRGAP_PLATFORM_REGISTRY_USERNAME`
-- `AIRGAP_PLATFORM_REGISTRY_PASSWORD`
+- `OURBOX_SUBSTRATE_REGISTRY_USERNAME`
+- `OURBOX_SUBSTRATE_REGISTRY_PASSWORD`
 
 The lane is additionally bounded by a required runtime input derived from the
 selected OS payload metadata:
@@ -83,11 +83,11 @@ selected OS payload metadata:
 
 This digest is not optional for the browsing lane.
 
-## 5. Airgap Platform Artifact Shape
+## 5. OurBox Substrate Artifact Shape
 
-The selected airgap bundle is an OCI artifact whose payload shape is:
+The selected substrate bundle is an OCI artifact whose payload shape is:
 
-- `dist/airgap-platform.tar.gz`
+- `dist/ourbox-substrate.tar.gz`
 
 That tarball expands to:
 
@@ -99,13 +99,13 @@ Consumers must treat this as the authoritative upstream shape.
 
 `manifest.env` is required and must be self-describing. It must carry at least:
 
-- `OURBOX_AIRGAP_PLATFORM_SOURCE`
-- `OURBOX_AIRGAP_PLATFORM_REVISION`
-- `OURBOX_AIRGAP_PLATFORM_VERSION`
-- `OURBOX_AIRGAP_PLATFORM_CREATED`
+- `OURBOX_SUBSTRATE_SOURCE`
+- `OURBOX_SUBSTRATE_REVISION`
+- `OURBOX_SUBSTRATE_VERSION`
+- `OURBOX_SUBSTRATE_CREATED`
 - `OURBOX_PLATFORM_CONTRACT_REF`
 - `OURBOX_PLATFORM_CONTRACT_DIGEST`
-- `AIRGAP_PLATFORM_ARCH`
+- `OURBOX_SUBSTRATE_ARCH`
 - `K3S_VERSION`
 - `OURBOX_PLATFORM_PROFILE`
 - `OURBOX_PLATFORM_IMAGES_LOCK_PATH`
@@ -115,8 +115,8 @@ Consumers must treat this as the authoritative upstream shape.
 
 Catalogs are published in the same OCI repo as the bundle:
 
-- `ghcr.io/techofourown/sw-ourbox-os/airgap-platform:catalog-arm64`
-- `ghcr.io/techofourown/sw-ourbox-os/airgap-platform:catalog-amd64`
+- `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate:catalog-arm64`
+- `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate:catalog-amd64`
 
 The TSV schema for both arch catalogs is:
 
@@ -138,26 +138,26 @@ Append order is not the contract.
 
 Shared precedence is:
 
-1. `AIRGAP_PLATFORM_REF`
-2. newest valid catalog row for `AIRGAP_PLATFORM_CHANNEL`
+1. `OURBOX_SUBSTRATE_REF`
+2. newest valid catalog row for `OURBOX_SUBSTRATE_CHANNEL`
 
 Catalog resolution must also satisfy the contract filter rule in the next
 section.
 
 ## 8. Contract-Digest Filter Rule
 
-The airgap browser is bounded by the selected OS payload's
+The substrate browser is bounded by the selected OS payload's
 `OURBOX_PLATFORM_CONTRACT_DIGEST`.
 
 That means:
 
 1. resolve the OS payload first,
 2. read `OURBOX_PLATFORM_CONTRACT_DIGEST` from the selected OS payload metadata,
-3. filter airgap catalog rows to that digest,
-4. reject any selected airgap bundle whose extracted `manifest.env` carries a
+3. filter substrate catalog rows to that digest,
+4. reject any selected substrate bundle whose extracted `manifest.env` carries a
    different contract digest.
 
-The selected airgap bundle may change the mutable bundle contents for
+The selected substrate bundle may change the mutable bundle contents for
 platform-owned container image payloads and k3s payloads, but it may not
 replace the selected OS payload's platform-contract files in this rollout.
 
@@ -177,11 +177,11 @@ If `oras resolve` fails:
 - `OURBOX_ALLOW_UNRESOLVED_PULL=1` is the only allowed escape hatch, and it is
   for development or testing only
 - when that escape hatch is used, provenance must explicitly record
-  `OURBOX_AIRGAP_PLATFORM_DIGEST=unresolved`
+  `OURBOX_SUBSTRATE_DIGEST=unresolved`
 
 ## 10. Bundle-Source Rule
 
-Installers should compare the selected airgap ref with the baked airgap bundle
+Installers should compare the selected substrate ref with the baked substrate bundle
 already described by the selected OS payload metadata.
 
 If the selected ref equals the baked bundle ref:
@@ -202,31 +202,31 @@ bundle and the actual selection source.
 
 Installed systems should write the following fields to `/etc/ourbox/release`:
 
-- `OURBOX_AIRGAP_PLATFORM_SOURCE`
-- `OURBOX_AIRGAP_PLATFORM_REVISION`
-- `OURBOX_AIRGAP_PLATFORM_VERSION`
-- `OURBOX_AIRGAP_PLATFORM_CREATED`
-- `OURBOX_AIRGAP_PLATFORM_ARCH`
-- `OURBOX_AIRGAP_PLATFORM_PROFILE`
-- `OURBOX_AIRGAP_PLATFORM_K3S_VERSION`
-- `OURBOX_AIRGAP_PLATFORM_IMAGES_LOCK_SHA256`
-- `OURBOX_AIRGAP_PLATFORM_ARTIFACT_SOURCE`
-- `OURBOX_AIRGAP_PLATFORM_REF`
-- `OURBOX_AIRGAP_PLATFORM_DIGEST`
-- `OURBOX_AIRGAP_PLATFORM_SELECTION_SOURCE`
-- `OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL`
+- `OURBOX_SUBSTRATE_SOURCE`
+- `OURBOX_SUBSTRATE_REVISION`
+- `OURBOX_SUBSTRATE_VERSION`
+- `OURBOX_SUBSTRATE_CREATED`
+- `OURBOX_SUBSTRATE_ARCH`
+- `OURBOX_SUBSTRATE_PROFILE`
+- `OURBOX_SUBSTRATE_K3S_VERSION`
+- `OURBOX_SUBSTRATE_IMAGES_LOCK_SHA256`
+- `OURBOX_SUBSTRATE_ARTIFACT_SOURCE`
+- `OURBOX_SUBSTRATE_REF`
+- `OURBOX_SUBSTRATE_DIGEST`
+- `OURBOX_SUBSTRATE_SELECTION_SOURCE`
+- `OURBOX_SUBSTRATE_RELEASE_CHANNEL`
 
 Shared value expectations:
 
-- `OURBOX_AIRGAP_PLATFORM_ARTIFACT_SOURCE`
+- `OURBOX_SUBSTRATE_ARTIFACT_SOURCE`
   - `baked`
   - `registry`
-- `OURBOX_AIRGAP_PLATFORM_SELECTION_SOURCE`
-  - `airgap-platform-ref`
+- `OURBOX_SUBSTRATE_SELECTION_SOURCE`
+  - `ourbox-substrate-ref`
   - `catalog`
   - `operator-override`
 
-`OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL` should be populated only when channel
+`OURBOX_SUBSTRATE_RELEASE_CHANNEL` should be populated only when channel
 semantics actually participated in selection, typically for `catalog`.
 
 ## 12. Current Adoption Boundary
@@ -234,7 +234,7 @@ semantics actually participated in selection, typically for `catalog`.
 Woodbox and legacy direct-selection consumers may realize this shared contract
 directly.
 
-Matchbox no longer carries the shared airgap-selection lane inside installer
+Matchbox no longer carries the shared substrate-selection lane inside installer
 runtime media. Matchbox now consumes host-composed local mission media from
 `sw-ourbox-installer`, so the application bundle has already been selected and
 staged before the target boots.

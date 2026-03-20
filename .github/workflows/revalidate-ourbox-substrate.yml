@@ -1,5 +1,5 @@
-name: Revalidate Airgap Platform (non-publishing)
-# Runs the full airgap-platform bundle build on the official builder to confirm
+name: Revalidate OurBox Substrate (non-publishing)
+# Runs the full ourbox-substrate bundle build on the official builder to confirm
 # the release-capable path still works. Does NOT publish any official artifacts.
 # Use this after infrastructure changes, runner migrations, or to satisfy the
 # ADR-0008 revalidation requirement.
@@ -15,7 +15,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: revalidate-airgap-platform
+  group: revalidate-ourbox-substrate
   cancel-in-progress: true
 
 jobs:
@@ -80,7 +80,7 @@ jobs:
           set -euo pipefail
           ./tools/platform-contract/build.sh
 
-      - name: Build airgap bundle (no publish)
+      - name: Build substrate bundle (no publish)
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
@@ -88,7 +88,7 @@ jobs:
           OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ steps.contract.outputs.digest }}
         run: |
           set -euo pipefail
-          ARCH="${ARCH}" ./tools/airgap-platform/build.sh
+          ARCH="${ARCH}" ./tools/ourbox-substrate/build.sh
 
       - name: Verify bundle layout
         env:
@@ -96,10 +96,10 @@ jobs:
         run: |
           set -euo pipefail
 
-          test -f dist/airgap-platform.tar.gz
+          test -f dist/ourbox-substrate.tar.gz
 
-          TAR_LIST="/tmp/airgap-platform-revalidate-${ARCH}.list"
-          tar -tzf dist/airgap-platform.tar.gz > "${TAR_LIST}"
+          TAR_LIST="/tmp/ourbox-substrate-revalidate-${ARCH}.list"
+          tar -tzf dist/ourbox-substrate.tar.gz > "${TAR_LIST}"
 
           echo "Tar listing (head):"
           sed -n '1,50p' "${TAR_LIST}"
@@ -109,11 +109,11 @@ jobs:
           grep -q '^manifest.env$' "${TAR_LIST}"
           grep -q '^platform/images/' "${TAR_LIST}"
           if grep -q '^platform/catalog\.json$' "${TAR_LIST}"; then
-            echo "airgap bundle must not include platform/catalog.json" >&2
+            echo "substrate bundle must not include platform/catalog.json" >&2
             exit 1
           fi
           if grep -q '^platform/selected-apps\.json$' "${TAR_LIST}"; then
-            echo "airgap bundle must not include platform/selected-apps.json" >&2
+            echo "substrate bundle must not include platform/selected-apps.json" >&2
             exit 1
           fi
 
@@ -123,7 +123,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: revalidation-airgap-${{ matrix.arch }}-${{ github.run_id }}
+          name: revalidation-substrate-${{ matrix.arch }}-${{ github.run_id }}
           path: |
-            dist/airgap-platform.meta.env
+            dist/ourbox-substrate.meta.env
           if-no-files-found: warn

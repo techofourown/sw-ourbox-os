@@ -10,7 +10,7 @@ CHANNEL="${2:-}"
 TIMESTAMP="${3:-${TIMESTAMP:-}}"
 IMMUTABLE_TAG_OVERRIDE="${4:-${IMMUTABLE_TAG_OVERRIDE:-}}"
 VERSION_OVERRIDE="${5:-${VERSION_OVERRIDE:-}}"
-CATALOG_ARTIFACT_TYPE="application/vnd.techofourown.ourbox.airgap-platform.catalog.v1"
+CATALOG_ARTIFACT_TYPE="application/vnd.techofourown.ourbox.substrate.catalog.v1"
 
 [[ -n "${PUBLISH_RECORD}" ]] || die "usage: update-catalog.sh <publish-record.json> <channel> [timestamp] [immutable-tag-override] [version-override]"
 [[ -f "${PUBLISH_RECORD}" ]] || die "publish record not found: ${PUBLISH_RECORD}"
@@ -31,11 +31,11 @@ import sys
 with open(sys.argv[1], "r", encoding="utf-8") as fh:
     data = json.load(fh)
 
-if data.get("artifact_family") != "airgap-platform":
-    raise SystemExit("publish record must be for artifact_family=airgap-platform")
+if data.get("artifact_family") != "ourbox-substrate":
+    raise SystemExit("publish record must be for artifact_family=ourbox-substrate")
 
 artifact_repo = data.get("artifact_repo", "")
-arch = data.get("artifact_metadata", {}).get("AIRGAP_PLATFORM_ARCH", "")
+arch = data.get("artifact_metadata", {}).get("OURBOX_SUBSTRATE_ARCH", "")
 created = data.get("created", "")
 print(artifact_repo, arch, created)
 PY
@@ -44,7 +44,7 @@ PY
 [[ -n "${ARTIFACT_REPO}" ]] || die "artifact_repo missing from publish record"
 case "${ARCH}" in
   arm64|amd64) : ;;
-  *) die "unsupported or missing AIRGAP_PLATFORM_ARCH in publish record: ${ARCH}" ;;
+  *) die "unsupported or missing OURBOX_SUBSTRATE_ARCH in publish record: ${ARCH}" ;;
 esac
 
 if [[ -z "${TIMESTAMP}" ]]; then
@@ -56,7 +56,7 @@ CATALOG_TAG="catalog-${ARCH}"
 
 args=(
   update-catalog
-  --catalog-family airgap-platform
+  --catalog-family ourbox-substrate
   --artifact-record "${PUBLISH_RECORD}"
   --artifact-repo "${ARTIFACT_REPO}"
   --catalog-tag "${CATALOG_TAG}"

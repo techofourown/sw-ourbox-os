@@ -13,7 +13,7 @@
 - [`docs/decisions/ADR-0012-centralize-installer-selection-contract-above-the-hardware-seam.md`](../decisions/ADR-0012-centralize-installer-selection-contract-above-the-hardware-seam.md)
 - [`docs/reference/target-integration-contract.md`](../reference/target-integration-contract.md)
 - [`docs/reference/installer-selection-contract.md`](../reference/installer-selection-contract.md)
-- [`docs/reference/airgap-platform-selection-contract.md`](../reference/airgap-platform-selection-contract.md)
+- [`docs/reference/ourbox-substrate-selection-contract.md`](../reference/ourbox-substrate-selection-contract.md)
 - `org-techofourown/docs/decisions/ADR-0007-adopt-oci-artifacts-for-app-distribution.md`
 - `org-techofourown/docs/rfcs/RFC-0001-oci-artifacts-trust-and-attestations.md`
 - `org-techofourown/docs/decisions/ADR-0008-adopt-organization-controlled-build-infrastructure-for-heavy-artifacts.md`
@@ -139,7 +139,7 @@ It is responsible for:
 - publishing install-defaults bundles that tell installers where to look by
   default for both:
   - OS payload discovery
-  - airgap-platform discovery
+  - ourbox-substrate discovery
 - documenting the public artifact model and consumer expectations
 
 `sw-ourbox-os` does not directly define every hardware-specific flashing path.
@@ -208,7 +208,7 @@ Its job is to answer questions like:
 - which catalog tag should be consulted?
 - is there a pinned default artifact reference?
 - what are the current stable, beta, nightly, or experimental channel tags?
-- which airgap-platform repo, catalog tag, pinned default ref, and moving
+- which ourbox-substrate repo, catalog tag, pinned default ref, and moving
   channel tags should be used after OS selection?
 
 ### 4.6 Installer media or flashing tools
@@ -266,9 +266,9 @@ Typical fields include:
 - `INSTALLER_ID`
 - `OS_REPO`
 - `OS_CATALOG_TAG`
-- `AIRGAP_PLATFORM_REPO`
-- `AIRGAP_PLATFORM_CHANNEL`
-- `AIRGAP_PLATFORM_CATALOG_TAG`
+- `OURBOX_SUBSTRATE_REPO`
+- `OURBOX_SUBSTRATE_CHANNEL`
+- `OURBOX_SUBSTRATE_CATALOG_TAG`
 
 This bundle is small and separately publishable so the recommended default artifact can change without requiring every installer image to be rebuilt for every recommendation change.
 
@@ -353,7 +353,7 @@ This gives downstream image repos a stable upstream integration contract.
 
 ### Step 2: `sw-ourbox-os` publishes install-defaults
 
-`sw-ourbox-os` also publishes the install-defaults bundle that maps installer profiles to default payload repos, catalog tags, and airgap selection catalogs.
+`sw-ourbox-os` also publishes the install-defaults bundle that maps installer profiles to default payload repos, catalog tags, and substrate selection catalogs.
 
 This acts as the upstream control plane for "where should this installer look by default?"
 
@@ -462,7 +462,7 @@ A profile can answer:
 
 - which repo is the default source of OS payloads?
 - which catalog tag should be consulted?
-- which airgap-platform repo and catalog should be used after OS selection?
+- which ourbox-substrate repo and catalog should be used after OS selection?
 - which release lane should be treated as the default channel?
 
 ### 8.3 Current intended precedence
@@ -484,14 +484,14 @@ This is the intended public model even if specific targets may realize parts of 
 The normative contracts for this resolver behavior now live in:
 
 - `docs/reference/installer-selection-contract.md`
-- `docs/reference/airgap-platform-selection-contract.md`
+- `docs/reference/ourbox-substrate-selection-contract.md`
 
 They define, among other things:
 
 - the remote install-defaults bundle shape,
 - row-order-independent catalog resolution by `created`,
 - fail-closed digest resolution,
-- the rule that airgap catalog rows and extracted bundles must match the
+- the rule that substrate catalog rows and extracted bundles must match the
   selected OS payload's `OURBOX_PLATFORM_CONTRACT_DIGEST`,
 - and the standard provenance vocabulary recorded on installed systems.
 
@@ -696,7 +696,7 @@ The public OurBox image model is:
 
 - `sw-ourbox-os` defines the upstream platform contract and install-defaults control plane
 - `install-defaults` controls both OS payload discovery and contract-bound
-  airgap-platform discovery
+  ourbox-substrate discovery
 - `img-*` repos turn that upstream contract into target-specific OS payloads and installer media
 - payload repos publish immutable artifacts, moving channels, and catalogs
 - install-defaults tells a given installer profile where to look by default
@@ -719,4 +719,4 @@ This keeps the system:
 - [Downstream consumer surfaces](../reference/downstream-consumer-surfaces.md)
 - [Artifact publish record contract](../reference/artifact-publish-record-contract.md)
 - [Installer selection contract](../reference/installer-selection-contract.md)
-- [Airgap-platform selection contract](../reference/airgap-platform-selection-contract.md)
+- [OurBox Substrate selection contract](../reference/ourbox-substrate-selection-contract.md)

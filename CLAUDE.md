@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 A **GraphMD dataset** defining the OurBox OS platform — a local-first application platform for user-owned hardware. Two distinct things live here:
 
 1. **Requirements dataset** — structured Markdown with YAML frontmatter: system requirements (SyRS), software requirements (SRS), architecture docs, ADRs, RFCs, types. Validated in CI by `@graphmd/dataset`.
-2. **OCI artifact producers** — tooling in `tools/` that builds and publishes the platform contract bundle and airgap platform bundle to GHCR.
+2. **OCI artifact producers** — tooling in `tools/` that builds and publishes the platform contract bundle and OurBox substrate bundle to GHCR.
 
 ## Key Commands
 
@@ -22,9 +22,9 @@ Platform contract:
 ./tools/platform-contract/publish.sh [tag]   # Publish to GHCR (default: edge)
 ```
 
-Airgap platform (requires Docker/Podman, large download):
+OurBox substrate (requires Docker/Podman, large download):
 ```bash
-ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 [tag]
+ARCH=arm64 ./tools/ourbox-substrate/publish.sh arm64 [tag]
 ```
 
 Workflow safety check:
@@ -43,7 +43,7 @@ GraphMD YAML frontmatter types are defined in `types/`. Records live in `records
 | Artifact | Registry path | Trigger |
 |---|---|---|
 | Platform contract | `ghcr.io/techofourown/sw-ourbox-os/platform-contract` | push to `main`, `v*` tag |
-| Airgap platform (arm64/amd64) | `ghcr.io/techofourown/sw-ourbox-os/airgap-platform` | push to `main`, `v*` tag |
+| OurBox substrate (arm64/amd64) | `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate` | push to `main`, `v*` tag |
 | Install defaults | `ghcr.io/techofourown/sw-ourbox-os/install-defaults` | push to `main`, `v*` tag |
 
 Channel tags: `edge` (main), `v*` (releases). All artifacts are digest-addressable.
@@ -56,7 +56,7 @@ Image build repos (e.g., `img-ourbox-matchbox`) consume these artifacts via dige
 1. No self-hosted workflow triggered by `pull_request`/`pull_request_target` — prevents untrusted PR code on privileged airgap builders
 2. No official publish workflow exposes `workflow_dispatch` — official publication flows only from push-to-main or tag push
 
-Official publish workflows (`airgap-platform.yml`) run on `[self-hosted, official-heavy, airgap-builder]` per [ADR-0008](https://github.com/techofourown/org-techofourown/blob/main/docs/decisions/ADR-0008-adopt-organization-controlled-build-infrastructure-for-heavy-artifacts.md). Lightweight workflows (`platform-contract.yml`, `install-defaults.yml`) run on `ubuntu-latest`.
+Official publish workflows (`ourbox-substrate.yml`) run on `[self-hosted, official-heavy, airgap-builder]` per [ADR-0008](https://github.com/techofourown/org-techofourown/blob/main/docs/decisions/ADR-0008-adopt-organization-controlled-build-infrastructure-for-heavy-artifacts.md). Lightweight workflows (`platform-contract.yml`, `install-defaults.yml`) run on `ubuntu-latest`.
 
 ## Conventions
 

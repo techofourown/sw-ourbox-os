@@ -60,7 +60,7 @@ Concretely:
      - installed-system release metadata,
      - persistent data contract,
      - bootstrap contract,
-     - airgap packaging behavior when a platform bundle is embedded,
+     - substrate bundle packaging behavior when a platform bundle is embedded,
      - status, health, and observability surfaces,
      - artifact identity and installation provenance,
      - access-mode realization (local-only HTTP mode and public custom-domain HTTPS mode),
