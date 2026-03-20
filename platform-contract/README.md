@@ -60,8 +60,8 @@ or for copied standalone catalog/image-lock defaults. Published application
 catalogs are expected to ship their own static app content in the selected app
 images rather than via `asset_dir` overlays from this tree.
 
-The same source tree is also used when building `airgap-platform`, because that
-bundle re-renders the contract and then filters the result down to
+The same source tree is also used when building the substrate bundle, because
+that bundle re-renders the contract and then filters the result down to
 platform-owned image refs only.
 
 ## Build and validation
@@ -69,16 +69,12 @@ platform-owned image refs only.
 From the repo root:
 
 ```bash
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
-  ./tools/platform-contract/build.sh
+./tools/platform-contract/build.sh
 ./tools/platform-contract/validate.sh
 ```
 
-For explicit local fixture validation only:
-
-```bash
-OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/platform-contract/build.sh
-```
+The build always uses the in-repo `profiles/demo-apps/` fixtures as render
+inputs. No external catalog ref is required.
 
 ## Related directories
 

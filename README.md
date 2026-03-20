@@ -45,16 +45,12 @@ through signer/policy choices over time.
 This repository now produces a platform contract bundle from `platform-contract/` as a tarball
 that can be published to GHCR as an OCI artifact.
 
-- Build locally from a published catalog bundle:
-  `OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... ./tools/platform-contract/build.sh`
-- Publish from a published catalog bundle:
-  `OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... ./tools/platform-contract/publish.sh [tag]`
-- Publish from the in-repo demo-apps fixtures:
-  `OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/platform-contract/publish.sh [tag]`
+- Build locally: `./tools/platform-contract/build.sh`
+- Publish: `./tools/platform-contract/publish.sh [tag]`
 - Pinned digest output: `dist/platform-contract.ref`
 
-Fixture-only local validation remains available via:
-`OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/platform-contract/build.sh`
+The build always uses the in-repo `demo-apps` fixtures as render inputs.
+No external catalog ref is required.
 
 A GitHub Actions workflow publishes:
 - `edge` on pushes to `main`

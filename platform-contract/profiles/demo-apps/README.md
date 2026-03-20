@@ -14,19 +14,13 @@ contract profile.
 
 ## Where this profile is used
 
-This profile still drives local validation when explicitly requested. Official publication no
-longer needs to treat the checked-in catalog/image-lock copies as production
-authority:
+Both `platform-contract` and `airgap-platform` publication use these fixtures
+as their render inputs. No external application catalog ref is accepted or
+required.
 
-- official `platform-contract` publication can render against an external
-  digest-pinned published application catalog bundle via
-  `OURBOX_APPLICATION_CATALOG_REF`
-- official `airgap-platform` publication no longer accepts any external
-  application catalog bundle input and only packages platform-owned image refs
-
-That means changes here should now be treated as fixture maintenance unless you
-are deliberately updating the local validation corpus and opt in with
-`OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1`.
+Changes here affect the published platform-contract shape and image set.
+Production application catalogs and their image sets are owned by the
+standalone `sw-ourbox-catalog-*` repositories and selected at install time.
 
 ## Who consumes the output
 

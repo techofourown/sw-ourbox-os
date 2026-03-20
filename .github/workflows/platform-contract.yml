@@ -55,9 +55,7 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Publish platform-contract bundle from in-repo demo-apps fixtures
-        env:
-          OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG: "1"
+      - name: Publish platform-contract bundle
         run: |
           set -euo pipefail
           ./tools/platform-contract/publish.sh edge

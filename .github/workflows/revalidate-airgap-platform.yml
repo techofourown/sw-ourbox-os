@@ -75,9 +75,7 @@ jobs:
       - name: Install platform-contract build deps
         run: python3 -m pip install --disable-pip-version-check pyyaml
 
-      - name: Build local platform-contract bundle using in-repo demo-apps fixtures
-        env:
-          OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG: "1"
+      - name: Build local platform-contract bundle
         run: |
           set -euo pipefail
           ./tools/platform-contract/build.sh
