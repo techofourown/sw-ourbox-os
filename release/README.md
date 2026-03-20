@@ -27,6 +27,7 @@ Consumed by:
 Purpose:
 
 - records upstream input intent such as repository and approved release lane
+- may record lane-specific intent such as `candidate` versus `nightly`
 - keeps approval separate from generated immutable ref materialization
 - lets downstream workflows resolve digests at workflow start and record those
   exact identities only in generated provenance outputs

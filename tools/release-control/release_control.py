@@ -8,6 +8,8 @@ import shlex
 import subprocess
 import sys
 import tempfile
+import urllib.error
+import urllib.request
 from copy import deepcopy
 from datetime import datetime, timezone
 from pathlib import Path
@@ -27,6 +29,14 @@ def fail(message: str) -> "NoReturn":
 
 def load_json(path: str | Path) -> Any:
     return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def load_json_url(url: str) -> Any:
+    try:
+        with urllib.request.urlopen(url) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except urllib.error.URLError as exc:
+        fail(f"failed to fetch {url}: {exc}")
 
 
 def write_json(path: str | Path, payload: Any) -> None:
@@ -145,6 +155,78 @@ def oras_resolve(ref: str) -> str:
     if completed.returncode != 0:
         return ""
     return completed.stdout.strip()
+
+
+def github_raw_url(repo: str, ref: str, path: str) -> str:
+    ensure_non_empty_string(repo, "github repo")
+    ensure_non_empty_string(ref, "github ref")
+    ensure_non_empty_string(path, "github path")
+    return f"https://raw.githubusercontent.com/{repo}/{ref}/{path}"
+
+
+def validate_approved_upstream_inputs(payload: Any) -> dict[str, Any]:
+    if not isinstance(payload, dict):
+        fail("approved upstream inputs payload must be an object")
+    if payload.get("schema") != 1:
+        fail("approved upstream inputs schema must be 1")
+    if payload.get("kind") != "approved-upstream-inputs":
+        fail("approved upstream inputs kind must be 'approved-upstream-inputs'")
+
+    ensure_non_empty_string(payload.get("snapshot"), "snapshot")
+    artifacts = payload.get("artifacts")
+    if not isinstance(artifacts, dict) or not artifacts:
+        fail("approved upstream inputs must declare a non-empty artifacts object")
+
+    for artifact_key, artifact in artifacts.items():
+        if not isinstance(artifact_key, str) or not artifact_key:
+            fail("approved upstream inputs artifact keys must be non-empty strings")
+        if not isinstance(artifact, dict):
+            fail(f"artifacts.{artifact_key} must be an object")
+        ensure_non_empty_string(artifact.get("repo"), f"artifacts.{artifact_key}.repo")
+        channels = artifact.get("channels")
+        if not isinstance(channels, dict) or not channels:
+            fail(f"artifacts.{artifact_key}.channels must be a non-empty object")
+        for channel_key, channel_value in channels.items():
+            if not isinstance(channel_key, str) or not channel_key:
+                fail(f"artifacts.{artifact_key}.channels keys must be non-empty strings")
+            ensure_non_empty_string(channel_value, f"artifacts.{artifact_key}.channels.{channel_key}")
+
+    return payload
+
+
+def resolve_approved_upstream_input(
+    payload: dict[str, Any],
+    *,
+    artifact_key: str,
+    channel_key: str,
+) -> tuple[str, str, str]:
+    artifacts = payload["artifacts"]
+    artifact = artifacts.get(artifact_key)
+    if not isinstance(artifact, dict):
+        fail(f"approved upstream inputs has no artifact entry {artifact_key!r}")
+
+    repo = ensure_non_empty_string(artifact.get("repo"), f"artifacts.{artifact_key}.repo")
+    channels = artifact.get("channels")
+    if not isinstance(channels, dict):
+        fail(f"artifacts.{artifact_key}.channels must be an object")
+    channel = ensure_non_empty_string(
+        channels.get(channel_key),
+        f"artifacts.{artifact_key}.channels.{channel_key}",
+    )
+
+    selected_ref = f"{repo}:{channel}"
+    digest = oras_resolve(selected_ref)
+    if not DIGEST_RE.match(digest):
+        fail(f"oras resolve failed for approved upstream input {selected_ref}")
+    return payload["snapshot"], selected_ref, f"{repo}@{digest}"
+
+
+def append_env_line(path: str | Path, key: str, value: str) -> None:
+    ensure_non_empty_string(key, "env key")
+    ensure_non_empty_string(value, "env value")
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    with Path(path).open("a", encoding="utf-8") as handle:
+        handle.write(f"{key}={value}\n")
 
 
 def oras_tag(pinned_ref: str, tag: str) -> None:
@@ -867,6 +949,28 @@ def cmd_update_catalog(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_resolve_approved_upstream_input(args: argparse.Namespace) -> int:
+    if args.input_json:
+        payload = load_json(args.input_json)
+    else:
+        payload = load_json_url(github_raw_url(args.github_repo, args.github_ref, args.github_path))
+    validated = validate_approved_upstream_inputs(payload)
+    snapshot, selected_ref, pinned_ref = resolve_approved_upstream_input(
+        validated,
+        artifact_key=args.artifact_key,
+        channel_key=args.channel_key,
+    )
+
+    if args.github_env:
+        append_env_line(args.github_env, args.env_var, pinned_ref)
+        append_env_line(args.github_env, "OURBOX_APPROVED_UPSTREAM_INPUTS_SNAPSHOT", snapshot)
+        append_env_line(args.github_env, "OURBOX_APPROVED_UPSTREAM_INPUT_SOURCE_REF", selected_ref)
+        return 0
+
+    print(pinned_ref)
+    return 0
+
+
 def load_validated_provenance(path: str, expected_source_commit: str | None = None) -> dict[str, Any]:
     return validate_candidate_provenance_object(load_json(path), expected_source_commit=expected_source_commit)
 
@@ -952,6 +1056,18 @@ def build_parser() -> argparse.ArgumentParser:
     update_catalog_parser.add_argument("--version-override")
     update_catalog_parser.add_argument("--timestamp", required=True)
     update_catalog_parser.set_defaults(func=cmd_update_catalog)
+
+    resolve_approved_parser = subparsers.add_parser("resolve-approved-upstream-input")
+    resolve_approved_input_group = resolve_approved_parser.add_mutually_exclusive_group(required=True)
+    resolve_approved_input_group.add_argument("--input-json")
+    resolve_approved_input_group.add_argument("--github-ref")
+    resolve_approved_parser.add_argument("--github-repo")
+    resolve_approved_parser.add_argument("--github-path")
+    resolve_approved_parser.add_argument("--artifact-key", required=True)
+    resolve_approved_parser.add_argument("--channel-key", required=True)
+    resolve_approved_parser.add_argument("--env-var", default="OURBOX_AIRGAP_PLATFORM_REF")
+    resolve_approved_parser.add_argument("--github-env")
+    resolve_approved_parser.set_defaults(func=cmd_resolve_approved_upstream_input)
 
     promote_os_parser = subparsers.add_parser("promote-os")
     promote_os_parser.add_argument("--provenance", required=True)

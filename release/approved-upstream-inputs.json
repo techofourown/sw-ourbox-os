@@ -5,17 +5,26 @@
   "artifacts": {
     "platform_contract": {
       "repo": "ghcr.io/techofourown/sw-ourbox-os/platform-contract",
-      "channel": "edge"
+      "channels": {
+        "candidate": "edge",
+        "nightly": "edge"
+      }
     },
     "matchbox_airgap_platform": {
       "target": "matchbox",
       "repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
-      "channel": "beta-arm64"
+      "channels": {
+        "candidate": "beta-arm64",
+        "nightly": "nightly-arm64"
+      }
     },
     "woodbox_airgap_platform": {
       "target": "woodbox",
       "repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
-      "channel": "beta-amd64"
+      "channels": {
+        "candidate": "beta-amd64",
+        "nightly": "nightly-amd64"
+      }
     }
   }
 }
