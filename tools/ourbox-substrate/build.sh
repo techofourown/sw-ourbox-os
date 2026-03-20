@@ -7,10 +7,8 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST_DIR="${ROOT}/dist"
 VERSIONS_FILE="${ROOT}/tools/ourbox-substrate/versions.env"
-RENDER_SCRIPT="${ROOT}/tools/platform-contract/render-contract.py"
-LINT_SCRIPT="${ROOT}/tools/platform-contract/lint-rendered-contract.py"
-FIXTURE_APPLICATION_CATALOG_FILE="${ROOT}/platform-contract/profiles/demo-apps/catalog.json"
-FIXTURE_APPLICATION_IMAGES_LOCK_FILE="${ROOT}/platform-contract/profiles/demo-apps/images.lock.json"
+PLATFORM_PROFILE_ENV_FILE="${ROOT}/platform-contract/profiles/demo-apps/profile.env"
+PLATFORM_IMAGES_LOCK_SOURCE="${ROOT}/platform-contract/profiles/demo-apps/platform-images.lock.json"
 
 command -v curl >/dev/null 2>&1 || die "curl is required"
 command -v git >/dev/null 2>&1 || die "git is required (to stamp revision)"
@@ -97,10 +95,13 @@ mkdir -p "${build_dir}/k3s" "${build_dir}/platform/images"
   || die "ourbox-substrate build no longer accepts OURBOX_APPLICATION_CATALOG_REF"
 [[ -z "${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-}" ]] \
   || die "ourbox-substrate build no longer uses OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG"
-[[ -f "${FIXTURE_APPLICATION_CATALOG_FILE}" ]] || die "Missing ${FIXTURE_APPLICATION_CATALOG_FILE}"
-[[ -f "${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}" ]] || die "Missing ${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}"
+[[ -f "${PLATFORM_PROFILE_ENV_FILE}" ]] || die "Missing ${PLATFORM_PROFILE_ENV_FILE}"
+[[ -f "${PLATFORM_IMAGES_LOCK_SOURCE}" ]] || die "Missing ${PLATFORM_IMAGES_LOCK_SOURCE}"
 
-log "Using in-repo demo-apps render fixtures only to derive platform-owned substrate metadata."
+PLATFORM_PROFILE="$(awk -F= '/^OURBOX_PLATFORM_PROFILE=/{print $2; exit}' "${PLATFORM_PROFILE_ENV_FILE}")"
+[[ -n "${PLATFORM_PROFILE}" ]] || die "OURBOX_PLATFORM_PROFILE is missing from ${PLATFORM_PROFILE_ENV_FILE}"
+
+log "Using checked-in platform profile metadata and platform-owned images lock for substrate build."
 
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -109,75 +110,55 @@ if git -C "${ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
   VERSION="$(git -C "${ROOT}" describe --tags --exact-match)"
 fi
 
-# Render the checked-in contract so the substrate bundle stays aligned with the
-# current platform sources, then filter the result down to platform-owned refs.
-render_dir="${build_dir}/rendered-platform-contract"
-OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
-OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
-OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os \
-OURBOX_PLATFORM_CONTRACT_REVISION="${REVISION}" \
-OURBOX_PLATFORM_CONTRACT_VERSION="${VERSION}" \
-OURBOX_PLATFORM_CONTRACT_CREATED="${CREATED}" \
-python3 "${RENDER_SCRIPT}" \
-  --contract-root "${ROOT}/platform-contract" \
-  --output-dir "${render_dir}" \
-  --profile demo-apps \
-  --application-catalog "${FIXTURE_APPLICATION_CATALOG_FILE}" \
-  --images-lock-file "${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}" \
-  --box-host "ourbox.local" \
-  --tls-mode "lan-http" \
-  --ingress-class "traefik" \
-  --storage-class "local-path"
-
-python3 "${LINT_SCRIPT}" \
-  --contract-root "${ROOT}/platform-contract" \
-  --render-dir "${render_dir}"
-
-PLATFORM_IMAGES_LOCK_FILE="${build_dir}/platform-images.lock.json"
-mapfile -t IMAGES < <(python3 - <<'PY' "${render_dir}/images.lock.json" "${PLATFORM_IMAGES_LOCK_FILE}"
+mapfile -t IMAGES < <(python3 - <<'PY' "${PLATFORM_IMAGES_LOCK_SOURCE}" "${PLATFORM_PROFILE}"
 import json
 import sys
 
 from pathlib import Path
 
 source_path = Path(sys.argv[1])
-filtered_path = Path(sys.argv[2])
+expected_profile = sys.argv[2]
 data = json.loads(source_path.read_text(encoding="utf-8"))
+if data.get("schema") != 1:
+    raise SystemExit(f"{source_path} must declare schema=1")
+
+profile = str(data.get("profile", "")).strip()
+if profile != expected_profile:
+    raise SystemExit(f"{source_path} must declare profile={expected_profile!r}")
+
 images = data.get("images")
 if not isinstance(images, list):
     raise SystemExit(f"{source_path} must declare an images list")
 
-filtered_images = []
+seen_names = set()
 seen_refs = set()
 for entry in images:
+    name = str(entry.get("name", "")).strip()
     used_by = entry.get("used_by")
     if not isinstance(used_by, list):
         raise SystemExit(f"{source_path} contains an image entry without a used_by list")
     normalized_used_by = [str(item).strip() for item in used_by]
     if "_platform" not in normalized_used_by:
-        continue
+        raise SystemExit(f"{source_path} entry {name!r} must declare used_by including '_platform'")
 
     ref = str(entry.get("ref", "")).strip()
+    if not name:
+        raise SystemExit(f"{source_path} contains a platform image without a name")
     if not ref:
         raise SystemExit(f"{source_path} contains a platform image without a ref")
+    if name in seen_names:
+        raise SystemExit(f"{source_path} contains a duplicate platform image name: {name}")
 
-    filtered_images.append(entry)
+    seen_names.add(name)
     if ref not in seen_refs:
         print(ref)
         seen_refs.add(ref)
 
-if not filtered_images:
+if not seen_refs:
     raise SystemExit(f"{source_path} did not contain any platform-owned image entries")
-
-filtered_lock = dict(data)
-filtered_lock["images"] = filtered_images
-filtered_path.write_text(
-    json.dumps(filtered_lock, indent=2, sort_keys=True) + "\n",
-    encoding="utf-8",
-)
 PY
 )
-IMAGES_LOCK_SHA256="$(sha256sum "${PLATFORM_IMAGES_LOCK_FILE}" | awk '{print $1}')"
+IMAGES_LOCK_SHA256="$(sha256sum "${PLATFORM_IMAGES_LOCK_SOURCE}" | awk '{print $1}')"
 log "Resolved ${#IMAGES[@]} unique platform-owned image refs for substrate bundle."
 
 # k3s binaries + substrate images
@@ -263,13 +244,13 @@ OURBOX_PLATFORM_CONTRACT_REF=${OURBOX_PLATFORM_CONTRACT_REF}
 OURBOX_PLATFORM_CONTRACT_DIGEST=${OURBOX_PLATFORM_CONTRACT_DIGEST}
 OURBOX_SUBSTRATE_ARCH=${ARCH}
 K3S_VERSION=${K3S_VERSION}
-OURBOX_PLATFORM_PROFILE=demo-apps
+OURBOX_PLATFORM_PROFILE=${PLATFORM_PROFILE}
 OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
 OURBOX_PLATFORM_IMAGES_LOCK_SHA256=${IMAGES_LOCK_SHA256}
 EOF_MANIFEST
 
-cp -a "${PLATFORM_IMAGES_LOCK_FILE}" "${build_dir}/platform/images.lock.json"
-cp -a "${ROOT}/platform-contract/profiles/demo-apps/profile.env" "${build_dir}/platform/profile.env"
+cp -a "${PLATFORM_IMAGES_LOCK_SOURCE}" "${build_dir}/platform/images.lock.json"
+cp -a "${PLATFORM_PROFILE_ENV_FILE}" "${build_dir}/platform/profile.env"
 
 cat > "${DIST_DIR}/ourbox-substrate.meta.env" <<EOF_META
 OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
