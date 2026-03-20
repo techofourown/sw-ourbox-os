@@ -129,23 +129,21 @@ Catalog maintenance:
 
 Candidate publication behavior:
 
-- the Airgap publish workflow first checks whether the selected catalog bundle is
-  already bound to the resolved `platform-contract:edge` digest
-- if not, it requests a refresh in the catalog repo and waits for
-  `sw-ourbox-catalog-demo:latest` to converge to a compatible bundle
-- publication still fails closed if no compatible bundle appears within the
-  configured timeout
+- the official Airgap publish workflow resolves `platform-contract:edge`
+- it then builds from the in-repo `demo-apps` fixture catalog profile
+- installer-time application catalog selection remains a separate concern and is
+  not resolved during official airgap publication
 
 Build:
 
 ```bash
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
+OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
 ARCH=arm64 ./tools/airgap-platform/build.sh
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
+OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
 ARCH=amd64 ./tools/airgap-platform/build.sh
 ```
 
@@ -163,12 +161,21 @@ Build and publish:
 ```bash
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
+OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
 ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 beta
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
+OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
 ARCH=amd64 ./tools/airgap-platform/publish.sh amd64 nightly
+```
+
+Official workflow publication uses:
+
+```bash
+OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
+OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
+OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 \
+ARCH=amd64 ./tools/airgap-platform/publish.sh amd64 beta
 ```
 
 Promote an already-published candidate digest into a version tag:

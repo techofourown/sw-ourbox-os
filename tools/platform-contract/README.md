@@ -61,9 +61,11 @@ That means this directory is both:
 From the repo root:
 
 ```bash
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
+OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
   ./tools/platform-contract/build.sh
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... \
+OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
+  ./tools/platform-contract/publish.sh edge
+OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 \
   ./tools/platform-contract/publish.sh edge
 PROMOTE_SOURCE_PINNED_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... ./tools/platform-contract/promote.sh v0.16.2
 ./tools/platform-contract/validate.sh

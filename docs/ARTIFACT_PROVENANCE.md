@@ -51,21 +51,22 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 
 | Operation | Entrypoint |
 |---|---|
-| Build platform contract | `OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... ./tools/platform-contract/build.sh` |
-| Publish platform contract | `./tools/platform-contract/publish.sh [tag]` |
-| Build airgap platform | `OURBOX_APPLICATION_CATALOG_REF=ghcr.io/techofourown/sw-ourbox-catalog-demo@sha256:... ARCH=arm64 ./tools/airgap-platform/build.sh` |
-| Publish airgap platform | `ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 [tag]` |
+| Build platform contract | `OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... ./tools/platform-contract/build.sh` |
+| Publish platform contract | `OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/platform-contract/publish.sh [tag]` |
+| Build airgap platform | `OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... ARCH=arm64 ./tools/airgap-platform/build.sh` |
+| Publish airgap platform | `OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 [tag]` |
 | Build install defaults | `./tools/install-defaults/build.sh` |
 | Publish install defaults | `TAG=edge ./tools/install-defaults/publish.sh [tag]` |
 | Validate GraphMD dataset | `npm test` |
 
-All build logic lives in this repository. Official and compatible builds use the same entrypoints.
+All build logic lives in this repository. Official and compatible builds use the
+same entrypoints.
 
-For production publication, both `platform-contract/publish.sh` and
-`airgap-platform/publish.sh` require `OURBOX_APPLICATION_CATALOG_REF` to be a
-digest-pinned published application catalog bundle ref.
-Local fixture-only validation may still opt in with
-`OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1`.
+Official publication now uses explicit in-repo fixture mode via
+`OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1` for both
+`platform-contract/publish.sh` and `airgap-platform/publish.sh`.
+Explicit local builds may still provide a digest-pinned
+`OURBOX_APPLICATION_CATALOG_REF` when validating a published catalog bundle.
 
 ---
 
