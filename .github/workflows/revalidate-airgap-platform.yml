@@ -86,7 +86,6 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
-          OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG: "1"
           OURBOX_PLATFORM_CONTRACT_REF: ${{ steps.contract.outputs.pinned_ref }}
           OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ steps.contract.outputs.digest }}
         run: |
@@ -111,6 +110,8 @@ jobs:
           grep -q "^k3s/k3s-airgap-images-${ARCH}\\.tar$" "${TAR_LIST}"
           grep -q '^manifest.env$' "${TAR_LIST}"
           grep -q '^platform/images/' "${TAR_LIST}"
+          ! grep -q '^platform/catalog\.json$' "${TAR_LIST}"
+          ! grep -q '^platform/selected-apps\.json$' "${TAR_LIST}"
 
           echo "Bundle layout verified for ${ARCH}."
 

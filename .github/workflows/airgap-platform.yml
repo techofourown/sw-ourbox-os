@@ -212,7 +212,6 @@ jobs:
           IMMUTABLE_TAG: ${{ needs.context.outputs.immutable_tag || needs.recovery-request.outputs.immutable_tag }}
           OURBOX_PLATFORM_CONTRACT_REF: ${{ needs.resolve-inputs.outputs.pinned_ref || needs.recovery-request.outputs.pinned_ref }}
           OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ needs.resolve-inputs.outputs.digest || needs.recovery-request.outputs.digest }}
-          OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG: "1"
         run: |
           set -euo pipefail
           TAG="${IMMUTABLE_TAG}" \
@@ -276,6 +275,8 @@ jobs:
           grep -q '^k3s/k3s-airgap-images-'${ARCH}'\.tar$' "${TAR_LIST}"
           grep -q '^manifest.env$' "${TAR_LIST}"
           grep -q '^platform/images/' "${TAR_LIST}"
+          ! grep -q '^platform/catalog\.json$' "${TAR_LIST}"
+          ! grep -q '^platform/selected-apps\.json$' "${TAR_LIST}"
           tar -xOzf /tmp/airgap-platform/dist/airgap-platform.tar.gz manifest.env | grep -q '^OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:'
 
       - name: Upload publish outputs

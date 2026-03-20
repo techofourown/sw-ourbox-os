@@ -157,9 +157,9 @@ That means:
 4. reject any selected airgap bundle whose extracted `manifest.env` carries a
    different contract digest.
 
-The selected airgap bundle may change the mutable bundle contents for apps and
-k3s payloads, but it may not replace the selected OS payload's platform-contract
-files in this rollout.
+The selected airgap bundle may change the mutable bundle contents for
+platform-owned container image payloads and k3s payloads, but it may not
+replace the selected OS payload's platform-contract files in this rollout.
 
 ## 9. Digest Resolution Rules
 

@@ -936,7 +936,7 @@ test_airgap_platform_validate_extracted_bundle_rejects_invalid_manifest_contract
   required_contract="sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
 
   mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
-  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/app.tar"
+  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
   cat > "${bundle_dir}/manifest.env" <<'EOF_MANIFEST'
 OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_AIRGAP_PLATFORM_REVISION=6472fb5919d187daf832082eeaef6086b336a632
@@ -966,7 +966,7 @@ test_airgap_platform_validate_extracted_bundle_exports_manifest_metadata() {
   required_contract="sha256:abababababababababababababababababababababababababababababababab"
 
   mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
-  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/app.tar"
+  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
   cat > "${bundle_dir}/manifest.env" <<EOF_MANIFEST
 OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_AIRGAP_PLATFORM_REVISION=6472fb5919d187daf832082eeaef6086b336a632
@@ -1016,7 +1016,7 @@ test_airgap_platform_validate_extracted_bundle_rejects_missing_contract_digest_h
   required_contract="sha256:5656565656565656565656565656565656565656565656565656565656565656"
 
   mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
-  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/app.tar"
+  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
   cat > "${bundle_dir}/manifest.env" <<'EOF_MANIFEST'
 OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_AIRGAP_PLATFORM_REVISION=6472fb5919d187daf832082eeaef6086b336a632
@@ -1045,7 +1045,7 @@ test_airgap_platform_validate_extracted_bundle_rejects_missing_k3s_airgap_images
   required_contract="sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef"
 
   mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
-  touch "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/app.tar"
+  touch "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
   cat > "${bundle_dir}/manifest.env" <<EOF_MANIFEST
 OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_AIRGAP_PLATFORM_REVISION=6472fb5919d187daf832082eeaef6086b336a632

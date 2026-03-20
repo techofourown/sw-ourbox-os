@@ -53,8 +53,8 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 |---|---|
 | Build platform contract | `OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... ./tools/platform-contract/build.sh` |
 | Publish platform contract | `OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/platform-contract/publish.sh [tag]` |
-| Build airgap platform | `OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... ARCH=arm64 ./tools/airgap-platform/build.sh` |
-| Publish airgap platform | `OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 [tag]` |
+| Build airgap platform | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... ARCH=arm64 ./tools/airgap-platform/build.sh` |
+| Publish airgap platform | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 [tag]` |
 | Build install defaults | `./tools/install-defaults/build.sh` |
 | Publish install defaults | `TAG=edge ./tools/install-defaults/publish.sh [tag]` |
 | Validate GraphMD dataset | `npm test` |
@@ -62,10 +62,10 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 All build logic lives in this repository. Official and compatible builds use the
 same entrypoints.
 
-Official publication now uses explicit in-repo fixture mode via
-`OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1` for both
-`platform-contract/publish.sh` and `airgap-platform/publish.sh`.
-Explicit local builds may still provide a digest-pinned
+Official `airgap-platform` publication no longer accepts application-catalog
+inputs at all. Official `platform-contract` publication still uses explicit
+in-repo fixture mode via `OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1`.
+Explicit local platform-contract builds may still provide a digest-pinned
 `OURBOX_APPLICATION_CATALOG_REF` when validating a published catalog bundle.
 
 ---

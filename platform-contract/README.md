@@ -61,8 +61,8 @@ catalogs are expected to ship their own static app content in the selected app
 images rather than via `asset_dir` overlays from this tree.
 
 The same source tree is also used when building `airgap-platform`, because that
-bundle re-renders the contract and pulls the images selected by the current
-catalog input.
+bundle re-renders the contract and then filters the result down to
+platform-owned image refs only.
 
 ## Build and validation
 

@@ -21,8 +21,8 @@ authority:
 - official `platform-contract` publication can render against an external
   digest-pinned published application catalog bundle via
   `OURBOX_APPLICATION_CATALOG_REF`
-- official `airgap-platform` publication can pull the same external bundle and
-  enforce its `OURBOX_PLATFORM_CONTRACT_DIGEST` binding
+- official `airgap-platform` publication no longer accepts any external
+  application catalog bundle input and only packages platform-owned image refs
 
 That means changes here should now be treated as fixture maintenance unless you
 are deliberately updating the local validation corpus and opt in with
