@@ -24,13 +24,10 @@ command -v node >/dev/null 2>&1 || die "node is required for schema validation o
 : "${OURBOX_PLATFORM_CONTRACT_DIGEST:?OURBOX_PLATFORM_CONTRACT_DIGEST is required}"
 [[ "${OURBOX_PLATFORM_CONTRACT_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] \
   || die "OURBOX_PLATFORM_CONTRACT_DIGEST must be a sha256 digest"
-ALLOW_FIXTURE_APPLICATION_CATALOG="${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-0}"
-if [[ -n "${OURBOX_APPLICATION_CATALOG_REF:-}" ]]; then
-  [[ "${OURBOX_APPLICATION_CATALOG_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]] \
-    || die "OURBOX_APPLICATION_CATALOG_REF must be a digest-pinned published application catalog bundle ref"
-elif [[ "${ALLOW_FIXTURE_APPLICATION_CATALOG}" != "1" ]]; then
-  die "OURBOX_APPLICATION_CATALOG_REF is required for publish.sh unless OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 is set"
-fi
+[[ -z "${OURBOX_APPLICATION_CATALOG_REF:-}" ]] \
+  || die "airgap-platform publish no longer accepts OURBOX_APPLICATION_CATALOG_REF"
+[[ -z "${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-}" ]] \
+  || die "airgap-platform publish no longer uses OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG"
 
 log "Building bundle for ${ARCH}"
 ARCH="${ARCH}" "${ROOT}/tools/airgap-platform/build.sh"

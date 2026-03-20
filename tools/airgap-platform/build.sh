@@ -93,57 +93,14 @@ fi
 
 mkdir -p "${build_dir}/k3s" "${build_dir}/platform/images"
 
-ALLOW_FIXTURE_APPLICATION_CATALOG="${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-0}"
-APPLICATION_CATALOG_FILE="${FIXTURE_APPLICATION_CATALOG_FILE}"
-APPLICATION_IMAGES_LOCK_FILE="${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}"
-APPLICATION_CATALOG_SOURCE_KIND="fixture-profile"
-APPLICATION_CATALOG_MANIFEST_FILE=""
+[[ -z "${OURBOX_APPLICATION_CATALOG_REF:-}" ]] \
+  || die "airgap-platform build no longer accepts OURBOX_APPLICATION_CATALOG_REF"
+[[ -z "${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-}" ]] \
+  || die "airgap-platform build no longer uses OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG"
+[[ -f "${FIXTURE_APPLICATION_CATALOG_FILE}" ]] || die "Missing ${FIXTURE_APPLICATION_CATALOG_FILE}"
+[[ -f "${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}" ]] || die "Missing ${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}"
 
-prepare_application_catalog_inputs() {
-  local pull_dir=""
-  local extract_dir=""
-  local bundle_tarball=""
-  local manifest_digest=""
-
-  if [[ -z "${OURBOX_APPLICATION_CATALOG_REF:-}" ]]; then
-    if [[ "${ALLOW_FIXTURE_APPLICATION_CATALOG}" == "1" ]]; then
-      log "Using explicitly requested in-repo demo-apps catalog fixtures for airgap-platform build."
-      return 0
-    fi
-    die "OURBOX_APPLICATION_CATALOG_REF is required for airgap-platform build. Set OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 only for explicit local fixture validation."
-  fi
-
-  command -v oras >/dev/null 2>&1 || die "oras is required when OURBOX_APPLICATION_CATALOG_REF is set"
-
-  pull_dir="${build_dir}/application-catalog-pull"
-  extract_dir="${build_dir}/application-catalog"
-  rm -rf "${pull_dir}" "${extract_dir}"
-  mkdir -p "${pull_dir}" "${extract_dir}"
-
-  log "Pulling application catalog bundle: ${OURBOX_APPLICATION_CATALOG_REF}"
-  oras pull "${OURBOX_APPLICATION_CATALOG_REF}" -o "${pull_dir}" >/dev/null
-  bundle_tarball="$(find "${pull_dir}" -maxdepth 4 -type f -name 'application-catalog-bundle.tar.gz' | head -n 1 || true)"
-  [[ -f "${bundle_tarball}" ]] || die "application catalog pull did not produce application-catalog-bundle.tar.gz"
-
-  tar -xzf "${bundle_tarball}" -C "${extract_dir}"
-  [[ -f "${extract_dir}/catalog.json" ]] || die "application catalog bundle missing catalog.json"
-  [[ -f "${extract_dir}/images.lock.json" ]] || die "application catalog bundle missing images.lock.json"
-  [[ -f "${extract_dir}/manifest.env" ]] || die "application catalog bundle missing manifest.env"
-
-  manifest_digest="$(awk -F= '/^OURBOX_PLATFORM_CONTRACT_DIGEST=/{print $2; exit}' "${extract_dir}/manifest.env")"
-  [[ "${manifest_digest}" =~ ^sha256:[0-9a-f]{64}$ ]] \
-    || die "application catalog bundle manifest must declare a valid OURBOX_PLATFORM_CONTRACT_DIGEST"
-  [[ "${manifest_digest}" == "${OURBOX_PLATFORM_CONTRACT_DIGEST}" ]] \
-    || die "application catalog bundle contract digest mismatch: expected ${OURBOX_PLATFORM_CONTRACT_DIGEST}, got ${manifest_digest}"
-
-  APPLICATION_CATALOG_FILE="${extract_dir}/catalog.json"
-  APPLICATION_IMAGES_LOCK_FILE="${extract_dir}/images.lock.json"
-  APPLICATION_CATALOG_MANIFEST_FILE="${extract_dir}/manifest.env"
-  APPLICATION_CATALOG_SOURCE_KIND="published-catalog-bundle"
-  log "Using published application catalog bundle inputs for airgap-platform build."
-}
-
-prepare_application_catalog_inputs
+log "Using in-repo demo-apps render fixtures only to derive platform-owned airgap metadata."
 
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -152,6 +109,8 @@ if git -C "${ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
   VERSION="$(git -C "${ROOT}" describe --tags --exact-match)"
 fi
 
+# Render the checked-in contract so the airgap bundle stays aligned with the
+# current platform sources, then filter the result down to platform-owned refs.
 render_dir="${build_dir}/rendered-platform-contract"
 OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
 OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
@@ -163,8 +122,8 @@ python3 "${RENDER_SCRIPT}" \
   --contract-root "${ROOT}/platform-contract" \
   --output-dir "${render_dir}" \
   --profile demo-apps \
-  --application-catalog "${APPLICATION_CATALOG_FILE}" \
-  --images-lock-file "${APPLICATION_IMAGES_LOCK_FILE}" \
+  --application-catalog "${FIXTURE_APPLICATION_CATALOG_FILE}" \
+  --images-lock-file "${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}" \
   --box-host "airgap.ourbox.local" \
   --tls-mode "lan-http" \
   --ingress-class "traefik" \
@@ -174,16 +133,52 @@ python3 "${LINT_SCRIPT}" \
   --contract-root "${ROOT}/platform-contract" \
   --render-dir "${render_dir}"
 
-mapfile -t IMAGES < <(python3 - <<'PY' "${render_dir}/images.lock.json"
+PLATFORM_IMAGES_LOCK_FILE="${build_dir}/platform-images.lock.json"
+mapfile -t IMAGES < <(python3 - <<'PY' "${render_dir}/images.lock.json" "${PLATFORM_IMAGES_LOCK_FILE}"
 import json
 import sys
-with open(sys.argv[1], "r", encoding="utf-8") as handle:
-    data = json.load(handle)
-for entry in data["images"]:
-    print(entry["ref"])
+
+from pathlib import Path
+
+source_path = Path(sys.argv[1])
+filtered_path = Path(sys.argv[2])
+data = json.loads(source_path.read_text(encoding="utf-8"))
+images = data.get("images")
+if not isinstance(images, list):
+    raise SystemExit(f"{source_path} must declare an images list")
+
+filtered_images = []
+seen_refs = set()
+for entry in images:
+    used_by = entry.get("used_by")
+    if not isinstance(used_by, list):
+        raise SystemExit(f"{source_path} contains an image entry without a used_by list")
+    normalized_used_by = [str(item).strip() for item in used_by]
+    if "_platform" not in normalized_used_by:
+        continue
+
+    ref = str(entry.get("ref", "")).strip()
+    if not ref:
+        raise SystemExit(f"{source_path} contains a platform image without a ref")
+
+    filtered_images.append(entry)
+    if ref not in seen_refs:
+        print(ref)
+        seen_refs.add(ref)
+
+if not filtered_images:
+    raise SystemExit(f"{source_path} did not contain any platform-owned image entries")
+
+filtered_lock = dict(data)
+filtered_lock["images"] = filtered_images
+filtered_path.write_text(
+    json.dumps(filtered_lock, indent=2, sort_keys=True) + "\n",
+    encoding="utf-8",
+)
 PY
 )
-IMAGES_LOCK_SHA256="$(sha256sum "${render_dir}/images.lock.json" | awk '{print $1}')"
+IMAGES_LOCK_SHA256="$(sha256sum "${PLATFORM_IMAGES_LOCK_FILE}" | awk '{print $1}')"
+log "Resolved ${#IMAGES[@]} unique platform-owned image refs for airgap bundle."
 
 # k3s binaries + airgap images
 BIN_URL="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}/k3s"
@@ -273,16 +268,8 @@ OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
 OURBOX_PLATFORM_IMAGES_LOCK_SHA256=${IMAGES_LOCK_SHA256}
 EOF_MANIFEST
 
-cp -a "${render_dir}/images.lock.json" "${build_dir}/platform/images.lock.json"
+cp -a "${PLATFORM_IMAGES_LOCK_FILE}" "${build_dir}/platform/images.lock.json"
 cp -a "${ROOT}/platform-contract/profiles/demo-apps/profile.env" "${build_dir}/platform/profile.env"
-if [[ -f "${APPLICATION_CATALOG_FILE}" ]]; then
-  cp -a "${APPLICATION_CATALOG_FILE}" "${build_dir}/platform/catalog.json"
-fi
-if [[ -f "${render_dir}/selected-apps.json" ]]; then
-  cp -a "${render_dir}/selected-apps.json" "${build_dir}/platform/selected-apps.json"
-else
-  die "rendered platform contract did not produce selected-apps.json"
-fi
 
 cat > "${DIST_DIR}/airgap-platform.meta.env" <<EOF_META
 OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os

@@ -27,19 +27,11 @@ It packages:
 
 - the `k3s` binary for one target architecture
 - the matching upstream k3s airgap image tar
-- the platform app images listed in the rendered `images.lock.json`
-- the selected application-catalog inputs used to build the bundle
+- the platform-owned image archives listed in `platform/images.lock.json`
 
 The artifact is architecture-specific, but the source code is not split by
 architecture. `arm64` and `amd64` both use the same scripts here with a different
 `ARCH` value.
-
-User-facing naming note:
-
-- the transport artifact is still named `airgap-platform`
-- the user-facing meaning is now “application catalog bundle”
-- a host-side installer may then choose either the catalog defaults, all apps,
-  or a custom app subset from that catalog
 
 Official publication is also bound to the exact published platform-contract
 artifact identity via:
@@ -55,21 +47,21 @@ Checked in here and elsewhere in this repo:
 - `versions.env` for pinned upstream k3s version
 - `platform-contract/profiles/demo-apps/profile.env`
 - `platform-contract/profiles/demo-apps/{catalog.json,images.lock.json}` as
-  fixture fallback inputs for local validation
+  local render fixtures only
 - the platform-contract rendering and lint tooling under `tools/platform-contract/`
 
 Fetched during the build:
 
-- the published application catalog bundle selected by `OURBOX_APPLICATION_CATALOG_REF`
 - the upstream `k3s` binary for the selected architecture
 - the upstream `k3s-airgap-images-<arch>.tar`
-- each application image pinned in the rendered `images.lock.json`
+- each platform-owned image pinned in the filtered `platform/images.lock.json`
 
 There is intentionally no checked-in `airgap-platform/` payload tree in this
-repository. The artifact is assembled by script from published catalog inputs
+repository. The artifact is assembled by script from checked-in platform inputs
 plus fetched upstream bytes. The checked-in `demo-apps` catalog and lock files
-remain only as an explicit validation fixture when
-`OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1` is set.
+remain only to satisfy the platform-contract renderer; the published airgap
+bundle is filtered down to platform-owned refs and carries no application
+catalog payload.
 
 ## Output shape
 
@@ -84,14 +76,8 @@ The tarball contains:
 - `platform/`
 - `manifest.env`
 
-`platform/` includes the rendered `images.lock.json` and
-`platform/profile.env` from the selected catalog/profile build input.
-
-When the profile carries application-catalog metadata, `platform/` also
-includes:
-
-- `catalog.json`
-- `selected-apps.json`
+`platform/` includes the filtered, platform-owned `images.lock.json` and
+`platform/profile.env` from the selected platform profile.
 
 `manifest.env` is self-describing and includes:
 
@@ -130,7 +116,7 @@ Catalog maintenance:
 Candidate publication behavior:
 
 - the official Airgap publish workflow resolves `platform-contract:edge`
-- it then builds from the in-repo `demo-apps` fixture catalog profile
+- it then builds a platform-owned airgap bundle from `main`
 - installer-time application catalog selection remains a separate concern and is
   not resolved during official airgap publication
 
@@ -139,20 +125,9 @@ Build:
 ```bash
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
 ARCH=arm64 ./tools/airgap-platform/build.sh
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
-ARCH=amd64 ./tools/airgap-platform/build.sh
-```
-
-For explicit local fixture validation only:
-
-```bash
-OURBOX_PLATFORM_CONTRACT_REF=revalidate-local-platform-contract \
-OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:$(printf '%064d' 0) \
-OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 \
 ARCH=amd64 ./tools/airgap-platform/build.sh
 ```
 
@@ -161,21 +136,17 @@ Build and publish:
 ```bash
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
 ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 beta
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
 ARCH=amd64 ./tools/airgap-platform/publish.sh amd64 nightly
 ```
 
-Official workflow publication uses:
+Guardrail:
 
 ```bash
-OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
-OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 \
-ARCH=amd64 ./tools/airgap-platform/publish.sh amd64 beta
+OURBOX_APPLICATION_CATALOG_REF=... ./tools/airgap-platform/build.sh   # rejected
+OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/airgap-platform/build.sh   # rejected
 ```
 
 Promote an already-published candidate digest into a version tag:
@@ -188,7 +159,7 @@ PROMOTE_SOURCE_PINNED_REF=ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha2
 ## How official publication works
 
 - `.github/workflows/airgap-platform.yml` publishes the platform-contract first,
-  then builds contract-bound airgap bundles from `main`.
+  then builds contract-bound, platform-owned airgap bundles from `main`.
 - Official mainline publication moves `beta-<arch>`.
 - Scheduled integration publication moves `nightly-<arch>`.
 - Promotion workflows later re-tag the exact published digest into:
