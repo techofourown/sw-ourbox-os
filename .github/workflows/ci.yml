@@ -29,6 +29,9 @@ jobs:
       - name: Check workflow trust boundaries
         run: bash tools/policy/check-workflow-safety.sh
 
+      - name: Check for mirrored upstream pins in control-plane surfaces
+        run: bash tools/policy/check-no-mirrored-upstream-pins.sh
+
   platform-contract:
     name: Platform contract render + lint
     runs-on: ubuntu-latest
