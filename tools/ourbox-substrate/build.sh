@@ -124,7 +124,7 @@ python3 "${RENDER_SCRIPT}" \
   --profile demo-apps \
   --application-catalog "${FIXTURE_APPLICATION_CATALOG_FILE}" \
   --images-lock-file "${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}" \
-  --box-host "airgap.ourbox.local" \
+  --box-host "ourbox.local" \
   --tls-mode "lan-http" \
   --ingress-class "traefik" \
   --storage-class "local-path"

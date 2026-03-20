@@ -24,15 +24,15 @@ Build or validate the canonical rendered bundle with:
 Verify a live rendered/apply result on a target with:
 
 ```bash
-/opt/ourbox/airgap/platform/tools/check-target-prereqs.sh
-/opt/ourbox/airgap/platform/tools/verify-runtime.sh \
-  --contract-dir /opt/ourbox/airgap/platform \
+/opt/ourbox/substrate/platform/tools/check-target-prereqs.sh
+/opt/ourbox/substrate/platform/tools/verify-runtime.sh \
+  --contract-dir /opt/ourbox/substrate/platform \
   --render-dir /run/ourbox-platform-rendered
 ```
 
 Optional PVC persistence verification:
 
 ```bash
-/opt/ourbox/airgap/platform/tools/verify-persistence.sh \
+/opt/ourbox/substrate/platform/tools/verify-persistence.sh \
   --render-dir /run/ourbox-platform-rendered
 ```

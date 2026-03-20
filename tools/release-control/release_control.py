@@ -327,7 +327,7 @@ def build_os_catalog_header(sha_column: str) -> str:
     )
 
 
-def build_airgap_catalog_header() -> str:
+def build_substrate_catalog_header() -> str:
     return "\t".join(
         [
             "channel",
@@ -366,7 +366,7 @@ def find_catalog_file(catalog_dir: Path) -> Path:
     return direct
 
 
-def validate_upstream_airgap_publish_record(record: Any) -> dict[str, Any]:
+def validate_upstream_substrate_publish_record(record: Any) -> dict[str, Any]:
     if not isinstance(record, dict):
         fail("artifact record must be an object")
     if record.get("schema") != 1:
@@ -486,7 +486,7 @@ def update_os_catalog_from_record(
         oras_push_catalog(catalog_ref, catalog_artifact_type, catalog_file.parent)
 
 
-def update_airgap_catalog_from_record(
+def update_substrate_catalog_from_record(
     artifact_record: dict[str, Any],
     *,
     artifact_repo: str,
@@ -501,11 +501,11 @@ def update_airgap_catalog_from_record(
     if channel_mode != "short":
         fail("ourbox-substrate catalogs require channel-mode short")
 
-    record = validate_upstream_airgap_publish_record(artifact_record)
+    record = validate_upstream_substrate_publish_record(artifact_record)
     if record["artifact_repo"] != artifact_repo:
         fail(f"artifact record repo {record['artifact_repo']} does not match {artifact_repo}")
 
-    header = build_airgap_catalog_header()
+    header = build_substrate_catalog_header()
     immutable_tag = immutable_tag_override or extract_tag_from_ref(record["artifact_repo"], record["artifact_ref"])
     version = version_override or record["source_version"]
     channel = normalize_channel(channel_tag, "", channel_mode)
@@ -592,7 +592,7 @@ def update_catalog_from_record(
         return
 
     if detected_family == "ourbox-substrate":
-        update_airgap_catalog_from_record(
+        update_substrate_catalog_from_record(
             artifact_record,
             artifact_repo=artifact_repo,
             catalog_tag=catalog_tag,
