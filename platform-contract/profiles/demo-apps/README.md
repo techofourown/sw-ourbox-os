@@ -7,6 +7,9 @@ contract profile.
 
 - `profile.env`
   - profile-level render inputs used by the platform-contract renderer
+- `platform-images.lock.json`
+  - source of truth for the platform-owned image refs consumed by both
+    `render-contract.py` and `ourbox-substrate`
 - `images.lock.json`
   - fixture image-lock data kept for local validation and negative tests
 - `catalog.json`
@@ -14,9 +17,11 @@ contract profile.
 
 ## Where this profile is used
 
-Both `platform-contract` and `ourbox-substrate` publication use these fixtures
-as their render inputs. No external application catalog ref is accepted or
-required.
+`platform-contract` publication still uses the local `catalog.json` and
+`images.lock.json` fixtures as render inputs. `ourbox-substrate` now consumes
+only `profile.env` plus `platform-images.lock.json` from this directory and no
+longer re-renders the demo application fixtures just to derive platform-owned
+image refs.
 
 Changes here affect the published platform-contract shape and image set.
 Production application catalogs and their image sets are owned by the
@@ -37,6 +42,7 @@ Use this directory when you need to change:
 - local render-contract validation coverage
 - negative test fixtures for catalog/image-lock behavior
 - profile-level routing knobs in `profile.env`
+- platform-owned image refs in `platform-images.lock.json`
 
 Changing the production application catalog or image defaults should happen in
 the standalone `sw-ourbox-catalog-*` repositories instead.

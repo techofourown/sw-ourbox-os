@@ -62,9 +62,10 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 All build logic lives in this repository. Official and compatible builds use the
 same entrypoints.
 
-Official `ourbox-substrate` and `platform-contract` publication both use the
-in-repo `demo-apps` fixtures exclusively. No external application-catalog
-ref is accepted or required.
+Official `platform-contract` publication uses the in-repo `demo-apps`
+fixtures. Official `ourbox-substrate` publication uses the checked-in
+`demo-apps` profile metadata plus platform-owned image refs. No external
+application-catalog ref is accepted or required.
 
 ---
 

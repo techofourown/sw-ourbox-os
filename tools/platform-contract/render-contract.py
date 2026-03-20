@@ -36,14 +36,8 @@ METADATA_KEYS = (
 
 CATALOG_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SELECTION_MODES = {"catalog-defaults", "all-apps", "custom"}
-LANDING_IMAGE_REF = (
-    "docker.io/library/nginx@"
-    "sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10"
-)
-LANDING_STATUS_IMAGE_REF = (
-    "docker.io/library/python:3.12-alpine@"
-    "sha256:7747d47f92cfca63a6e2b50275e23dba8407c30d8ae929a88ddd49a5d3f2d331"
-)
+PLATFORM_LANDING_IMAGE_NAME = "_platform-landing"
+PLATFORM_LANDING_STATUS_IMAGE_NAME = "_platform-landing-status"
 LANDING_STATUS_ROUTE_PATH = "/_ourbox/app-status.json"
 LANDING_STATUS_ROUTE_DESCRIPTION = "landing-app-status"
 LANDING_STATUS_BODY_MARKER = "ourbox-landing-status"
@@ -218,6 +212,54 @@ def load_images_lock(profile_dir: Path, images_lock_override: str | None) -> tup
         if not ref:
             raise SystemExit(f"images lock at {images_lock_path} contains an image without a ref")
     return images_lock, images_lock_path
+
+
+def load_platform_images_lock(profile_dir: Path) -> tuple[dict, Path]:
+    platform_images_lock_path = profile_dir / "platform-images.lock.json"
+    if not platform_images_lock_path.exists():
+        raise SystemExit(f"platform-images.lock.json not found at {platform_images_lock_path}")
+
+    platform_images_lock = json.loads(platform_images_lock_path.read_text(encoding="utf-8"))
+    if platform_images_lock.get("schema") != 1:
+        raise SystemExit(f"platform images lock at {platform_images_lock_path} must declare schema=1")
+
+    profile_name = str(platform_images_lock.get("profile", "")).strip()
+    if profile_name != profile_dir.name:
+        raise SystemExit(
+            f"platform images lock at {platform_images_lock_path} must declare profile={profile_dir.name!r}"
+        )
+
+    images = platform_images_lock.get("images")
+    if not isinstance(images, list) or not images:
+        raise SystemExit(f"platform images lock at {platform_images_lock_path} must declare a non-empty images list")
+
+    seen_names: set[str] = set()
+    for image in images:
+        name = str(image.get("name", "")).strip()
+        ref = str(image.get("ref", "")).strip()
+        used_by = image.get("used_by")
+        if not name:
+            raise SystemExit(f"platform images lock at {platform_images_lock_path} contains an image without a name")
+        if name in seen_names:
+            raise SystemExit(f"platform images lock at {platform_images_lock_path} contains duplicate image name {name!r}")
+        if not ref:
+            raise SystemExit(f"platform images lock at {platform_images_lock_path} contains an image without a ref")
+        if not isinstance(used_by, list) or "_platform" not in [str(item).strip() for item in used_by]:
+            raise SystemExit(
+                f"platform images lock at {platform_images_lock_path} entry {name!r} must declare used_by including '_platform'"
+            )
+        seen_names.add(name)
+
+    return platform_images_lock, platform_images_lock_path
+
+
+def required_platform_image_ref(platform_image_refs: dict[str, str], image_name: str, profile_dir: Path) -> str:
+    ref = str(platform_image_refs.get(image_name, "")).strip()
+    if ref:
+        return ref
+    raise SystemExit(
+        f"platform images lock at {profile_dir / 'platform-images.lock.json'} is missing required image {image_name!r}"
+    )
 
 
 def resolve_selected_apps(catalog: dict, selected_apps_path: str | None) -> tuple[str, list[str], dict[str, dict]]:
@@ -987,6 +1029,8 @@ def emit_landing_infra(
     *,
     landing_apps: list[dict[str, str]],
     status_apps: list[dict[str, str]],
+    landing_image_ref: str,
+    landing_status_image_ref: str,
 ) -> None:
     # --- Landing page (nginx serving the app-directory page) ---
     landing_service_name = "landing"
@@ -1016,7 +1060,7 @@ def emit_landing_infra(
             ingress_class,
             storage_class,
             name=landing_service_name,
-            image=LANDING_IMAGE_REF,
+            image=landing_image_ref,
             container_port=80,
             container_name=landing_service_name,
             volumes=[{"name": "assets", "configMap": {"name": landing_configmap_name}}],
@@ -1121,7 +1165,7 @@ def emit_landing_infra(
             ingress_class,
             storage_class,
             name=status_service_name,
-            image=LANDING_STATUS_IMAGE_REF,
+            image=landing_status_image_ref,
             container_port=8080,
             container_name=status_service_name,
             command=["python3", "/app/app.py"],
@@ -1204,8 +1248,19 @@ def main() -> int:
     ingress_class = args.ingress_class or profile_env["OURBOX_PLATFORM_DEFAULT_INGRESS_CLASS"]
     storage_class = args.storage_class or profile_env["OURBOX_PLATFORM_DEFAULT_STORAGE_CLASS"]
     metadata = load_metadata(contract_root)
+    platform_images_lock, _platform_images_lock_path = load_platform_images_lock(profile_dir)
+    platform_image_refs = {item["name"]: item["ref"] for item in platform_images_lock["images"]}
+    landing_image_ref = required_platform_image_ref(platform_image_refs, PLATFORM_LANDING_IMAGE_NAME, profile_dir)
+    landing_status_image_ref = required_platform_image_ref(
+        platform_image_refs, PLATFORM_LANDING_STATUS_IMAGE_NAME, profile_dir
+    )
     images_lock, _images_lock_path = load_images_lock(profile_dir, args.images_lock_file)
     image_refs = {item["name"]: item["ref"] for item in images_lock["images"]}
+    overlapping_image_names = sorted(set(image_refs) & set(platform_image_refs))
+    if overlapping_image_names:
+        raise SystemExit(
+            f"application images.lock.json overlaps platform-images.lock.json names: {', '.join(overlapping_image_names)}"
+        )
     application_catalog, application_catalog_path = load_application_catalog(profile_dir, args.application_catalog)
     selection_mode, selected_app_ids, app_by_id = resolve_selected_apps(application_catalog, args.selected_apps_file)
     selected_app_surface = resolved_selected_application_surface(
@@ -1292,8 +1347,8 @@ def main() -> int:
                 "platform_images.json": LiteralStr(
                     json.dumps(
                         {
-                            "landing": LANDING_IMAGE_REF,
-                            "landing-status": LANDING_STATUS_IMAGE_REF,
+                            "landing": landing_image_ref,
+                            "landing-status": landing_status_image_ref,
                         },
                         indent=2,
                         sort_keys=True,
@@ -1328,6 +1383,8 @@ def main() -> int:
         storage_class,
         landing_apps=landing_apps,
         status_apps=status_apps,
+        landing_image_ref=landing_image_ref,
+        landing_status_image_ref=landing_status_image_ref,
     )
 
     yaml_dump(
@@ -1367,12 +1424,8 @@ def main() -> int:
         json.dumps(selected_app_surface, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
-    platform_images = [
-        {"name": "_platform-landing", "ref": LANDING_IMAGE_REF, "used_by": ["_platform"]},
-        {"name": "_platform-landing-status", "ref": LANDING_STATUS_IMAGE_REF, "used_by": ["_platform"]},
-    ]
     images_lock_with_platform = dict(images_lock)
-    images_lock_with_platform["images"] = list(images_lock["images"]) + platform_images
+    images_lock_with_platform["images"] = list(images_lock["images"]) + list(platform_images_lock["images"])
     (output_dir / "images.lock.json").write_text(
         json.dumps(images_lock_with_platform, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )

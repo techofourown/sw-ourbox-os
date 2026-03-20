@@ -46,22 +46,20 @@ Checked in here and elsewhere in this repo:
 - `build.sh`, `publish.sh`, `promote.sh`
 - `versions.env` for pinned upstream k3s version
 - `platform-contract/profiles/demo-apps/profile.env`
-- `platform-contract/profiles/demo-apps/{catalog.json,images.lock.json}` as
-  local render fixtures only
-- the platform-contract rendering and lint tooling under `tools/platform-contract/`
+- `platform-contract/profiles/demo-apps/platform-images.lock.json`
 
 Fetched during the build:
 
 - the upstream `k3s` binary for the selected architecture
 - the upstream `k3s-airgap-images-<arch>.tar`
-- each platform-owned image pinned in the filtered `platform/images.lock.json`
+- each platform-owned image pinned in `platform/images.lock.json`
 
 There is intentionally no checked-in `ourbox-substrate/` payload tree in this
 repository. The artifact is assembled by script from checked-in platform inputs
-plus fetched upstream bytes. The checked-in `demo-apps` catalog and lock files
-remain only to satisfy the platform-contract renderer; the published substrate
-bundle is filtered down to platform-owned refs and carries no application
-catalog payload.
+plus fetched upstream bytes. The substrate build now reads the checked-in
+platform profile metadata and platform-owned image lock directly; it does not
+re-render the `demo-apps` catalog fixtures and carries no application catalog
+payload.
 
 ## Output shape
 
@@ -76,7 +74,7 @@ The tarball contains:
 - `platform/`
 - `manifest.env`
 
-`platform/` includes the filtered, platform-owned `images.lock.json` and
+`platform/` includes the checked-in platform-owned `images.lock.json` and
 `platform/profile.env` from the selected platform profile.
 
 `manifest.env` is self-describing and includes:

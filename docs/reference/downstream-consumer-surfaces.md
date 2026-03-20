@@ -36,7 +36,7 @@ The following published artifact families are stable consumer surfaces.
 | Artifact family | Canonical OCI repo | Authoritative source in this repo | Build/publish entrypoints | Canonical machine-readable publish record |
 |---|---|---|---|---|
 | platform-contract | `ghcr.io/techofourown/sw-ourbox-os/platform-contract` | `platform-contract/` + `tools/platform-contract/` | `tools/platform-contract/build.sh`, `tools/platform-contract/publish.sh` | `dist/platform-contract.publish-record.json` |
-| ourbox-substrate | `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate` | `tools/ourbox-substrate/` + `platform-contract/profiles/demo-apps/` + rendered contract inputs | `tools/ourbox-substrate/build.sh`, `tools/ourbox-substrate/publish.sh`, `tools/ourbox-substrate/promote.sh` | `dist/ourbox-substrate.<arch>.publish-record.json` |
+| ourbox-substrate | `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate` | `tools/ourbox-substrate/` + `platform-contract/profiles/demo-apps/profile.env` + `platform-contract/profiles/demo-apps/platform-images.lock.json` | `tools/ourbox-substrate/build.sh`, `tools/ourbox-substrate/publish.sh`, `tools/ourbox-substrate/promote.sh` | `dist/ourbox-substrate.<arch>.publish-record.json` |
 | install-defaults | `ghcr.io/techofourown/sw-ourbox-os/install-defaults` | `install-defaults/` + `tools/install-defaults/` | `tools/install-defaults/build.sh`, `tools/install-defaults/publish.sh` | `dist/install-defaults.publish-record.json` |
 | catalog-tooling | `ghcr.io/techofourown/sw-ourbox-os/catalog-tooling` | `catalog-tooling/` + `tools/catalog-tooling/` | `tools/catalog-tooling/build.sh`, `tools/catalog-tooling/publish.sh` | `dist/catalog-tooling.publish-record.json` |
 

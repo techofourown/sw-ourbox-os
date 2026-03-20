@@ -60,9 +60,9 @@ or for copied standalone catalog/image-lock defaults. Published application
 catalogs are expected to ship their own static app content in the selected app
 images rather than via `asset_dir` overlays from this tree.
 
-The same source tree is also used when building the substrate bundle, because
-that bundle re-renders the contract and then filters the result down to
-platform-owned image refs only.
+The same source tree also provides checked-in platform profile metadata and
+platform-owned image refs for the substrate bundle, but that bundle no longer
+re-renders the demo application fixtures just to derive those platform bytes.
 
 ## Build and validation
 
@@ -79,5 +79,5 @@ inputs. No external catalog ref is required.
 ## Related directories
 
 - `tools/platform-contract/` for the render, lint, publish, and verification scripts
-- `platform-contract/profiles/demo-apps/` for local fixture inputs and profile metadata
+- `platform-contract/profiles/demo-apps/` for local fixture inputs, platform-owned image refs, and profile metadata
 - `platform-contract/manifests/` for generated output inside published bundles
