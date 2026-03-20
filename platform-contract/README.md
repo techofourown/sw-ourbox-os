@@ -73,11 +73,12 @@ From the repo root:
 ./tools/platform-contract/validate.sh
 ```
 
-The build always uses the in-repo `profiles/demo-apps/` fixtures as render
-inputs. No external catalog ref is required.
+The build always uses the in-repo `profiles/demo-apps/` catalog/profile intent
+plus generated image locks resolved from `image-sources.json` and
+`platform-image-sources.json`. No external catalog ref is required.
 
 ## Related directories
 
 - `tools/platform-contract/` for the render, lint, publish, and verification scripts
-- `platform-contract/profiles/demo-apps/` for local fixture inputs, platform-owned image refs, and profile metadata
+- `platform-contract/profiles/demo-apps/` for local catalog/profile intent, image source refs, and profile metadata
 - `platform-contract/manifests/` for generated output inside published bundles

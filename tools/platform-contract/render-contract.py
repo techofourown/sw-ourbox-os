@@ -196,8 +196,10 @@ def load_application_catalog(profile_dir: Path, catalog_override: str | None) ->
     return catalog, catalog_path
 
 
-def load_images_lock(profile_dir: Path, images_lock_override: str | None) -> tuple[dict, Path]:
-    images_lock_path = Path(images_lock_override).resolve() if images_lock_override else profile_dir / "images.lock.json"
+def load_images_lock(images_lock_override: str | None) -> tuple[dict, Path]:
+    if not images_lock_override:
+        raise SystemExit("supported renders require explicit application image lock input (--images-lock-file)")
+    images_lock_path = Path(images_lock_override).resolve()
     if not images_lock_path.exists():
         raise SystemExit(f"images.lock.json not found at {images_lock_path}")
     images_lock = json.loads(images_lock_path.read_text(encoding="utf-8"))
@@ -214,12 +216,12 @@ def load_images_lock(profile_dir: Path, images_lock_override: str | None) -> tup
     return images_lock, images_lock_path
 
 
-def load_platform_images_lock(profile_dir: Path, platform_images_lock_override: str | None) -> tuple[dict, Path]:
-    platform_images_lock_path = (
-        Path(platform_images_lock_override).resolve()
-        if platform_images_lock_override
-        else profile_dir / "platform-images.lock.json"
-    )
+def load_platform_images_lock(platform_images_lock_override: str | None, expected_profile: str) -> tuple[dict, Path]:
+    if not platform_images_lock_override:
+        raise SystemExit(
+            "supported renders require explicit platform image lock input (--platform-images-lock-file)"
+        )
+    platform_images_lock_path = Path(platform_images_lock_override).resolve()
     if not platform_images_lock_path.exists():
         raise SystemExit(f"platform-images.lock.json not found at {platform_images_lock_path}")
 
@@ -228,9 +230,9 @@ def load_platform_images_lock(profile_dir: Path, platform_images_lock_override: 
         raise SystemExit(f"platform images lock at {platform_images_lock_path} must declare schema=1")
 
     profile_name = str(platform_images_lock.get("profile", "")).strip()
-    if profile_name != profile_dir.name:
+    if profile_name != expected_profile:
         raise SystemExit(
-            f"platform images lock at {platform_images_lock_path} must declare profile={profile_dir.name!r}"
+            f"platform images lock at {platform_images_lock_path} must declare profile={expected_profile!r}"
         )
 
     images = platform_images_lock.get("images")
@@ -1230,8 +1232,11 @@ def main() -> int:
     parser.add_argument("--output-dir", required=True, help="Destination for the rendered bundle")
     parser.add_argument("--profile", default=os.environ.get("OURBOX_PLATFORM_PROFILE", "demo-apps"))
     parser.add_argument("--application-catalog", help="Optional override path for the application catalog JSON")
-    parser.add_argument("--images-lock-file", help="Optional override path for the rendered images.lock.json")
-    parser.add_argument("--platform-images-lock-file", help="Optional override path for platform-images.lock.json")
+    parser.add_argument("--images-lock-file", help="Explicit generated application images.lock.json input")
+    parser.add_argument(
+        "--platform-images-lock-file",
+        help="Explicit generated platform-images.lock.json input",
+    )
     parser.add_argument("--selected-apps-file", help="Optional selected-applications JSON written by the host-side composer")
     parser.add_argument("--box-host", default=os.environ.get("BOX_HOST", ""))
     parser.add_argument("--tls-mode", default=os.environ.get("TLS_MODE", ""))
@@ -1253,7 +1258,9 @@ def main() -> int:
     ingress_class = args.ingress_class or profile_env["OURBOX_PLATFORM_DEFAULT_INGRESS_CLASS"]
     storage_class = args.storage_class or profile_env["OURBOX_PLATFORM_DEFAULT_STORAGE_CLASS"]
     metadata = load_metadata(contract_root)
-    platform_images_lock, platform_images_lock_path = load_platform_images_lock(profile_dir, args.platform_images_lock_file)
+    platform_images_lock, platform_images_lock_path = load_platform_images_lock(
+        args.platform_images_lock_file, profile_dir.name
+    )
     platform_image_refs = {item["name"]: item["ref"] for item in platform_images_lock["images"]}
     landing_image_ref = required_platform_image_ref(
         platform_image_refs, PLATFORM_LANDING_IMAGE_NAME, platform_images_lock_path
@@ -1261,7 +1268,7 @@ def main() -> int:
     landing_status_image_ref = required_platform_image_ref(
         platform_image_refs, PLATFORM_LANDING_STATUS_IMAGE_NAME, platform_images_lock_path
     )
-    images_lock, _images_lock_path = load_images_lock(profile_dir, args.images_lock_file)
+    images_lock, _images_lock_path = load_images_lock(args.images_lock_file)
     image_refs = {item["name"]: item["ref"] for item in images_lock["images"]}
     overlapping_image_names = sorted(set(image_refs) & set(platform_image_refs))
     if overlapping_image_names:

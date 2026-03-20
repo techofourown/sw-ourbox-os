@@ -280,6 +280,7 @@ python3 "${ROOT}/tools/platform-contract/render-contract.py" \
   --profile demo-apps \
   --application-catalog "${MERGED_CATALOG_FILE}" \
   --images-lock-file "${MERGED_IMAGES_LOCK_FILE}" \
+  --platform-images-lock-file "${GENERATED_PLATFORM_IMAGES_LOCK_FILE}" \
   --selected-apps-file "${MERGED_SELECTED_APPS_FILE}" \
   --box-host "validate.ourbox.local" \
   --tls-mode "lan-http" \
@@ -471,7 +472,7 @@ path = Path(sys.argv[1])
 config = yaml.safe_load(path.read_text(encoding="utf-8"))
 platform_images = json.loads(config["data"]["platform_images.json"])
 landing_ref = platform_images.get("landing", "")
-if not landing_ref.startswith("docker.io/library/nginx@sha256:"):
+if not landing_ref.startswith("docker.io/library/nginx:1.27-alpine@sha256:"):
     raise SystemExit(f"unexpected landing platform image ref: {landing_ref!r}")
 status_ref = platform_images.get("landing-status", "")
 if not status_ref.startswith("docker.io/library/python:3.12-alpine@sha256:"):

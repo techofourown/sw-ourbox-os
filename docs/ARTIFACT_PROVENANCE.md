@@ -63,9 +63,11 @@ All build logic lives in this repository. Official and compatible builds use the
 same entrypoints.
 
 Official `platform-contract` publication uses the in-repo `demo-apps`
-fixtures. Official `ourbox-substrate` publication uses the checked-in
-`demo-apps` profile metadata plus platform-owned image refs. No external
-application-catalog ref is accepted or required.
+catalog/profile intent plus generated image locks resolved at build time from
+`image-sources.json` and `platform-image-sources.json`. Official
+`ourbox-substrate` publication uses the checked-in `demo-apps` profile metadata
+plus platform image source intent resolved into a generated platform-owned
+image lock. No external application-catalog ref is accepted or required.
 
 ---
 

@@ -27,7 +27,8 @@ It packages:
 
 - the `k3s` binary for one target architecture
 - the matching upstream k3s airgap image tar
-- the platform-owned image archives listed in `platform/images.lock.json`
+- the platform-owned image archives listed in the generated
+  `platform/images.lock.json`
 
 The artifact is architecture-specific, but the source code is not split by
 architecture. `arm64` and `amd64` both use the same scripts here with a different
@@ -46,20 +47,20 @@ Checked in here and elsewhere in this repo:
 - `build.sh`, `publish.sh`, `promote.sh`
 - `versions.env` for pinned upstream k3s version
 - `platform-contract/profiles/demo-apps/profile.env`
-- `platform-contract/profiles/demo-apps/platform-images.lock.json`
+- `platform-contract/profiles/demo-apps/platform-image-sources.json`
 
 Fetched during the build:
 
 - the upstream `k3s` binary for the selected architecture
 - the upstream `k3s-airgap-images-<arch>.tar`
-- each platform-owned image pinned in `platform/images.lock.json`
+- each platform-owned image pinned in the generated `platform/images.lock.json`
 
 There is intentionally no checked-in `ourbox-substrate/` payload tree in this
 repository. The artifact is assembled by script from checked-in platform inputs
 plus fetched upstream bytes. The substrate build now reads the checked-in
-platform profile metadata and platform-owned image lock directly; it does not
-re-render the `demo-apps` catalog fixtures and carries no application catalog
-payload.
+platform profile metadata plus platform image source intent and resolves the
+platform-owned image lock at build time; it does not re-render the
+`demo-apps` catalog fixtures and carries no application catalog payload.
 
 ## Output shape
 
@@ -74,7 +75,7 @@ The tarball contains:
 - `platform/`
 - `manifest.env`
 
-`platform/` includes the checked-in platform-owned `images.lock.json` and
+`platform/` includes the generated platform-owned `images.lock.json` and
 `platform/profile.env` from the selected platform profile.
 
 `manifest.env` is self-describing and includes:
