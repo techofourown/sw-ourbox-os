@@ -2,7 +2,7 @@ name: Platform Contract Promote Release
 
 on:
   workflow_run:
-    workflows: ["Airgap Platform"]
+    workflows: ["OurBox Substrate"]
     types: [completed]
   release:
     types: [published]
@@ -60,7 +60,7 @@ jobs:
           RELEASE_IS_DRAFT: ${{ github.event.release.draft }}
           RELEASE_IS_PRERELEASE: ${{ github.event.release.prerelease }}
           PROMOTION_CONTEXT: versioned
-          CANDIDATE_WORKFLOW_NAME: Airgap Platform
+          CANDIDATE_WORKFLOW_NAME: OurBox Substrate
         run: |
           set -euo pipefail
           ./tools/release-control/resolve-promotion-context.sh \
@@ -72,7 +72,7 @@ jobs:
         if: steps.context.outputs.skip != 'true'
         uses: actions/download-artifact@v4
         with:
-          name: platform-contract-for-airgap-${{ steps.context.outputs.candidate_run_id }}
+          name: platform-contract-for-substrate-${{ steps.context.outputs.candidate_run_id }}
           path: dist/candidate-platform-contract
           run-id: ${{ steps.context.outputs.candidate_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -86,7 +86,7 @@ jobs:
 
           source_ref_file="$(find dist/candidate-platform-contract -type f -name 'platform-contract.ref' | head -n1 || true)"
           [[ -f "${source_ref_file}" ]] || {
-            echo "Missing platform-contract.ref in downloaded Airgap Platform candidate outputs" >&2
+            echo "Missing platform-contract.ref in downloaded OurBox Substrate candidate outputs" >&2
             exit 1
           }
 

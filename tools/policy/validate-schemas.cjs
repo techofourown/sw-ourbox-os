@@ -57,13 +57,13 @@ function validatePublishRecordSemantics(filePath) {
     requireKeys(inputMetadata, ['PROFILE_COUNT', 'PROFILE_IDS'], 'input_metadata', errors);
   }
 
-  if (data.artifact_family === 'airgap-platform') {
+  if (data.artifact_family === 'ourbox-substrate') {
     requireKeys(artifactMetadata, [
-      'OURBOX_AIRGAP_PLATFORM_SOURCE',
-      'OURBOX_AIRGAP_PLATFORM_REVISION',
-      'OURBOX_AIRGAP_PLATFORM_VERSION',
-      'OURBOX_AIRGAP_PLATFORM_CREATED',
-      'AIRGAP_PLATFORM_ARCH',
+      'OURBOX_SUBSTRATE_SOURCE',
+      'OURBOX_SUBSTRATE_REVISION',
+      'OURBOX_SUBSTRATE_VERSION',
+      'OURBOX_SUBSTRATE_CREATED',
+      'OURBOX_SUBSTRATE_ARCH',
     ], 'artifact_metadata', errors);
     requireKeys(inputMetadata, [
       'K3S_VERSION',

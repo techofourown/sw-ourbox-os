@@ -99,7 +99,7 @@ Suggested summary fields:
 ## 7. Airgap and artifact posture
 
 - [ ] The proposal states whether the target supports airgapped installation.
-- [ ] If a platform airgap bundle is embedded, its location is documented.
+- [ ] If a substrate bundle is embedded, its location is documented.
 - [ ] The OS payload / installer media / defaults / catalog story is documented at least at a
       public-model level.
 - [ ] Artifact identity is preserved by digest, checksum, or another stable identifier as
@@ -135,7 +135,7 @@ Fill this out explicitly.
 - [ ] installed-system release metadata
 - [ ] persistent data contract
 - [ ] bootstrap contract
-- [ ] airgap behavior (if applicable)
+- [ ] substrate bundle behavior (if applicable)
 - [ ] status / observability surfaces
 - [ ] artifact identity / install provenance
 

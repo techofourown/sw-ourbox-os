@@ -1,8 +1,8 @@
-name: Airgap Platform Promote Release
+name: OurBox Substrate Promote Release
 
 on:
   workflow_run:
-    workflows: ["Airgap Platform"]
+    workflows: ["OurBox Substrate"]
     types: [completed]
   release:
     types: [published, prereleased]
@@ -13,7 +13,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: airgap-platform-promote-${{ github.event.release.tag_name || github.event.workflow_run.id || github.run_id }}
+  group: ourbox-substrate-promote-${{ github.event.release.tag_name || github.event.workflow_run.id || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -65,7 +65,7 @@ jobs:
           RELEASE_IS_DRAFT: ${{ github.event.release.draft }}
           RELEASE_IS_PRERELEASE: ${{ github.event.release.prerelease }}
           PROMOTION_CONTEXT: ${{ matrix.promotion_context }}
-          CANDIDATE_WORKFLOW_NAME: Airgap Platform
+          CANDIDATE_WORKFLOW_NAME: OurBox Substrate
         run: |
           set -euo pipefail
           ./tools/release-control/resolve-promotion-context.sh \
@@ -77,7 +77,7 @@ jobs:
         if: steps.context.outputs.skip != 'true'
         uses: actions/download-artifact@v4
         with:
-          name: airgap-platform-${{ matrix.arch }}-${{ steps.context.outputs.candidate_run_id }}
+          name: ourbox-substrate-${{ matrix.arch }}-${{ steps.context.outputs.candidate_run_id }}
           path: dist/candidate-provenance/${{ matrix.arch }}
           run-id: ${{ steps.context.outputs.candidate_run_id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -90,14 +90,14 @@ jobs:
           PROMOTION_CONTEXT: ${{ matrix.promotion_context }}
         run: |
           set -euo pipefail
-          source_ref_file="$(find "dist/candidate-provenance/${ARCH}" -type f -name "airgap-platform.${ARCH}.ref" | head -n1 || true)"
+          source_ref_file="$(find "dist/candidate-provenance/${ARCH}" -type f -name "ourbox-substrate.${ARCH}.ref" | head -n1 || true)"
           [[ -f "${source_ref_file}" ]] || {
-            echo "Missing airgap-platform.${ARCH}.ref in downloaded candidate provenance" >&2
+            echo "Missing ourbox-substrate.${ARCH}.ref in downloaded candidate provenance" >&2
             exit 1
           }
-          publish_record_file="$(find "dist/candidate-provenance/${ARCH}" -type f -name "airgap-platform.${ARCH}.publish-record.json" | head -n1 || true)"
+          publish_record_file="$(find "dist/candidate-provenance/${ARCH}" -type f -name "ourbox-substrate.${ARCH}.publish-record.json" | head -n1 || true)"
           [[ -f "${publish_record_file}" ]] || {
-            echo "Missing airgap-platform.${ARCH}.publish-record.json in downloaded candidate provenance" >&2
+            echo "Missing ourbox-substrate.${ARCH}.publish-record.json in downloaded candidate provenance" >&2
             exit 1
           }
 
@@ -105,17 +105,17 @@ jobs:
           export PROMOTE_SOURCE_REF="$(cat "${source_ref_file}")"
           export PROMOTE_SOURCE_PINNED_REF="${PROMOTE_SOURCE_REF}"
 
-          ./tools/airgap-platform/promote.sh "${ARCH}" "${PROMOTION_CONTEXT}"
-          cp "dist/airgap-platform.${ARCH}.promote.source.ref" "dist/promote/${ARCH}/${PROMOTION_CONTEXT}.source.ref"
-          cp "dist/airgap-platform.${ARCH}.promote.digest.ref" "dist/promote/${ARCH}/${PROMOTION_CONTEXT}.digest.ref"
-          cp "dist/airgap-platform.${ARCH}.promote.target.ref" "dist/promote/${ARCH}/${PROMOTION_CONTEXT}.target.ref"
+          ./tools/ourbox-substrate/promote.sh "${ARCH}" "${PROMOTION_CONTEXT}"
+          cp "dist/ourbox-substrate.${ARCH}.promote.source.ref" "dist/promote/${ARCH}/${PROMOTION_CONTEXT}.source.ref"
+          cp "dist/ourbox-substrate.${ARCH}.promote.digest.ref" "dist/promote/${ARCH}/${PROMOTION_CONTEXT}.digest.ref"
+          cp "dist/ourbox-substrate.${ARCH}.promote.target.ref" "dist/promote/${ARCH}/${PROMOTION_CONTEXT}.target.ref"
 
-          ./tools/airgap-platform/promote.sh "${ARCH}" "${RELEASE_TAG}"
-          cp "dist/airgap-platform.${ARCH}.promote.source.ref" "dist/promote/${ARCH}/versioned.source.ref"
-          cp "dist/airgap-platform.${ARCH}.promote.digest.ref" "dist/promote/${ARCH}/versioned.digest.ref"
-          cp "dist/airgap-platform.${ARCH}.promote.target.ref" "dist/promote/${ARCH}/versioned.target.ref"
+          ./tools/ourbox-substrate/promote.sh "${ARCH}" "${RELEASE_TAG}"
+          cp "dist/ourbox-substrate.${ARCH}.promote.source.ref" "dist/promote/${ARCH}/versioned.source.ref"
+          cp "dist/ourbox-substrate.${ARCH}.promote.digest.ref" "dist/promote/${ARCH}/versioned.digest.ref"
+          cp "dist/ourbox-substrate.${ARCH}.promote.target.ref" "dist/promote/${ARCH}/versioned.target.ref"
 
-          ./tools/airgap-platform/update-catalog.sh \
+          ./tools/ourbox-substrate/update-catalog.sh \
             "${publish_record_file}" \
             "${PROMOTION_CONTEXT}" \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
@@ -126,7 +126,7 @@ jobs:
         uses: actions/upload-artifact@v4
         if: steps.context.outputs.skip != 'true' && always()
         with:
-          name: airgap-platform-promote-${{ matrix.arch }}-${{ matrix.promotion_context }}-${{ steps.context.outputs.release_tag || github.run_id }}
+          name: ourbox-substrate-promote-${{ matrix.arch }}-${{ matrix.promotion_context }}-${{ steps.context.outputs.release_tag || github.run_id }}
           path: |
             dist/promote/${{ matrix.arch }}/${{ matrix.promotion_context }}.source.ref
             dist/promote/${{ matrix.arch }}/${{ matrix.promotion_context }}.digest.ref

@@ -6,7 +6,7 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST_DIR="${ROOT}/dist"
-VERSIONS_FILE="${ROOT}/tools/airgap-platform/versions.env"
+VERSIONS_FILE="${ROOT}/tools/ourbox-substrate/versions.env"
 RENDER_SCRIPT="${ROOT}/tools/platform-contract/render-contract.py"
 LINT_SCRIPT="${ROOT}/tools/platform-contract/lint-rendered-contract.py"
 FIXTURE_APPLICATION_CATALOG_FILE="${ROOT}/platform-contract/profiles/demo-apps/catalog.json"
@@ -94,13 +94,13 @@ fi
 mkdir -p "${build_dir}/k3s" "${build_dir}/platform/images"
 
 [[ -z "${OURBOX_APPLICATION_CATALOG_REF:-}" ]] \
-  || die "airgap-platform build no longer accepts OURBOX_APPLICATION_CATALOG_REF"
+  || die "ourbox-substrate build no longer accepts OURBOX_APPLICATION_CATALOG_REF"
 [[ -z "${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-}" ]] \
-  || die "airgap-platform build no longer uses OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG"
+  || die "ourbox-substrate build no longer uses OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG"
 [[ -f "${FIXTURE_APPLICATION_CATALOG_FILE}" ]] || die "Missing ${FIXTURE_APPLICATION_CATALOG_FILE}"
 [[ -f "${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}" ]] || die "Missing ${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}"
 
-log "Using in-repo demo-apps render fixtures only to derive platform-owned airgap metadata."
+log "Using in-repo demo-apps render fixtures only to derive platform-owned substrate metadata."
 
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -109,7 +109,7 @@ if git -C "${ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
   VERSION="$(git -C "${ROOT}" describe --tags --exact-match)"
 fi
 
-# Render the checked-in contract so the airgap bundle stays aligned with the
+# Render the checked-in contract so the substrate bundle stays aligned with the
 # current platform sources, then filter the result down to platform-owned refs.
 render_dir="${build_dir}/rendered-platform-contract"
 OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
@@ -178,9 +178,9 @@ filtered_path.write_text(
 PY
 )
 IMAGES_LOCK_SHA256="$(sha256sum "${PLATFORM_IMAGES_LOCK_FILE}" | awk '{print $1}')"
-log "Resolved ${#IMAGES[@]} unique platform-owned image refs for airgap bundle."
+log "Resolved ${#IMAGES[@]} unique platform-owned image refs for substrate bundle."
 
-# k3s binaries + airgap images
+# k3s binaries + substrate images
 BIN_URL="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}/k3s"
 if [[ "${ARCH}" == "arm64" ]]; then
   BIN_URL="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}/k3s-arm64"
@@ -253,15 +253,15 @@ for img in "${IMAGES[@]}"; do
 done
 
 cat > "${build_dir}/manifest.env" <<EOF_MANIFEST
-OURBOX_AIRGAP_PLATFORM_SCHEMA=1
-OURBOX_AIRGAP_PLATFORM_KIND=airgap-platform
-OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
-OURBOX_AIRGAP_PLATFORM_REVISION=${REVISION}
-OURBOX_AIRGAP_PLATFORM_VERSION=${VERSION}
-OURBOX_AIRGAP_PLATFORM_CREATED=${CREATED}
+OURBOX_SUBSTRATE_SCHEMA=1
+OURBOX_SUBSTRATE_KIND=ourbox-substrate
+OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
+OURBOX_SUBSTRATE_REVISION=${REVISION}
+OURBOX_SUBSTRATE_VERSION=${VERSION}
+OURBOX_SUBSTRATE_CREATED=${CREATED}
 OURBOX_PLATFORM_CONTRACT_REF=${OURBOX_PLATFORM_CONTRACT_REF}
 OURBOX_PLATFORM_CONTRACT_DIGEST=${OURBOX_PLATFORM_CONTRACT_DIGEST}
-AIRGAP_PLATFORM_ARCH=${ARCH}
+OURBOX_SUBSTRATE_ARCH=${ARCH}
 K3S_VERSION=${K3S_VERSION}
 OURBOX_PLATFORM_PROFILE=demo-apps
 OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
@@ -271,16 +271,16 @@ EOF_MANIFEST
 cp -a "${PLATFORM_IMAGES_LOCK_FILE}" "${build_dir}/platform/images.lock.json"
 cp -a "${ROOT}/platform-contract/profiles/demo-apps/profile.env" "${build_dir}/platform/profile.env"
 
-cat > "${DIST_DIR}/airgap-platform.meta.env" <<EOF_META
-OURBOX_AIRGAP_PLATFORM_SOURCE=https://github.com/techofourown/sw-ourbox-os
-OURBOX_AIRGAP_PLATFORM_REVISION=${REVISION}
-OURBOX_AIRGAP_PLATFORM_VERSION=${VERSION}
-OURBOX_AIRGAP_PLATFORM_CREATED=${CREATED}
+cat > "${DIST_DIR}/ourbox-substrate.meta.env" <<EOF_META
+OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
+OURBOX_SUBSTRATE_REVISION=${REVISION}
+OURBOX_SUBSTRATE_VERSION=${VERSION}
+OURBOX_SUBSTRATE_CREATED=${CREATED}
 OURBOX_PLATFORM_CONTRACT_REF=${OURBOX_PLATFORM_CONTRACT_REF}
 OURBOX_PLATFORM_CONTRACT_DIGEST=${OURBOX_PLATFORM_CONTRACT_DIGEST}
-AIRGAP_PLATFORM_ARCH=${ARCH}
+OURBOX_SUBSTRATE_ARCH=${ARCH}
 EOF_META
 
-TARBALL="${DIST_DIR}/airgap-platform.tar.gz"
+TARBALL="${DIST_DIR}/ourbox-substrate.tar.gz"
 tar -C "${build_dir}" -czf "${TARBALL}" k3s platform manifest.env
 log "Built ${TARBALL}"

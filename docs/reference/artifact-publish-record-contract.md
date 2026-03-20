@@ -30,7 +30,7 @@ The older shell/human-oriented outputs remain in place for compatibility.
 This contract applies to the upstream artifact families published from `sw-ourbox-os`:
 
 - platform-contract
-- airgap-platform
+- ourbox-substrate
 - install-defaults
 - catalog-tooling
 
@@ -46,10 +46,10 @@ Each artifact family MUST emit the following record file in `dist/`.
 |---|---|
 | platform-contract | `dist/platform-contract.publish-record.json` |
 | install-defaults | `dist/install-defaults.publish-record.json` |
-| airgap-platform | `dist/airgap-platform.<arch>.publish-record.json` |
+| ourbox-substrate | `dist/ourbox-substrate.<arch>.publish-record.json` |
 | catalog-tooling | `dist/catalog-tooling.publish-record.json` |
 
-For airgap-platform, `<arch>` is required and is currently one of:
+For ourbox-substrate, `<arch>` is required and is currently one of:
 
 - `arm64`
 - `amd64`
@@ -70,10 +70,10 @@ The following existing outputs remain valid and must not be removed during this 
 - `dist/install-defaults.ref`
 - `dist/install-defaults.push.log`
 
-### Airgap-platform
-- `dist/airgap-platform.meta.env`
-- `dist/airgap-platform.<arch>.ref`
-- `dist/airgap-platform.<arch>.push.log`
+### OurBox Substrate
+- `dist/ourbox-substrate.meta.env`
+- `dist/ourbox-substrate.<arch>.ref`
+- `dist/ourbox-substrate.<arch>.push.log`
 
 ### Catalog-tooling
 - `dist/catalog-tooling.meta.env`
@@ -126,7 +126,7 @@ The artifact family published by this repo.
 
 Allowed values:
 - `platform-contract`
-- `airgap-platform`
+- `ourbox-substrate`
 - `install-defaults`
 - `catalog-tooling`
 
@@ -135,7 +135,7 @@ The OCI artifact type used in the publish step.
 
 Examples:
 - `application/vnd.techofourown.ourbox.platform-contract.v1.tar+gzip`
-- `application/vnd.techofourown.ourbox.airgap-platform.v1.tar+gzip`
+- `application/vnd.techofourown.ourbox.substrate.v1.tar+gzip`
 - `application/vnd.techofourown.ourbox.install-defaults.v1.tar+gzip`
 - `application/vnd.techofourown.ourbox.catalog-tooling.v1.tar+gzip`
 
@@ -144,7 +144,7 @@ The OCI repository path without tag or digest.
 
 Examples:
 - `ghcr.io/techofourown/sw-ourbox-os/platform-contract`
-- `ghcr.io/techofourown/sw-ourbox-os/airgap-platform`
+- `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate`
 - `ghcr.io/techofourown/sw-ourbox-os/install-defaults`
 - `ghcr.io/techofourown/sw-ourbox-os/catalog-tooling`
 
@@ -153,7 +153,7 @@ The tagged ref published during this invocation.
 
 Examples:
 - `ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge`
-- `ghcr.io/techofourown/sw-ourbox-os/airgap-platform:main-93e087a67142-arm64`
+- `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate:main-93e087a67142-arm64`
 - `ghcr.io/techofourown/sw-ourbox-os/install-defaults:edge`
 
 #### `artifact_pinned_ref`
@@ -249,14 +249,14 @@ This record should describe the artifact that was actually published, not every 
 - `push_log`
 - `pinned_ref`
 
-### 5.3 Airgap-platform
+### 5.3 OurBox Substrate
 
 #### Required `artifact_metadata` keys
-- `OURBOX_AIRGAP_PLATFORM_SOURCE`
-- `OURBOX_AIRGAP_PLATFORM_REVISION`
-- `OURBOX_AIRGAP_PLATFORM_VERSION`
-- `OURBOX_AIRGAP_PLATFORM_CREATED`
-- `AIRGAP_PLATFORM_ARCH`
+- `OURBOX_SUBSTRATE_SOURCE`
+- `OURBOX_SUBSTRATE_REVISION`
+- `OURBOX_SUBSTRATE_VERSION`
+- `OURBOX_SUBSTRATE_CREATED`
+- `OURBOX_SUBSTRATE_ARCH`
 
 #### Required `input_metadata` keys
 - `K3S_VERSION`
@@ -265,7 +265,7 @@ This record should describe the artifact that was actually published, not every 
 - `OURBOX_PLATFORM_CONTRACT_DIGEST`
 
 For official publication, `OURBOX_PLATFORM_CONTRACT_DIGEST` is mandatory because
-the airgap bundle is contract-bound to the exact published platform-contract
+the substrate bundle is contract-bound to the exact published platform-contract
 artifact identity.
 
 If the build can truthfully surface additional contract-input metadata, it
@@ -388,27 +388,27 @@ These examples are illustrative. The real records must be produced from actual b
 }
 ```
 
-## 7.3 Airgap-platform example
+## 7.3 OurBox Substrate example
 
 ```json
 {
   "schema": 1,
-  "artifact_family": "airgap-platform",
-  "artifact_type": "application/vnd.techofourown.ourbox.airgap-platform.v1.tar+gzip",
-  "artifact_repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
-  "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:main-93e087a67142-arm64",
-  "artifact_pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:fc445baf0258f73400e27a20f4f411ad267d8722171dff566c5aeb00f41b918c",
+  "artifact_family": "ourbox-substrate",
+  "artifact_type": "application/vnd.techofourown.ourbox.substrate.v1.tar+gzip",
+  "artifact_repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
+  "artifact_ref": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate:main-93e087a67142-arm64",
+  "artifact_pinned_ref": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:fc445baf0258f73400e27a20f4f411ad267d8722171dff566c5aeb00f41b918c",
   "artifact_digest": "sha256:fc445baf0258f73400e27a20f4f411ad267d8722171dff566c5aeb00f41b918c",
   "source_repo": "https://github.com/techofourown/sw-ourbox-os",
   "source_commit": "93e087a671428ee9e87688d039a8715abea735a7",
   "source_version": "v0.10.1",
   "created": "2026-03-08T14:20:00Z",
   "artifact_metadata": {
-    "OURBOX_AIRGAP_PLATFORM_SOURCE": "https://github.com/techofourown/sw-ourbox-os",
-    "OURBOX_AIRGAP_PLATFORM_REVISION": "93e087a671428ee9e87688d039a8715abea735a7",
-    "OURBOX_AIRGAP_PLATFORM_VERSION": "v0.10.1",
-    "OURBOX_AIRGAP_PLATFORM_CREATED": "2026-03-08T14:20:00Z",
-    "AIRGAP_PLATFORM_ARCH": "arm64"
+    "OURBOX_SUBSTRATE_SOURCE": "https://github.com/techofourown/sw-ourbox-os",
+    "OURBOX_SUBSTRATE_REVISION": "93e087a671428ee9e87688d039a8715abea735a7",
+    "OURBOX_SUBSTRATE_VERSION": "v0.10.1",
+    "OURBOX_SUBSTRATE_CREATED": "2026-03-08T14:20:00Z",
+    "OURBOX_SUBSTRATE_ARCH": "arm64"
   },
   "input_metadata": {
     "K3S_VERSION": "v1.35.0+k3s1",
@@ -417,10 +417,10 @@ These examples are illustrative. The real records must be produced from actual b
     "OURBOX_PLATFORM_IMAGES_LOCK_SHA256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
   "dist_files": {
-    "payload": "dist/airgap-platform.tar.gz",
-    "meta_env": "dist/airgap-platform.meta.env",
-    "push_log": "dist/airgap-platform.arm64.push.log",
-    "pinned_ref": "dist/airgap-platform.arm64.ref"
+    "payload": "dist/ourbox-substrate.tar.gz",
+    "meta_env": "dist/ourbox-substrate.meta.env",
+    "push_log": "dist/ourbox-substrate.arm64.push.log",
+    "pinned_ref": "dist/ourbox-substrate.arm64.ref"
   }
 }
 ```

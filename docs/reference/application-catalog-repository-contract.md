@@ -6,17 +6,12 @@ application distribution model: the application catalog repository.
 ## Purpose
 
 An application catalog repository consumes published OCI images from one or
-more apps repositories and publishes the artifact currently transported as
-`airgap-platform`.
+more apps repositories and publishes an application catalog bundle artifact.
 
 User-facing meaning:
 
 - `application catalog`
 - `application catalog bundle`
-
-Current transport name:
-
-- `airgap-platform`
 
 ## Responsibilities
 
@@ -101,7 +96,7 @@ Why this matters:
 
 An application catalog repository should publish:
 
-- the bundle artifact currently named `airgap-platform`
+- the application catalog bundle artifact
 - a canonical publish record for that bundle
 - channel-tag and version-tag refs
 - catalog rows for installer browsing
@@ -109,11 +104,13 @@ An application catalog repository should publish:
 ## Relationship to `sw-ourbox-os`
 
 Today `sw-ourbox-os` still contains the reference implementation of this
-pattern through the `demo-apps` profile and the `tools/airgap-platform/`
+pattern through the `demo-apps` profile and the `tools/ourbox-substrate/`
 pipeline.
 
 That should be treated as the prototype for future standalone application
-catalog repositories, not as the final location for every catalog.
+catalog repositories, not as the final location for every catalog. The
+substrate bundle (`ourbox-substrate`) no longer carries application catalogs;
+catalog distribution is owned by the standalone catalog repositories.
 
 ## Naming
 
@@ -205,5 +202,5 @@ Current concrete repos:
 
 Avoid using:
 
-- `airgap bundle` as the primary user-facing term
+- `substrate bundle` as the primary user-facing term
 - `app store` when no purchase or account model exists

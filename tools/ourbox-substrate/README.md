@@ -1,11 +1,11 @@
-# Airgap Platform Build And Publish
+# OurBox Substrate Build And Publish
 
-This directory contains the build and publish entrypoints for the `airgap-platform`
+This directory contains the build and publish entrypoints for the `ourbox-substrate`
 artifact published from `sw-ourbox-os`.
 
 Published artifact:
 
-- `ghcr.io/techofourown/sw-ourbox-os/airgap-platform`
+- `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate`
 
 Published lanes:
 
@@ -22,7 +22,7 @@ Published lanes:
 
 ## What this artifact is
 
-`airgap-platform` is the offline platform bundle consumed by downstream image repos.
+`ourbox-substrate` is the offline substrate bundle consumed by downstream image repos.
 It packages:
 
 - the `k3s` binary for one target architecture
@@ -56,10 +56,10 @@ Fetched during the build:
 - the upstream `k3s-airgap-images-<arch>.tar`
 - each platform-owned image pinned in the filtered `platform/images.lock.json`
 
-There is intentionally no checked-in `airgap-platform/` payload tree in this
+There is intentionally no checked-in `ourbox-substrate/` payload tree in this
 repository. The artifact is assembled by script from checked-in platform inputs
 plus fetched upstream bytes. The checked-in `demo-apps` catalog and lock files
-remain only to satisfy the platform-contract renderer; the published airgap
+remain only to satisfy the platform-contract renderer; the published substrate
 bundle is filtered down to platform-owned refs and carries no application
 catalog payload.
 
@@ -67,8 +67,8 @@ catalog payload.
 
 `build.sh` writes:
 
-- `dist/airgap-platform.tar.gz`
-- `dist/airgap-platform.meta.env`
+- `dist/ourbox-substrate.tar.gz`
+- `dist/ourbox-substrate.meta.env`
 
 The tarball contains:
 
@@ -81,13 +81,13 @@ The tarball contains:
 
 `manifest.env` is self-describing and includes:
 
-- `OURBOX_AIRGAP_PLATFORM_SOURCE`
-- `OURBOX_AIRGAP_PLATFORM_REVISION`
-- `OURBOX_AIRGAP_PLATFORM_VERSION`
-- `OURBOX_AIRGAP_PLATFORM_CREATED`
+- `OURBOX_SUBSTRATE_SOURCE`
+- `OURBOX_SUBSTRATE_REVISION`
+- `OURBOX_SUBSTRATE_VERSION`
+- `OURBOX_SUBSTRATE_CREATED`
 - `OURBOX_PLATFORM_CONTRACT_REF`
 - `OURBOX_PLATFORM_CONTRACT_DIGEST`
-- `AIRGAP_PLATFORM_ARCH`
+- `OURBOX_SUBSTRATE_ARCH`
 - `K3S_VERSION`
 - `OURBOX_PLATFORM_PROFILE`
 - `OURBOX_PLATFORM_IMAGES_LOCK_PATH`
@@ -95,40 +95,40 @@ The tarball contains:
 
 `publish.sh` also writes:
 
-- `dist/airgap-platform.<arch>.push.log`
-- `dist/airgap-platform.<arch>.ref`
-- `dist/airgap-platform.<arch>.publish-record.json` (canonical machine-readable publish record)
+- `dist/ourbox-substrate.<arch>.push.log`
+- `dist/ourbox-substrate.<arch>.ref`
+- `dist/ourbox-substrate.<arch>.publish-record.json` (canonical machine-readable publish record)
 
 Catalog maintenance:
 
-- `tools/airgap-platform/update-catalog.sh`
+- `tools/ourbox-substrate/update-catalog.sh`
   - appends a channel row into `catalog-arm64` or `catalog-amd64`
-  - uses the canonical airgap publish record as input
+  - uses the canonical substrate publish record as input
 
 `promote.sh` writes:
 
-- `dist/airgap-platform.<arch>.promote.source.ref`
-- `dist/airgap-platform.<arch>.promote.digest.ref`
-- `dist/airgap-platform.<arch>.promote.target.ref`
+- `dist/ourbox-substrate.<arch>.promote.source.ref`
+- `dist/ourbox-substrate.<arch>.promote.digest.ref`
+- `dist/ourbox-substrate.<arch>.promote.target.ref`
 
 ## Entrypoints
 
 Candidate publication behavior:
 
-- the official Airgap publish workflow resolves `platform-contract:edge`
-- it then builds a platform-owned airgap bundle from `main`
+- the official substrate publish workflow resolves `platform-contract:edge`
+- it then builds a platform-owned substrate bundle from `main`
 - installer-time application catalog selection remains a separate concern and is
-  not resolved during official airgap publication
+  not resolved during official substrate publication
 
 Build:
 
 ```bash
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-ARCH=arm64 ./tools/airgap-platform/build.sh
+ARCH=arm64 ./tools/ourbox-substrate/build.sh
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-ARCH=amd64 ./tools/airgap-platform/build.sh
+ARCH=amd64 ./tools/ourbox-substrate/build.sh
 ```
 
 Build and publish:
@@ -136,30 +136,30 @@ Build and publish:
 ```bash
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 beta
+ARCH=arm64 ./tools/ourbox-substrate/publish.sh arm64 beta
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
-ARCH=amd64 ./tools/airgap-platform/publish.sh amd64 nightly
+ARCH=amd64 ./tools/ourbox-substrate/publish.sh amd64 nightly
 ```
 
 Guardrail:
 
 ```bash
-OURBOX_APPLICATION_CATALOG_REF=... ./tools/airgap-platform/build.sh   # rejected
-OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/airgap-platform/build.sh   # rejected
+OURBOX_APPLICATION_CATALOG_REF=... ./tools/ourbox-substrate/build.sh   # rejected
+OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/ourbox-substrate/build.sh   # rejected
 ```
 
 Promote an already-published candidate digest into a version tag:
 
 ```bash
-PROMOTE_SOURCE_PINNED_REF=ghcr.io/techofourown/sw-ourbox-os/airgap-platform@sha256:... \
-  ./tools/airgap-platform/promote.sh arm64 v0.10.1
+PROMOTE_SOURCE_PINNED_REF=ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:... \
+  ./tools/ourbox-substrate/promote.sh arm64 v0.10.1
 ```
 
 ## How official publication works
 
-- `.github/workflows/airgap-platform.yml` publishes the platform-contract first,
-  then builds contract-bound, platform-owned airgap bundles from `main`.
+- `.github/workflows/ourbox-substrate.yml` publishes the platform-contract first,
+  then builds contract-bound, platform-owned substrate bundles from `main`.
 - Official mainline publication moves `beta-<arch>`.
 - Scheduled integration publication moves `nightly-<arch>`.
 - Promotion workflows later re-tag the exact published digest into:
@@ -185,4 +185,4 @@ See also:
 
 - [ARTIFACT_PROVENANCE.md](../../docs/ARTIFACT_PROVENANCE.md)
 - [official-image-production-and-consumption.md](../../docs/architecture/official-image-production-and-consumption.md)
-- [airgap-platform-selection-contract.md](../../docs/reference/airgap-platform-selection-contract.md)
+- [ourbox-substrate-selection-contract.md](../../docs/reference/ourbox-substrate-selection-contract.md)

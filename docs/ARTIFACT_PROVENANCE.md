@@ -12,8 +12,8 @@ and
 | Artifact | Registry path | Description |
 |---|---|---|
 | Platform contract | `ghcr.io/techofourown/sw-ourbox-os/platform-contract` | Baseline manifests, platform configuration, gateway/access-mode defaults, and contract metadata baked into every OurBox OS image |
-| Airgap platform (arm64) | `ghcr.io/techofourown/sw-ourbox-os/airgap-platform` (official lanes: `beta-arm64`, `nightly-arm64`, `stable-arm64`, `exp-labs-arm64`) | k3s binary + airgap images + platform images for ARM64 devices (Matchbox, Cinderbox) |
-| Airgap platform (amd64) | `ghcr.io/techofourown/sw-ourbox-os/airgap-platform` (official lanes: `beta-amd64`, `nightly-amd64`, `stable-amd64`, `exp-labs-amd64`) | k3s binary + airgap images + platform images for x86-64 devices (Woodbox) |
+| OurBox Substrate (arm64) | `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate` (official lanes: `beta-arm64`, `nightly-arm64`, `stable-arm64`, `exp-labs-arm64`) | k3s binary + airgap images + platform images for ARM64 devices (Matchbox, Cinderbox) |
+| OurBox Substrate (amd64) | `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate` (official lanes: `beta-amd64`, `nightly-amd64`, `stable-amd64`, `exp-labs-amd64`) | k3s binary + airgap images + platform images for x86-64 devices (Woodbox) |
 | Install defaults | `ghcr.io/techofourown/sw-ourbox-os/install-defaults` | Installer configuration defaults baked into installer media |
 
 All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identity is by digest.
@@ -25,13 +25,13 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 | Channel tag | Artifact | Trigger |
 |---|---|---|
 | `edge` | Platform contract, install-defaults | Push to `main` (source-filtered) |
-| `beta-arm64` / `beta-amd64` | Airgap platform | Push to `main` (source-filtered) from the immutable candidate digest |
-| `nightly-arm64` / `nightly-amd64` | Airgap platform | Scheduled integration publish from the immutable nightly digest |
-| `stable-arm64` / `stable-amd64` | Airgap platform | Promotion after both candidate completion and matching GitHub Release `published` authorization are true; whichever arrives second wakes the retag |
-| `exp-labs-arm64` / `exp-labs-amd64` | Airgap platform | Promotion after both candidate completion and matching GitHub Release `prereleased` authorization are true; whichever arrives second wakes the retag |
-| `v*` | Platform contract | Promotion after both successful `Airgap Platform` candidate completion and matching GitHub Release `published` authorization are true; whichever arrives second wakes the retag |
+| `beta-arm64` / `beta-amd64` | OurBox Substrate | Push to `main` (source-filtered) from the immutable candidate digest |
+| `nightly-arm64` / `nightly-amd64` | OurBox Substrate | Scheduled integration publish from the immutable nightly digest |
+| `stable-arm64` / `stable-amd64` | OurBox Substrate | Promotion after both candidate completion and matching GitHub Release `published` authorization are true; whichever arrives second wakes the retag |
+| `exp-labs-arm64` / `exp-labs-amd64` | OurBox Substrate | Promotion after both candidate completion and matching GitHub Release `prereleased` authorization are true; whichever arrives second wakes the retag |
+| `v*` | Platform contract | Promotion after both successful `OurBox Substrate` candidate completion and matching GitHub Release `published` authorization are true; whichever arrives second wakes the retag |
 | `v*` | Install defaults | `release` event (published) |
-| `v*-arm64` / `v*-amd64` | Airgap platform | Versioned retag of the same already-published digest during stable or exp-labs promotion |
+| `v*-arm64` / `v*-amd64` | OurBox Substrate | Versioned retag of the same already-published digest during stable or exp-labs promotion |
 | `stable` | Install defaults | Promotion after the successful `Install Defaults` release publish for the matching published GitHub Release tag; uses that publish run's artifact outputs instead of racing a sibling release workflow |
 
 ---
@@ -53,8 +53,8 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 |---|---|
 | Build platform contract | `./tools/platform-contract/build.sh` |
 | Publish platform contract | `./tools/platform-contract/publish.sh [tag]` |
-| Build airgap platform | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... ARCH=arm64 ./tools/airgap-platform/build.sh` |
-| Publish airgap platform | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... ARCH=arm64 ./tools/airgap-platform/publish.sh arm64 [tag]` |
+| Build ourbox-substrate | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... ARCH=arm64 ./tools/ourbox-substrate/build.sh` |
+| Publish ourbox-substrate | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... ARCH=arm64 ./tools/ourbox-substrate/publish.sh arm64 [tag]` |
 | Build install defaults | `./tools/install-defaults/build.sh` |
 | Publish install defaults | `TAG=edge ./tools/install-defaults/publish.sh [tag]` |
 | Validate GraphMD dataset | `npm test` |
@@ -62,7 +62,7 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 All build logic lives in this repository. Official and compatible builds use the
 same entrypoints.
 
-Official `airgap-platform` and `platform-contract` publication both use the
+Official `ourbox-substrate` and `platform-contract` publication both use the
 in-repo `demo-apps` fixtures exclusively. No external application-catalog
 ref is accepted or required.
 
@@ -72,25 +72,25 @@ ref is accepted or required.
 
 | Workflow | File | Runner | Trigger |
 |---|---|---|---|
-| Airgap Platform | `.github/workflows/airgap-platform.yml` | `[self-hosted, official-heavy, airgap-builder]` | Push to `main` (source-filtered) + scheduled nightly integration publish |
-| Airgap Platform Promote Release | `.github/workflows/airgap-platform-promote.yml` | `ubuntu-latest` | Candidate completion or release publication; promotes only when both candidate success and matching GitHub Release `published` or `prereleased` authorization are present |
+| OurBox Substrate | `.github/workflows/ourbox-substrate.yml` | `[self-hosted, official-heavy, airgap-builder]` | Push to `main` (source-filtered) + scheduled nightly integration publish |
+| OurBox Substrate Promote Release | `.github/workflows/ourbox-substrate-promote.yml` | `ubuntu-latest` | Candidate completion or release publication; promotes only when both candidate success and matching GitHub Release `published` or `prereleased` authorization are present |
 | Platform Contract | `.github/workflows/platform-contract.yml` | `ubuntu-latest` | Push to `main` (source-filtered) |
-| Platform Contract Promote Release | `.github/workflows/platform-contract-promote.yml` | `ubuntu-latest` | Candidate completion or release publication; promotes only when both Airgap Platform candidate success and matching GitHub Release `published` authorization are present |
+| Platform Contract Promote Release | `.github/workflows/platform-contract-promote.yml` | `ubuntu-latest` | Candidate completion or release publication; promotes only when both OurBox Substrate candidate success and matching GitHub Release `published` authorization are present |
 | Install Defaults | `.github/workflows/install-defaults.yml` | `ubuntu-latest` | Push to `main` (source-filtered) + release |
 | Install Defaults Promote Stable | `.github/workflows/install-defaults-promote.yml` | `ubuntu-latest` | `workflow_run` after successful `Install Defaults` release publication for a matching non-prerelease `v*` tag |
 
-`airgap-platform.yml` runs on organization-controlled build infrastructure in the
+`ourbox-substrate.yml` runs on organization-controlled build infrastructure in the
 `official-heavy-artifacts` runner group, publishes the bound platform-contract
 artifact first, then publishes one immutable candidate digest per source revision
 and tags either `beta-<arch>` or `nightly-<arch>` from that digest. It appends
-catalog rows only from those official channel moves. `airgap-platform-promote.yml`
+catalog rows only from those official channel moves. `ourbox-substrate-promote.yml`
 is lightweight and promotes the exact push-main candidate digest into
 `stable-<arch>`, `exp-labs-<arch>`, and `v*-<arch>` only after both the
 candidate run and a matching GitHub Release authorization exist; whichever
 arrives second wakes promotion. `platform-contract-promote.yml` follows that
 same dual-condition model for the bound platform-contract digest uploaded by
-the successful `Airgap Platform` candidate run, so `platform-contract:v*` is
-the same artifact identity the promoted airgap bundles were built against.
+the successful `OurBox Substrate` candidate run, so `platform-contract:v*` is
+the same artifact identity the promoted substrate bundles were built against.
 `platform-contract.yml` and `install-defaults.yml` run on GitHub-hosted runners
 (they are lightweight and do not require dedicated hardware).
 
@@ -119,8 +119,8 @@ Every published artifact carries the following provenance in its OCI annotations
 | `org.opencontainers.image.revision` | Git commit SHA |
 | `org.opencontainers.image.version` | `VERSION` env or `dev` |
 | `org.opencontainers.image.created` | Build timestamp (UTC, ISO 8601) |
-| `techofourown.artifact.kind` | `airgap-platform`, `platform-contract`, or `install-defaults` |
-| `techofourown.airgap.arch` | `arm64` or `amd64` (airgap-platform only) |
+| `techofourown.artifact.kind` | `ourbox-substrate`, `platform-contract`, or `install-defaults` |
+| `techofourown.substrate.arch` | `arm64` or `amd64` (ourbox-substrate only) |
 
 Canonical artifact identity for consumption is **by digest**.
 
@@ -169,7 +169,7 @@ source change. See `release/REVALIDATION_TRIGGER` for the documented procedure.
 
 ## Non-publishing revalidation
 
-`.github/workflows/revalidate-airgap-platform.yml` runs the full airgap platform bundle build
+`.github/workflows/revalidate-ourbox-substrate.yml` runs the full ourbox-substrate bundle build
 (for both arm64 and amd64) on the official builder weekly (Sunday 04:00 UTC) and on
 `workflow_dispatch`. It does NOT publish official artifacts. Use it to confirm the
 release-capable path works after infrastructure changes, per the ADR-0008 revalidation

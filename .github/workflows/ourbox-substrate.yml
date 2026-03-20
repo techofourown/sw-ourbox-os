@@ -1,4 +1,4 @@
-name: Airgap Platform
+name: OurBox Substrate
 
 on:
   push:
@@ -18,7 +18,7 @@ on:
   schedule:
     - cron: '0 3 * * *'
   workflow_run:
-    workflows: ["Airgap Platform Recovery Request"]
+    workflows: ["OurBox Substrate Recovery Request"]
     types: [completed]
 permissions:
   actions: read
@@ -26,7 +26,7 @@ permissions:
   packages: write
 
 concurrency:
-  group: airgap-platform-${{ github.event_name }}-${{ github.event.workflow_run.id || github.ref_name || github.run_id }}
+  group: ourbox-substrate-${{ github.event_name }}-${{ github.event.workflow_run.id || github.ref_name || github.run_id }}
   cancel-in-progress: false
 
 jobs:
@@ -64,7 +64,7 @@ jobs:
       - name: Download recovery request
         uses: actions/download-artifact@v4
         with:
-          name: airgap-platform-recovery-${{ github.event.workflow_run.id }}
+          name: ourbox-substrate-recovery-${{ github.event.workflow_run.id }}
           path: dist/recovery-request
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -168,7 +168,7 @@ jobs:
       - name: Upload platform-contract ref for promote workflow
         uses: actions/upload-artifact@v4
         with:
-          name: platform-contract-for-airgap-${{ github.run_id }}
+          name: platform-contract-for-substrate-${{ github.run_id }}
           path: dist/platform-contract.ref
           if-no-files-found: error
 
@@ -216,7 +216,7 @@ jobs:
           set -euo pipefail
           TAG="${IMMUTABLE_TAG}" \
             ARCH="${ARCH}" \
-            ./tools/airgap-platform/publish.sh "${ARCH}" "${IMMUTABLE_TAG}"
+            ./tools/ourbox-substrate/publish.sh "${ARCH}" "${IMMUTABLE_TAG}"
 
       - name: Tag official channel from candidate digest
         env:
@@ -224,21 +224,21 @@ jobs:
           CHANNEL: ${{ needs.context.outputs.channel || needs.recovery-request.outputs.channel }}
         run: |
           set -euo pipefail
-          REF_FILE="dist/airgap-platform.${ARCH}.ref"
+          REF_FILE="dist/ourbox-substrate.${ARCH}.ref"
           [[ -f "${REF_FILE}" ]] || {
             echo "Missing ${REF_FILE}" >&2
             exit 1
           }
           oras tag "$(cat "${REF_FILE}")" "${CHANNEL}-${ARCH}" >/dev/null
 
-      - name: Update official airgap catalog
+      - name: Update official substrate catalog
         env:
           ARCH: ${{ matrix.arch }}
           CHANNEL: ${{ needs.context.outputs.channel || needs.recovery-request.outputs.channel }}
         run: |
           set -euo pipefail
-          ./tools/airgap-platform/update-catalog.sh \
-            "dist/airgap-platform.${ARCH}.publish-record.json" \
+          ./tools/ourbox-substrate/update-catalog.sh \
+            "dist/ourbox-substrate.${ARCH}.publish-record.json" \
             "${CHANNEL}" \
             "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
             "${{ needs.context.outputs.immutable_tag || needs.recovery-request.outputs.immutable_tag }}-${ARCH}"
@@ -250,7 +250,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          REF_FILE="dist/airgap-platform.${ARCH}.ref"
+          REF_FILE="dist/ourbox-substrate.${ARCH}.ref"
           if [[ ! -f "${REF_FILE}" ]]; then
             echo "No ${REF_FILE} found (publish may have been skipped)."
             exit 0
@@ -259,40 +259,40 @@ jobs:
           REF="$(cat "${REF_FILE}")"
           echo "Smoke pull: ${REF}"
 
-          rm -rf /tmp/airgap-platform
-          mkdir -p /tmp/airgap-platform
-          oras pull "${REF}" -o /tmp/airgap-platform
+          rm -rf /tmp/ourbox-substrate
+          mkdir -p /tmp/ourbox-substrate
+          oras pull "${REF}" -o /tmp/ourbox-substrate
 
-          test -f /tmp/airgap-platform/dist/airgap-platform.tar.gz
+          test -f /tmp/ourbox-substrate/dist/ourbox-substrate.tar.gz
 
-          TAR_LIST="/tmp/airgap-platform/tar.list"
-          tar -tzf /tmp/airgap-platform/dist/airgap-platform.tar.gz > "${TAR_LIST}"
+          TAR_LIST="/tmp/ourbox-substrate/tar.list"
+          tar -tzf /tmp/ourbox-substrate/dist/ourbox-substrate.tar.gz > "${TAR_LIST}"
 
           echo "Tar listing (head):"
           sed -n '1,50p' "${TAR_LIST}"
 
           grep -q '^k3s/k3s$' "${TAR_LIST}"
-          grep -q '^k3s/k3s-airgap-images-'${ARCH}'\.tar$' "${TAR_LIST}"
+          grep -q '^k3s/k3s-airgap-images-'"${ARCH}"'\.tar$' "${TAR_LIST}"
           grep -q '^manifest.env$' "${TAR_LIST}"
           grep -q '^platform/images/' "${TAR_LIST}"
           if grep -q '^platform/catalog\.json$' "${TAR_LIST}"; then
-            echo "airgap bundle must not include platform/catalog.json" >&2
+            echo "substrate bundle must not include platform/catalog.json" >&2
             exit 1
           fi
           if grep -q '^platform/selected-apps\.json$' "${TAR_LIST}"; then
-            echo "airgap bundle must not include platform/selected-apps.json" >&2
+            echo "substrate bundle must not include platform/selected-apps.json" >&2
             exit 1
           fi
-          tar -xOzf /tmp/airgap-platform/dist/airgap-platform.tar.gz manifest.env | grep -q '^OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:'
+          tar -xOzf /tmp/ourbox-substrate/dist/ourbox-substrate.tar.gz manifest.env | grep -q '^OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:'
 
       - name: Upload publish outputs
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: airgap-platform-${{ matrix.arch }}-${{ github.run_id }}
+          name: ourbox-substrate-${{ matrix.arch }}-${{ github.run_id }}
           path: |
-            dist/airgap-platform.${{ matrix.arch }}.ref
-            dist/airgap-platform.${{ matrix.arch }}.push.log
-            dist/airgap-platform.meta.env
-            dist/airgap-platform.${{ matrix.arch }}.publish-record.json
+            dist/ourbox-substrate.${{ matrix.arch }}.ref
+            dist/ourbox-substrate.${{ matrix.arch }}.push.log
+            dist/ourbox-substrate.meta.env
+            dist/ourbox-substrate.${{ matrix.arch }}.publish-record.json
           if-no-files-found: warn

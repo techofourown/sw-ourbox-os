@@ -86,7 +86,7 @@ Key outputs:
 - `.github/workflows/platform-contract.yml`
   - publishes `edge` from `main`
 - `.github/workflows/platform-contract-promote.yml`
-  - promotes the exact bound digest from the successful `Airgap Platform` candidate into `v*`
+  - promotes the exact bound digest from the successful `OurBox Substrate` candidate into `v*`
   - waits for both candidate success and matching published release authorization
 
 This is a lightweight lane and runs on GitHub-hosted runners.

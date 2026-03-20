@@ -52,16 +52,16 @@ ourbox_selection_reset_state() {
     OURBOX_OS_ARTIFACT_DIGEST
 }
 
-ourbox_airgap_platform_selection_reset_state() {
+ourbox_substrate_selection_reset_state() {
   ourbox_selection_reset_lane_state \
-    OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE \
-    OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL \
-    OURBOX_AIRGAP_PLATFORM_CATALOG_REF \
-    OURBOX_AIRGAP_PLATFORM_SELECTED_REF \
-    OURBOX_AIRGAP_PLATFORM_PULL_REF \
-    OURBOX_AIRGAP_PLATFORM_ARTIFACT_SOURCE \
-    OURBOX_AIRGAP_PLATFORM_ARTIFACT_REF \
-    OURBOX_AIRGAP_PLATFORM_ARTIFACT_DIGEST
+    OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE \
+    OURBOX_SUBSTRATE_RELEASE_CHANNEL \
+    OURBOX_SUBSTRATE_CATALOG_REF \
+    OURBOX_SUBSTRATE_SELECTED_REF \
+    OURBOX_SUBSTRATE_PULL_REF \
+    OURBOX_SUBSTRATE_ARTIFACT_SOURCE \
+    OURBOX_SUBSTRATE_ARTIFACT_REF \
+    OURBOX_SUBSTRATE_ARTIFACT_DIGEST
 }
 
 ourbox_selection_is_clean_single_line_ref() {
@@ -598,20 +598,20 @@ ourbox_selection_finalize_registry_ref() {
     "OS artifact"
 }
 
-ourbox_airgap_platform_selection_require_context() {
+ourbox_substrate_selection_require_context() {
   local required_contract_digest="${1:-}"
 
-  [[ -n "${AIRGAP_PLATFORM_REPO:-}" ]] || ourbox_selection_die "AIRGAP_PLATFORM_REPO is required for airgap-platform selection"
-  [[ "${AIRGAP_PLATFORM_ARCH:-}" =~ ^(arm64|amd64)$ ]] || ourbox_selection_die "AIRGAP_PLATFORM_ARCH must be arm64 or amd64 for airgap-platform selection"
-  [[ -n "${AIRGAP_PLATFORM_CHANNEL:-}" ]] || ourbox_selection_die "AIRGAP_PLATFORM_CHANNEL is required for airgap-platform selection"
-  ourbox_selection_is_sha256_digest "${required_contract_digest}" || ourbox_selection_die "required platform contract digest must be a sha256:<64 hex> for airgap-platform selection"
+  [[ -n "${OURBOX_SUBSTRATE_REPO:-}" ]] || ourbox_selection_die "OURBOX_SUBSTRATE_REPO is required for ourbox-substrate selection"
+  [[ "${OURBOX_SUBSTRATE_ARCH:-}" =~ ^(arm64|amd64)$ ]] || ourbox_selection_die "OURBOX_SUBSTRATE_ARCH must be arm64 or amd64 for ourbox-substrate selection"
+  [[ -n "${OURBOX_SUBSTRATE_CHANNEL:-}" ]] || ourbox_selection_die "OURBOX_SUBSTRATE_CHANNEL is required for ourbox-substrate selection"
+  ourbox_selection_is_sha256_digest "${required_contract_digest}" || ourbox_selection_die "required platform contract digest must be a sha256:<64 hex> for ourbox-substrate selection"
 }
 
-ourbox_airgap_platform_selection_pull_catalog() {
+ourbox_substrate_selection_pull_catalog() {
   local dst="$1"
-  local ref="${AIRGAP_PLATFORM_REPO}:${AIRGAP_PLATFORM_CATALOG_TAG}"
+  local ref="${OURBOX_SUBSTRATE_REPO}:${OURBOX_SUBSTRATE_CATALOG_TAG}"
 
-  if [[ "${AIRGAP_PLATFORM_CATALOG_ENABLED:-1}" != "1" ]]; then
+  if [[ "${OURBOX_SUBSTRATE_CATALOG_ENABLED:-1}" != "1" ]]; then
     return 1
   fi
 
@@ -619,17 +619,17 @@ ourbox_airgap_platform_selection_pull_catalog() {
   rm -rf "${dst}"
   mkdir -p "${dst}"
 
-  ourbox_selection_log "Pulling airgap catalog: ${ref}"
+  ourbox_selection_log "Pulling substrate catalog: ${ref}"
   if ! oras pull "${ref}" -o "${dst}" >/dev/null 2>&1; then
     return 1
   fi
   [[ -f "${dst}/catalog.tsv" ]] || return 1
 
-  OURBOX_AIRGAP_PLATFORM_CATALOG_REF="${ref}"
+  OURBOX_SUBSTRATE_CATALOG_REF="${ref}"
   return 0
 }
 
-ourbox_airgap_platform_catalog_entries() {
+ourbox_substrate_catalog_entries() {
   local catalog_tsv="$1"
   [[ -f "${catalog_tsv}" ]] || return 1
 
@@ -673,78 +673,78 @@ ourbox_airgap_platform_catalog_entries() {
   ' "${catalog_tsv}" | sort -t $'\t' -k3,3r -k2,2r
 }
 
-ourbox_airgap_platform_catalog_newest_ref() {
+ourbox_substrate_catalog_newest_ref() {
   local catalog_tsv="$1"
   local channel="$2"
   local required_contract_digest="$3"
   local required_arch="$4"
   local row=""
 
-  row="$(ourbox_airgap_platform_catalog_entries "${catalog_tsv}" | awk -F'\t' -v ch="${channel}" -v digest="${required_contract_digest}" -v arch="${required_arch}" '
+  row="$(ourbox_substrate_catalog_entries "${catalog_tsv}" | awk -F'\t' -v ch="${channel}" -v digest="${required_contract_digest}" -v arch="${required_arch}" '
     $1 == ch && $6 == arch && $7 == digest { print; exit }
   ' || true)"
   [[ -n "${row}" ]] || return 1
   printf '%s\n' "${row##*$'\t'}"
 }
 
-ourbox_airgap_platform_determine_channel_ref() {
+ourbox_substrate_determine_channel_ref() {
   local catalog_dir="$1"
   local required_contract_digest="$2"
-  local channel="${3:-${AIRGAP_PLATFORM_CHANNEL}}"
+  local channel="${3:-${OURBOX_SUBSTRATE_CHANNEL}}"
   local catalog_tsv=""
   local catalog_ref=""
 
-  ourbox_airgap_platform_selection_require_context "${required_contract_digest}"
+  ourbox_substrate_selection_require_context "${required_contract_digest}"
 
-  OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE=""
-  OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL=""
-  OURBOX_AIRGAP_PLATFORM_SELECTED_REF=""
-  OURBOX_AIRGAP_PLATFORM_CATALOG_REF=""
+  OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE=""
+  OURBOX_SUBSTRATE_RELEASE_CHANNEL=""
+  OURBOX_SUBSTRATE_SELECTED_REF=""
+  OURBOX_SUBSTRATE_CATALOG_REF=""
 
-  if [[ "${AIRGAP_PLATFORM_CATALOG_ENABLED:-1}" != "1" ]]; then
-    ourbox_selection_log "Airgap catalog browsing is disabled; no catalog-backed airgap default is available."
+  if [[ "${OURBOX_SUBSTRATE_CATALOG_ENABLED:-1}" != "1" ]]; then
+    ourbox_selection_log "Substrate catalog browsing is disabled; no catalog-backed substrate default is available."
     return 1
   fi
 
-  if ! ourbox_airgap_platform_selection_pull_catalog "${catalog_dir}"; then
-    ourbox_selection_log "Airgap catalog unavailable for ${AIRGAP_PLATFORM_REPO}:${AIRGAP_PLATFORM_CATALOG_TAG}."
+  if ! ourbox_substrate_selection_pull_catalog "${catalog_dir}"; then
+    ourbox_selection_log "Substrate catalog unavailable for ${OURBOX_SUBSTRATE_REPO}:${OURBOX_SUBSTRATE_CATALOG_TAG}."
     return 1
   fi
 
   catalog_tsv="${catalog_dir}/catalog.tsv"
-  catalog_ref="$(ourbox_airgap_platform_catalog_newest_ref "${catalog_tsv}" "${channel}" "${required_contract_digest}" "${AIRGAP_PLATFORM_ARCH:-}" || true)"
+  catalog_ref="$(ourbox_substrate_catalog_newest_ref "${catalog_tsv}" "${channel}" "${required_contract_digest}" "${OURBOX_SUBSTRATE_ARCH:-}" || true)"
   if ! ourbox_selection_is_digest_pinned_ref "${catalog_ref}"; then
-    ourbox_selection_log "Airgap catalog has no valid digest-pinned entry for channel '${channel}' and contract '${required_contract_digest}'."
+    ourbox_selection_log "Substrate catalog has no valid digest-pinned entry for channel '${channel}' and contract '${required_contract_digest}'."
     return 1
   fi
 
-  OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE="catalog"
-  OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL="${channel}"
-  OURBOX_AIRGAP_PLATFORM_SELECTED_REF="${catalog_ref}"
+  OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE="catalog"
+  OURBOX_SUBSTRATE_RELEASE_CHANNEL="${channel}"
+  OURBOX_SUBSTRATE_SELECTED_REF="${catalog_ref}"
   return 0
 }
 
-ourbox_airgap_platform_determine_default_ref() {
+ourbox_substrate_determine_default_ref() {
   local catalog_dir="$1"
   local required_contract_digest="$2"
 
-  ourbox_airgap_platform_selection_require_context "${required_contract_digest}"
+  ourbox_substrate_selection_require_context "${required_contract_digest}"
 
-  OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE=""
-  OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL=""
-  OURBOX_AIRGAP_PLATFORM_SELECTED_REF=""
-  OURBOX_AIRGAP_PLATFORM_CATALOG_REF=""
+  OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE=""
+  OURBOX_SUBSTRATE_RELEASE_CHANNEL=""
+  OURBOX_SUBSTRATE_SELECTED_REF=""
+  OURBOX_SUBSTRATE_CATALOG_REF=""
 
-  if [[ -n "${AIRGAP_PLATFORM_REF:-}" ]]; then
-    OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE="airgap-platform-ref"
-    OURBOX_AIRGAP_PLATFORM_SELECTED_REF="${AIRGAP_PLATFORM_REF}"
+  if [[ -n "${OURBOX_SUBSTRATE_REF:-}" ]]; then
+    OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE="ourbox-substrate-ref"
+    OURBOX_SUBSTRATE_SELECTED_REF="${OURBOX_SUBSTRATE_REF}"
     return 0
   fi
 
-  ourbox_airgap_platform_determine_channel_ref "${catalog_dir}" "${required_contract_digest}" "${AIRGAP_PLATFORM_CHANNEL}"
+  ourbox_substrate_determine_channel_ref "${catalog_dir}" "${required_contract_digest}" "${OURBOX_SUBSTRATE_CHANNEL}"
 }
 
-ourbox_airgap_platform_selection_show_default_choice() {
+ourbox_substrate_selection_show_default_choice() {
   local ref="$1"
   local default_available="${2:-1}"
 
@@ -757,9 +757,9 @@ ourbox_airgap_platform_selection_show_default_choice() {
   else
     echo "Install defaults: caller-supplied local config"
   fi
-  echo "Default source : ${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE:-unavailable}"
+  echo "Default source : ${OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE:-unavailable}"
   if [[ "${default_available}" == "1" ]]; then
-    echo "Default: use airgap bundle '${ref}'"
+    echo "Default: use substrate bundle '${ref}'"
   else
     echo "Default: unavailable without a matching catalog row or explicit ref"
   fi
@@ -770,36 +770,36 @@ ourbox_airgap_platform_selection_show_default_choice() {
   echo "  c       Choose channel (prefers newest contract-matching catalog row for that lane)"
   echo "  l       List from catalog (if available)"
   echo "  r       Enter custom OCI ref (tag or digest)"
-  echo "  o       Override airgap repo (custom registry/fork)"
+  echo "  o       Override substrate repo (custom registry/fork)"
   echo "  q       Quit"
   echo
 }
 
-ourbox_airgap_platform_selection_override_repo_interactive() {
+ourbox_substrate_selection_override_repo_interactive() {
   local next_repo=""
-  local next_catalog="catalog-${AIRGAP_PLATFORM_ARCH}"
+  local next_catalog="catalog-${OURBOX_SUBSTRATE_ARCH}"
   local user_catalog=""
 
-  read -r -p "Enter OCI repo (e.g., ghcr.io/org/airgap-platform): " next_repo
+  read -r -p "Enter OCI repo (e.g., ghcr.io/org/ourbox-substrate): " next_repo
   [[ -n "${next_repo}" ]] || {
     ourbox_selection_log "Repository cannot be empty."
     return 1
   }
 
-  AIRGAP_PLATFORM_REPO="${next_repo}"
-  AIRGAP_PLATFORM_REF=""
+  OURBOX_SUBSTRATE_REPO="${next_repo}"
+  OURBOX_SUBSTRATE_REF=""
 
   read -r -p "Catalog tag [${next_catalog}]: " user_catalog
   if [[ -n "${user_catalog}" ]]; then
-    AIRGAP_PLATFORM_CATALOG_TAG="${user_catalog}"
+    OURBOX_SUBSTRATE_CATALOG_TAG="${user_catalog}"
   else
-    AIRGAP_PLATFORM_CATALOG_TAG="${next_catalog}"
+    OURBOX_SUBSTRATE_CATALOG_TAG="${next_catalog}"
   fi
 
-  ourbox_selection_log "Airgap repo override set to ${AIRGAP_PLATFORM_REPO}"
+  ourbox_selection_log "Substrate repo override set to ${OURBOX_SUBSTRATE_REPO}"
 }
 
-ourbox_airgap_platform_selection_choose_channel_interactive() {
+ourbox_substrate_selection_choose_channel_interactive() {
   local catalog_dir="$1"
   local required_contract_digest="$2"
   local pick=""
@@ -812,20 +812,20 @@ ourbox_airgap_platform_selection_choose_channel_interactive() {
 
   read -r -p "Select channel [1-4]: " pick
   case "${pick}" in
-    1|"") AIRGAP_PLATFORM_CHANNEL="stable" ;;
-    2) AIRGAP_PLATFORM_CHANNEL="beta" ;;
-    3) AIRGAP_PLATFORM_CHANNEL="nightly" ;;
-    4) AIRGAP_PLATFORM_CHANNEL="exp-labs" ;;
+    1|"") OURBOX_SUBSTRATE_CHANNEL="stable" ;;
+    2) OURBOX_SUBSTRATE_CHANNEL="beta" ;;
+    3) OURBOX_SUBSTRATE_CHANNEL="nightly" ;;
+    4) OURBOX_SUBSTRATE_CHANNEL="exp-labs" ;;
     *)
       ourbox_selection_log "Invalid choice."
       return 1
       ;;
   esac
 
-  ourbox_airgap_platform_determine_channel_ref "${catalog_dir}" "${required_contract_digest}" "${AIRGAP_PLATFORM_CHANNEL}"
+  ourbox_substrate_determine_channel_ref "${catalog_dir}" "${required_contract_digest}" "${OURBOX_SUBSTRATE_CHANNEL}"
 }
 
-ourbox_airgap_platform_selection_select_from_catalog_interactive() {
+ourbox_substrate_selection_select_from_catalog_interactive() {
   local catalog_dir="$1"
   local required_contract_digest="$2"
   local catalog_tsv=""
@@ -846,23 +846,23 @@ ourbox_airgap_platform_selection_select_from_catalog_interactive() {
   local i=1
   local -a entries=()
 
-  OURBOX_AIRGAP_PLATFORM_CATALOG_REF=""
-  ourbox_airgap_platform_selection_pull_catalog "${catalog_dir}" || {
-    ourbox_selection_log "Airgap catalog unavailable; skipping list."
+  OURBOX_SUBSTRATE_CATALOG_REF=""
+  ourbox_substrate_selection_pull_catalog "${catalog_dir}" || {
+    ourbox_selection_log "Substrate catalog unavailable; skipping list."
     return 1
   }
 
   catalog_tsv="${catalog_dir}/catalog.tsv"
-  mapfile -t entries < <(ourbox_airgap_platform_catalog_entries "${catalog_tsv}" | awk -F'\t' -v digest="${required_contract_digest}" -v arch="${AIRGAP_PLATFORM_ARCH:-}" '
+  mapfile -t entries < <(ourbox_substrate_catalog_entries "${catalog_tsv}" | awk -F'\t' -v digest="${required_contract_digest}" -v arch="${OURBOX_SUBSTRATE_ARCH:-}" '
     $6 == arch && $7 == digest { print }
   ')
   if [[ "${#entries[@]}" -eq 0 ]]; then
-    ourbox_selection_log "Airgap catalog pulled (${OURBOX_AIRGAP_PLATFORM_CATALOG_REF}) but contained no matching rows for arch=${AIRGAP_PLATFORM_ARCH:-unknown} contract=${required_contract_digest}."
+    ourbox_selection_log "Substrate catalog pulled (${OURBOX_SUBSTRATE_CATALOG_REF}) but contained no matching rows for arch=${OURBOX_SUBSTRATE_ARCH:-unknown} contract=${required_contract_digest}."
     return 1
   fi
 
   echo
-  echo "Airgap catalog entries (${OURBOX_AIRGAP_PLATFORM_CATALOG_REF}):"
+  echo "Substrate catalog entries (${OURBOX_SUBSTRATE_CATALOG_REF}):"
   for chosen in "${entries[@]}"; do
     IFS=$'\t' read -r channel tag created version _revision _arch contract profile _k3s_version _lock_sha _artifact_digest pinned_ref <<<"${chosen}"
     printf "  %d) %-10s %-24s %s %s %s\n" "${i}" "${channel}" "${tag}" "${version}" "${created}" "${contract}"
@@ -882,13 +882,13 @@ ourbox_airgap_platform_selection_select_from_catalog_interactive() {
 
   chosen="${entries[$((pick - 1))]}"
   IFS=$'\t' read -r channel tag created version _revision _arch contract profile _k3s_version _lock_sha _artifact_digest pinned_ref <<<"${chosen}"
-  OURBOX_AIRGAP_PLATFORM_SELECTED_REF="${pinned_ref}"
-  OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE="catalog"
-  OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL="${channel}"
-  ourbox_selection_log "Selected ${OURBOX_AIRGAP_PLATFORM_SELECTED_REF} (channel=${channel}, version=${version}, contract=${contract})"
+  OURBOX_SUBSTRATE_SELECTED_REF="${pinned_ref}"
+  OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE="catalog"
+  OURBOX_SUBSTRATE_RELEASE_CHANNEL="${channel}"
+  ourbox_selection_log "Selected ${OURBOX_SUBSTRATE_SELECTED_REF} (channel=${channel}, version=${version}, contract=${contract})"
 }
 
-ourbox_airgap_platform_selection_prompt_custom_ref_interactive() {
+ourbox_substrate_selection_prompt_custom_ref_interactive() {
   local ref=""
 
   read -r -p "Enter full OCI ref (e.g., repo:tag or repo@sha256:...): " ref
@@ -897,12 +897,12 @@ ourbox_airgap_platform_selection_prompt_custom_ref_interactive() {
     return 1
   }
 
-  OURBOX_AIRGAP_PLATFORM_SELECTED_REF="${ref}"
-  OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE="operator-override"
-  OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL=""
+  OURBOX_SUBSTRATE_SELECTED_REF="${ref}"
+  OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE="operator-override"
+  OURBOX_SUBSTRATE_RELEASE_CHANNEL=""
 }
 
-ourbox_airgap_platform_selection_interactive_select_ref() {
+ourbox_substrate_selection_interactive_select_ref() {
   local catalog_root="$1"
   local required_contract_digest="$2"
   local default_catalog_dir="${catalog_root}/default"
@@ -914,15 +914,15 @@ ourbox_airgap_platform_selection_interactive_select_ref() {
   local default_channel=""
   local default_available="0"
 
-  OURBOX_AIRGAP_PLATFORM_SELECTED_REF=""
-  OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE=""
-  OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL=""
+  OURBOX_SUBSTRATE_SELECTED_REF=""
+  OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE=""
+  OURBOX_SUBSTRATE_RELEASE_CHANNEL=""
 
-  while [[ -z "${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}" ]]; do
-    if ourbox_airgap_platform_determine_default_ref "${default_catalog_dir}" "${required_contract_digest}"; then
-      default_ref="${OURBOX_AIRGAP_PLATFORM_SELECTED_REF}"
-      default_source="${OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE}"
-      default_channel="${OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL}"
+  while [[ -z "${OURBOX_SUBSTRATE_SELECTED_REF}" ]]; do
+    if ourbox_substrate_determine_default_ref "${default_catalog_dir}" "${required_contract_digest}"; then
+      default_ref="${OURBOX_SUBSTRATE_SELECTED_REF}"
+      default_source="${OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE}"
+      default_channel="${OURBOX_SUBSTRATE_RELEASE_CHANNEL}"
       default_available="1"
     else
       default_ref=""
@@ -930,32 +930,32 @@ ourbox_airgap_platform_selection_interactive_select_ref() {
       default_channel=""
       default_available="0"
     fi
-    OURBOX_AIRGAP_PLATFORM_SELECTED_REF=""
+    OURBOX_SUBSTRATE_SELECTED_REF=""
 
-    ourbox_airgap_platform_selection_show_default_choice "${default_ref}" "${default_available}"
+    ourbox_substrate_selection_show_default_choice "${default_ref}" "${default_available}"
     read -r -p "Choice: " choice
 
     case "${choice}" in
       "")
         if [[ "${default_available}" == "1" ]]; then
-          OURBOX_AIRGAP_PLATFORM_SELECTED_REF="${default_ref}"
-          OURBOX_AIRGAP_PLATFORM_INSTALL_SELECTION_SOURCE="${default_source}"
-          OURBOX_AIRGAP_PLATFORM_RELEASE_CHANNEL="${default_channel}"
+          OURBOX_SUBSTRATE_SELECTED_REF="${default_ref}"
+          OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE="${default_source}"
+          OURBOX_SUBSTRATE_RELEASE_CHANNEL="${default_channel}"
         else
           ourbox_selection_log "No catalog-backed default is available. Choose c, l, r, o, or q."
         fi
         ;;
       c)
-        ourbox_airgap_platform_selection_choose_channel_interactive "${channel_catalog_dir}" "${required_contract_digest}" || true
+        ourbox_substrate_selection_choose_channel_interactive "${channel_catalog_dir}" "${required_contract_digest}" || true
         ;;
       l)
-        ourbox_airgap_platform_selection_select_from_catalog_interactive "${list_catalog_dir}" "${required_contract_digest}" || true
+        ourbox_substrate_selection_select_from_catalog_interactive "${list_catalog_dir}" "${required_contract_digest}" || true
         ;;
       r)
-        ourbox_airgap_platform_selection_prompt_custom_ref_interactive || true
+        ourbox_substrate_selection_prompt_custom_ref_interactive || true
         ;;
       o)
-        ourbox_airgap_platform_selection_override_repo_interactive || true
+        ourbox_substrate_selection_override_repo_interactive || true
         ;;
       q|Q)
         ourbox_selection_die "Install aborted by user"
@@ -967,30 +967,30 @@ ourbox_airgap_platform_selection_interactive_select_ref() {
   done
 }
 
-ourbox_airgap_platform_selection_finalize_registry_ref() {
+ourbox_substrate_selection_finalize_registry_ref() {
   local selected_ref="$1"
   ourbox_selection_finalize_registry_ref_common \
     "${selected_ref}" \
-    OURBOX_AIRGAP_PLATFORM_SELECTED_REF \
-    OURBOX_AIRGAP_PLATFORM_PULL_REF \
-    OURBOX_AIRGAP_PLATFORM_ARTIFACT_SOURCE \
-    OURBOX_AIRGAP_PLATFORM_ARTIFACT_REF \
-    OURBOX_AIRGAP_PLATFORM_ARTIFACT_DIGEST \
-    "airgap-platform artifact"
+    OURBOX_SUBSTRATE_SELECTED_REF \
+    OURBOX_SUBSTRATE_PULL_REF \
+    OURBOX_SUBSTRATE_ARTIFACT_SOURCE \
+    OURBOX_SUBSTRATE_ARTIFACT_REF \
+    OURBOX_SUBSTRATE_ARTIFACT_DIGEST \
+    "ourbox-substrate artifact"
 }
 
-ourbox_airgap_platform_selection_validate_extracted_bundle() {
+ourbox_substrate_selection_validate_extracted_bundle() {
   local bundle_dir="$1"
   local required_contract_digest="$2"
   local expected_arch="$3"
   local manifest="${bundle_dir}/manifest.env"
   local airgap_images_tar="${bundle_dir}/k3s/k3s-airgap-images-${expected_arch}.tar"
-  local manifest_airgap_source=""
-  local manifest_airgap_revision=""
-  local manifest_airgap_version=""
-  local manifest_airgap_created=""
+  local manifest_substrate_source=""
+  local manifest_substrate_revision=""
+  local manifest_substrate_version=""
+  local manifest_substrate_created=""
   local manifest_platform_contract_digest=""
-  local manifest_airgap_arch=""
+  local manifest_substrate_arch=""
   local manifest_k3s_version=""
   local manifest_platform_profile=""
   local manifest_platform_images_lock_path=""
@@ -998,69 +998,69 @@ ourbox_airgap_platform_selection_validate_extracted_bundle() {
   local manifest_dump=""
   local -a manifest_fields=()
 
-  [[ -f "${manifest}" ]] || ourbox_selection_die "airgap-platform bundle missing manifest.env: ${manifest}"
-  [[ -x "${bundle_dir}/k3s/k3s" ]] || ourbox_selection_die "airgap-platform bundle missing k3s binary: ${bundle_dir}/k3s/k3s"
-  [[ -f "${airgap_images_tar}" ]] || ourbox_selection_die "airgap-platform bundle missing k3s airgap images tar: ${airgap_images_tar}"
-  [[ -f "${bundle_dir}/platform/images.lock.json" ]] || ourbox_selection_die "airgap-platform bundle missing platform/images.lock.json"
-  [[ -f "${bundle_dir}/platform/profile.env" ]] || ourbox_selection_die "airgap-platform bundle missing platform/profile.env"
-  [[ -d "${bundle_dir}/platform/images" ]] || ourbox_selection_die "airgap-platform bundle missing platform/images directory"
+  [[ -f "${manifest}" ]] || ourbox_selection_die "ourbox-substrate bundle missing manifest.env: ${manifest}"
+  [[ -x "${bundle_dir}/k3s/k3s" ]] || ourbox_selection_die "ourbox-substrate bundle missing k3s binary: ${bundle_dir}/k3s/k3s"
+  [[ -f "${airgap_images_tar}" ]] || ourbox_selection_die "ourbox-substrate bundle missing k3s airgap images tar: ${airgap_images_tar}"
+  [[ -f "${bundle_dir}/platform/images.lock.json" ]] || ourbox_selection_die "ourbox-substrate bundle missing platform/images.lock.json"
+  [[ -f "${bundle_dir}/platform/profile.env" ]] || ourbox_selection_die "ourbox-substrate bundle missing platform/profile.env"
+  [[ -d "${bundle_dir}/platform/images" ]] || ourbox_selection_die "ourbox-substrate bundle missing platform/images directory"
   find "${bundle_dir}/platform/images" -maxdepth 1 -type f -name '*.tar' -print -quit | grep -q . \
-    || ourbox_selection_die "airgap-platform bundle missing platform image tar payloads: ${bundle_dir}/platform/images"
+    || ourbox_selection_die "ourbox-substrate bundle missing platform image tar payloads: ${bundle_dir}/platform/images"
 
   manifest_dump="$(
     (
-      unset OURBOX_AIRGAP_PLATFORM_SOURCE OURBOX_AIRGAP_PLATFORM_REVISION OURBOX_AIRGAP_PLATFORM_VERSION
-      unset OURBOX_AIRGAP_PLATFORM_CREATED OURBOX_PLATFORM_CONTRACT_DIGEST AIRGAP_PLATFORM_ARCH
+      unset OURBOX_SUBSTRATE_SOURCE OURBOX_SUBSTRATE_REVISION OURBOX_SUBSTRATE_VERSION
+      unset OURBOX_SUBSTRATE_CREATED OURBOX_PLATFORM_CONTRACT_DIGEST OURBOX_SUBSTRATE_ARCH
       unset K3S_VERSION OURBOX_PLATFORM_PROFILE OURBOX_PLATFORM_IMAGES_LOCK_PATH OURBOX_PLATFORM_IMAGES_LOCK_SHA256
       # shellcheck disable=SC1090
       source "${manifest}"
       printf '%s\n' \
-        "${OURBOX_AIRGAP_PLATFORM_SOURCE-}" \
-        "${OURBOX_AIRGAP_PLATFORM_REVISION-}" \
-        "${OURBOX_AIRGAP_PLATFORM_VERSION-}" \
-        "${OURBOX_AIRGAP_PLATFORM_CREATED-}" \
+        "${OURBOX_SUBSTRATE_SOURCE-}" \
+        "${OURBOX_SUBSTRATE_REVISION-}" \
+        "${OURBOX_SUBSTRATE_VERSION-}" \
+        "${OURBOX_SUBSTRATE_CREATED-}" \
         "${OURBOX_PLATFORM_CONTRACT_DIGEST-}" \
-        "${AIRGAP_PLATFORM_ARCH-}" \
+        "${OURBOX_SUBSTRATE_ARCH-}" \
         "${K3S_VERSION-}" \
         "${OURBOX_PLATFORM_PROFILE-}" \
         "${OURBOX_PLATFORM_IMAGES_LOCK_PATH-}" \
         "${OURBOX_PLATFORM_IMAGES_LOCK_SHA256-}" \
-        "__OURBOX_AIRGAP_MANIFEST_END__"
+        "__OURBOX_SUBSTRATE_MANIFEST_END__"
     )
-  )" || ourbox_selection_die "failed to parse airgap-platform manifest: ${manifest}"
+  )" || ourbox_selection_die "failed to parse ourbox-substrate manifest: ${manifest}"
   mapfile -t manifest_fields <<<"${manifest_dump}"
-  [[ "${#manifest_fields[@]}" -eq 11 && "${manifest_fields[10]}" == "__OURBOX_AIRGAP_MANIFEST_END__" ]] \
-    || ourbox_selection_die "airgap-platform manifest parse produced an unexpected field set: ${manifest}"
-  manifest_airgap_source="${manifest_fields[0]}"
-  manifest_airgap_revision="${manifest_fields[1]}"
-  manifest_airgap_version="${manifest_fields[2]}"
-  manifest_airgap_created="${manifest_fields[3]}"
+  [[ "${#manifest_fields[@]}" -eq 11 && "${manifest_fields[10]}" == "__OURBOX_SUBSTRATE_MANIFEST_END__" ]] \
+    || ourbox_selection_die "ourbox-substrate manifest parse produced an unexpected field set: ${manifest}"
+  manifest_substrate_source="${manifest_fields[0]}"
+  manifest_substrate_revision="${manifest_fields[1]}"
+  manifest_substrate_version="${manifest_fields[2]}"
+  manifest_substrate_created="${manifest_fields[3]}"
   manifest_platform_contract_digest="${manifest_fields[4]}"
-  manifest_airgap_arch="${manifest_fields[5]}"
+  manifest_substrate_arch="${manifest_fields[5]}"
   manifest_k3s_version="${manifest_fields[6]}"
   manifest_platform_profile="${manifest_fields[7]}"
   manifest_platform_images_lock_path="${manifest_fields[8]}"
   manifest_platform_images_lock_sha256="${manifest_fields[9]}"
 
-  [[ -n "${manifest_airgap_source}" ]] || ourbox_selection_die "airgap-platform manifest missing OURBOX_AIRGAP_PLATFORM_SOURCE"
-  [[ -n "${manifest_airgap_revision}" ]] || ourbox_selection_die "airgap-platform manifest missing OURBOX_AIRGAP_PLATFORM_REVISION"
-  [[ -n "${manifest_airgap_version}" ]] || ourbox_selection_die "airgap-platform manifest missing OURBOX_AIRGAP_PLATFORM_VERSION"
-  [[ -n "${manifest_airgap_created}" ]] || ourbox_selection_die "airgap-platform manifest missing OURBOX_AIRGAP_PLATFORM_CREATED"
-  ourbox_selection_is_sha256_digest "${required_contract_digest}" || ourbox_selection_die "required platform contract digest must be a sha256:<64 hex> before validating airgap-platform bundle"
-  ourbox_selection_is_sha256_digest "${manifest_platform_contract_digest}" || ourbox_selection_die "airgap-platform manifest carries invalid OURBOX_PLATFORM_CONTRACT_DIGEST"
-  [[ "${manifest_airgap_arch}" == "${expected_arch}" ]] || ourbox_selection_die "airgap-platform bundle arch mismatch: expected ${expected_arch}, got ${manifest_airgap_arch:-unknown}"
-  [[ "${manifest_platform_contract_digest}" == "${required_contract_digest}" ]] || ourbox_selection_die "airgap-platform bundle contract digest mismatch: expected ${required_contract_digest}, got ${manifest_platform_contract_digest}"
-  [[ -n "${manifest_k3s_version}" ]] || ourbox_selection_die "airgap-platform manifest missing K3S_VERSION"
-  [[ -n "${manifest_platform_profile}" ]] || ourbox_selection_die "airgap-platform manifest missing OURBOX_PLATFORM_PROFILE"
-  [[ -n "${manifest_platform_images_lock_path}" ]] || ourbox_selection_die "airgap-platform manifest missing OURBOX_PLATFORM_IMAGES_LOCK_PATH"
-  [[ "${manifest_platform_images_lock_sha256}" =~ ^[0-9a-f]{64}$ ]] || ourbox_selection_die "airgap-platform manifest carries invalid OURBOX_PLATFORM_IMAGES_LOCK_SHA256"
+  [[ -n "${manifest_substrate_source}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_SUBSTRATE_SOURCE"
+  [[ -n "${manifest_substrate_revision}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_SUBSTRATE_REVISION"
+  [[ -n "${manifest_substrate_version}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_SUBSTRATE_VERSION"
+  [[ -n "${manifest_substrate_created}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_SUBSTRATE_CREATED"
+  ourbox_selection_is_sha256_digest "${required_contract_digest}" || ourbox_selection_die "required platform contract digest must be a sha256:<64 hex> before validating ourbox-substrate bundle"
+  ourbox_selection_is_sha256_digest "${manifest_platform_contract_digest}" || ourbox_selection_die "ourbox-substrate manifest carries invalid OURBOX_PLATFORM_CONTRACT_DIGEST"
+  [[ "${manifest_substrate_arch}" == "${expected_arch}" ]] || ourbox_selection_die "ourbox-substrate bundle arch mismatch: expected ${expected_arch}, got ${manifest_substrate_arch:-unknown}"
+  [[ "${manifest_platform_contract_digest}" == "${required_contract_digest}" ]] || ourbox_selection_die "ourbox-substrate bundle contract digest mismatch: expected ${required_contract_digest}, got ${manifest_platform_contract_digest}"
+  [[ -n "${manifest_k3s_version}" ]] || ourbox_selection_die "ourbox-substrate manifest missing K3S_VERSION"
+  [[ -n "${manifest_platform_profile}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_PLATFORM_PROFILE"
+  [[ -n "${manifest_platform_images_lock_path}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_PLATFORM_IMAGES_LOCK_PATH"
+  [[ "${manifest_platform_images_lock_sha256}" =~ ^[0-9a-f]{64}$ ]] || ourbox_selection_die "ourbox-substrate manifest carries invalid OURBOX_PLATFORM_IMAGES_LOCK_SHA256"
 
-  export OURBOX_AIRGAP_PLATFORM_SOURCE="${manifest_airgap_source}"
-  export OURBOX_AIRGAP_PLATFORM_REVISION="${manifest_airgap_revision}"
-  export OURBOX_AIRGAP_PLATFORM_VERSION="${manifest_airgap_version}"
-  export OURBOX_AIRGAP_PLATFORM_CREATED="${manifest_airgap_created}"
-  export OURBOX_AIRGAP_PLATFORM_ARCH="${manifest_airgap_arch}"
-  export OURBOX_AIRGAP_PLATFORM_PROFILE="${manifest_platform_profile}"
-  export OURBOX_AIRGAP_PLATFORM_K3S_VERSION="${manifest_k3s_version}"
-  export OURBOX_AIRGAP_PLATFORM_IMAGES_LOCK_SHA256="${manifest_platform_images_lock_sha256}"
+  export OURBOX_SUBSTRATE_SOURCE="${manifest_substrate_source}"
+  export OURBOX_SUBSTRATE_REVISION="${manifest_substrate_revision}"
+  export OURBOX_SUBSTRATE_VERSION="${manifest_substrate_version}"
+  export OURBOX_SUBSTRATE_CREATED="${manifest_substrate_created}"
+  export OURBOX_SUBSTRATE_ARCH="${manifest_substrate_arch}"
+  export OURBOX_SUBSTRATE_PROFILE="${manifest_platform_profile}"
+  export OURBOX_SUBSTRATE_K3S_VERSION="${manifest_k3s_version}"
+  export OURBOX_SUBSTRATE_IMAGES_LOCK_SHA256="${manifest_platform_images_lock_sha256}"
 }

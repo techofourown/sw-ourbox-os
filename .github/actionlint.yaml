@@ -3,10 +3,10 @@ self-hosted-runner:
     - official-heavy
     - airgap-builder
 paths:
-  .github/workflows/airgap-platform-promote.yml:
+  .github/workflows/ourbox-substrate-promote.yml:
     ignore:
       - 'shellcheck reported issue in this script: SC2155:.+'
-  .github/workflows/airgap-platform.yml:
+  .github/workflows/ourbox-substrate.yml:
     ignore:
       - 'shellcheck reported issue in this script: SC2086:.+'
       - 'shellcheck reported issue in this script: SC2097:.+'

@@ -14,7 +14,7 @@ contract profile.
 
 ## Where this profile is used
 
-Both `platform-contract` and `airgap-platform` publication use these fixtures
+Both `platform-contract` and `ourbox-substrate` publication use these fixtures
 as their render inputs. No external application catalog ref is accepted or
 required.
 
@@ -28,7 +28,7 @@ Downstream image repos do not consume this directory directly. They consume the
 published artifacts that were built from it:
 
 - `platform-contract`
-- `airgap-platform`
+- `ourbox-substrate`
 
 ## Updating this profile
 
@@ -44,4 +44,4 @@ the standalone `sw-ourbox-catalog-*` repositories instead.
 See also:
 
 - [platform-contract/README.md](../../README.md)
-- [tools/airgap-platform/README.md](../../../tools/airgap-platform/README.md)
+- [tools/ourbox-substrate/README.md](../../../tools/ourbox-substrate/README.md)

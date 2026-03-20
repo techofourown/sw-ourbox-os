@@ -31,19 +31,19 @@ Each `defaults/<installer-id>.env` file can define:
 - `OS_REPO`
 - `OS_CATALOG_TAG`
 - `APPLICATION_CATALOG_DEFAULT_IDS` (optional comma-separated official catalog ids)
-- `AIRGAP_PLATFORM_REPO`
-- `AIRGAP_PLATFORM_ARCH`
-- `AIRGAP_PLATFORM_CHANNEL`
-- `AIRGAP_PLATFORM_CATALOG_ENABLED`
-- `AIRGAP_PLATFORM_CATALOG_TAG`
+- `OURBOX_SUBSTRATE_REPO`
+- `OURBOX_SUBSTRATE_ARCH`
+- `OURBOX_SUBSTRATE_CHANNEL`
+- `OURBOX_SUBSTRATE_CATALOG_ENABLED`
+- `OURBOX_SUBSTRATE_CATALOG_TAG`
 
 Out of scope:
 
 - `OS_REF`
-- `AIRGAP_PLATFORM_REF`
+- `OURBOX_SUBSTRATE_REF`
 - any `OURBOX_INSTALLER_SSH_*` key
-- `AIRGAP_PLATFORM_REGISTRY_USERNAME`
-- `AIRGAP_PLATFORM_REGISTRY_PASSWORD`
+- `OURBOX_SUBSTRATE_REGISTRY_USERNAME`
+- `OURBOX_SUBSTRATE_REGISTRY_PASSWORD`
 - SSH auth material
 - installer access policy
 
@@ -58,7 +58,7 @@ target. Current official example:
 
 - Woodbox: `x86-catalog`
 
-Each profile must also keep `AIRGAP_PLATFORM_CATALOG_TAG` aligned with the published airgap
+Each profile must also keep `OURBOX_SUBSTRATE_CATALOG_TAG` aligned with the published substrate
 catalog lane for that installer architecture:
 
 - Woodbox: `catalog-amd64`
@@ -80,14 +80,14 @@ Channel tags must follow the same published target lanes:
 
 - Woodbox: `x86-stable`, `x86-beta`, `x86-nightly`, `x86-exp-labs`
 
-Airgap-platform channel tags are architecture-specific:
+Substrate channel tags are architecture-specific:
 
 - Woodbox: `stable-amd64`, `beta-amd64`, `nightly-amd64`, `exp-labs-amd64`
 Recommended pattern:
 
 1. Publish digest-pinned catalog rows for each supported release lane.
 2. Keep `OS_CATALOG_TAG` aligned with the official lane-specific catalog for that target.
-3. Keep `AIRGAP_PLATFORM_CATALOG_TAG` aligned with the official lane-specific catalog for that installer architecture.
+3. Keep `OURBOX_SUBSTRATE_CATALOG_TAG` aligned with the official lane-specific catalog for that installer architecture.
 4. Let consumers resolve the newest contract-compatible pinned ref from those catalogs.
 5. Fail closed when the required upstream catalog data is missing or incompatible.
 

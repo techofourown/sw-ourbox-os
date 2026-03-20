@@ -371,8 +371,8 @@ def validate_upstream_airgap_publish_record(record: Any) -> dict[str, Any]:
         fail("artifact record must be an object")
     if record.get("schema") != 1:
         fail("artifact record schema must be 1")
-    if record.get("artifact_family") != "airgap-platform":
-        fail("artifact_family must be airgap-platform")
+    if record.get("artifact_family") != "ourbox-substrate":
+        fail("artifact_family must be ourbox-substrate")
 
     artifact_repo = ensure_non_empty_string(record.get("artifact_repo"), "artifact_repo")
     artifact_ref = ensure_non_empty_string(record.get("artifact_ref"), "artifact_ref")
@@ -396,17 +396,17 @@ def validate_upstream_airgap_publish_record(record: Any) -> dict[str, Any]:
     validate_flat_string_map(record.get("dist_files"), "dist_files")
 
     for key in (
-        "OURBOX_AIRGAP_PLATFORM_SOURCE",
-        "OURBOX_AIRGAP_PLATFORM_REVISION",
-        "OURBOX_AIRGAP_PLATFORM_VERSION",
-        "OURBOX_AIRGAP_PLATFORM_CREATED",
-        "AIRGAP_PLATFORM_ARCH",
+        "OURBOX_SUBSTRATE_SOURCE",
+        "OURBOX_SUBSTRATE_REVISION",
+        "OURBOX_SUBSTRATE_VERSION",
+        "OURBOX_SUBSTRATE_CREATED",
+        "OURBOX_SUBSTRATE_ARCH",
     ):
         ensure_non_empty_string(artifact_metadata.get(key), f"artifact_metadata.{key}")
 
-    arch = artifact_metadata["AIRGAP_PLATFORM_ARCH"]
+    arch = artifact_metadata["OURBOX_SUBSTRATE_ARCH"]
     if arch not in {"arm64", "amd64"}:
-        fail("artifact_metadata.AIRGAP_PLATFORM_ARCH must be arm64 or amd64")
+        fail("artifact_metadata.OURBOX_SUBSTRATE_ARCH must be arm64 or amd64")
 
     ensure_known_string(input_metadata.get("K3S_VERSION"), "input_metadata.K3S_VERSION")
     ensure_known_string(input_metadata.get("OURBOX_PLATFORM_PROFILE"), "input_metadata.OURBOX_PLATFORM_PROFILE")
@@ -499,7 +499,7 @@ def update_airgap_catalog_from_record(
     version_override: str | None = None,
 ) -> None:
     if channel_mode != "short":
-        fail("airgap-platform catalogs require channel-mode short")
+        fail("ourbox-substrate catalogs require channel-mode short")
 
     record = validate_upstream_airgap_publish_record(artifact_record)
     if record["artifact_repo"] != artifact_repo:
@@ -538,7 +538,7 @@ def update_airgap_catalog_from_record(
                     timestamp,
                     version,
                     record["source_commit"],
-                    artifact_metadata["AIRGAP_PLATFORM_ARCH"],
+                    artifact_metadata["OURBOX_SUBSTRATE_ARCH"],
                     input_metadata["OURBOX_PLATFORM_CONTRACT_DIGEST"],
                     input_metadata["OURBOX_PLATFORM_PROFILE"],
                     input_metadata["K3S_VERSION"],
@@ -570,8 +570,8 @@ def update_catalog_from_record(
     if detected_family is None:
         if isinstance(artifact_record, dict) and artifact_record.get("artifact_role") == "os":
             detected_family = "os"
-        elif isinstance(artifact_record, dict) and artifact_record.get("artifact_family") == "airgap-platform":
-            detected_family = "airgap-platform"
+        elif isinstance(artifact_record, dict) and artifact_record.get("artifact_family") == "ourbox-substrate":
+            detected_family = "ourbox-substrate"
         else:
             fail("unable to infer catalog family from artifact record")
 
@@ -591,7 +591,7 @@ def update_catalog_from_record(
         )
         return
 
-    if detected_family == "airgap-platform":
+    if detected_family == "ourbox-substrate":
         update_airgap_catalog_from_record(
             artifact_record,
             artifact_repo=artifact_repo,
@@ -946,7 +946,7 @@ def build_parser() -> argparse.ArgumentParser:
     update_catalog_parser.add_argument("--catalog-artifact-type", required=True)
     update_catalog_parser.add_argument("--channel-tag", required=True)
     update_catalog_parser.add_argument("--channel-mode", required=True)
-    update_catalog_parser.add_argument("--catalog-family", choices=["os", "airgap-platform"])
+    update_catalog_parser.add_argument("--catalog-family", choices=["os", "ourbox-substrate"])
     update_catalog_parser.add_argument("--sha-column")
     update_catalog_parser.add_argument("--immutable-tag-override")
     update_catalog_parser.add_argument("--version-override")

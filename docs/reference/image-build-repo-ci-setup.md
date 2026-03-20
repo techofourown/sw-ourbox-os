@@ -273,7 +273,7 @@ PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
 To resolve current digests:
 ```bash
 oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
-oras resolve ghcr.io/techofourown/sw-ourbox-os/airgap-platform:beta-<arch>
+oras resolve ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate:beta-<arch>
 ```
 
 Official builds resolve upstream inputs dynamically at build time via

@@ -8,7 +8,7 @@ need_cmd() { command -v "$1" >/dev/null 2>&1 || die "missing required command: $
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST_DIR="${ROOT}/dist"
-REF_BASE="ghcr.io/techofourown/sw-ourbox-os/airgap-platform"
+REF_BASE="ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate"
 
 ARCH="${ARCH:-${1:-}}"
 RELEASE_TAG="${RELEASE_TAG:-${2:-}}"
@@ -47,8 +47,8 @@ fi
 log "Promoting ${PINNED_REF} -> ${TARGET_REF}"
 oras tag "${PINNED_REF}" "${TARGET_TAG}" >/dev/null
 
-printf '%s\n' "${SOURCE_REF}" > "${DIST_DIR}/airgap-platform.${ARCH}.promote.source.ref"
-printf '%s\n' "${PINNED_REF}" > "${DIST_DIR}/airgap-platform.${ARCH}.promote.digest.ref"
-printf '%s\n' "${TARGET_REF}" > "${DIST_DIR}/airgap-platform.${ARCH}.promote.target.ref"
+printf '%s\n' "${SOURCE_REF}" > "${DIST_DIR}/ourbox-substrate.${ARCH}.promote.source.ref"
+printf '%s\n' "${PINNED_REF}" > "${DIST_DIR}/ourbox-substrate.${ARCH}.promote.digest.ref"
+printf '%s\n' "${TARGET_REF}" > "${DIST_DIR}/ourbox-substrate.${ARCH}.promote.target.ref"
 
 log "Promoted ${PINNED_REF} -> ${TARGET_REF}"
