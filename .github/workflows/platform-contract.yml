@@ -93,9 +93,12 @@ jobs:
           grep -q '^platform-contract/tools/check-target-prereqs\.sh$' "${TAR_LIST}"
           grep -q '^platform-contract/tools/contract-identity\.sh$' "${TAR_LIST}"
           grep -q '^platform-contract/tools/render-contract\.py$' "${TAR_LIST}"
+          grep -q '^platform-contract/tools/resolve-image-sources\.py$' "${TAR_LIST}"
           grep -q '^platform-contract/tools/verify-runtime\.sh$' "${TAR_LIST}"
           grep -q '^platform-contract/tools/verify-persistence\.sh$' "${TAR_LIST}"
-          grep -q '^platform-contract/profiles/demo-apps/images\.lock\.json$' "${TAR_LIST}"
+          grep -q '^platform-contract/profiles/demo-apps/image-sources\.json$' "${TAR_LIST}"
+          grep -q '^platform-contract/profiles/demo-apps/platform-image-sources\.json$' "${TAR_LIST}"
+          grep -q '^platform-contract/rendered/defaults/demo-apps/images\.lock\.json$' "${TAR_LIST}"
 
       - name: Upload publish outputs
         uses: actions/upload-artifact@v4
