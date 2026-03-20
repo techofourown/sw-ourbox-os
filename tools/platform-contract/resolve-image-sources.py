@@ -16,13 +16,8 @@ def fail(message: str) -> "NoReturn":
     raise SystemExit(message)
 
 
-def repository_for_ref(ref: str) -> str:
-    without_digest = ref.split("@", 1)[0]
-    last_slash = without_digest.rfind("/")
-    last_colon = without_digest.rfind(":")
-    if last_colon > last_slash:
-        return without_digest[:last_colon]
-    return without_digest
+def ref_without_digest(ref: str) -> str:
+    return ref.split("@", 1)[0]
 
 
 def resolve_pinned_ref(ref: str) -> str:
@@ -37,7 +32,7 @@ def resolve_pinned_ref(ref: str) -> str:
     ).stdout.strip()
     if not DIGEST_RE.fullmatch(digest):
         fail(f"oras resolve returned an invalid digest for {ref!r}: {digest!r}")
-    return f"{repository_for_ref(ref)}@{digest}"
+    return f"{ref_without_digest(ref)}@{digest}"
 
 
 def load_catalog_expectations(catalog_path: Path) -> dict[str, set[str]]:
