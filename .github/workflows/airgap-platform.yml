@@ -58,7 +58,6 @@ jobs:
     outputs:
       channel: ${{ steps.request.outputs.channel }}
       immutable_tag: ${{ steps.request.outputs.immutable_tag }}
-      catalog_pinned_ref: ${{ steps.contract.outputs.catalog_pinned_ref }}
       pinned_ref: ${{ steps.contract.outputs.pinned_ref }}
       digest: ${{ steps.contract.outputs.digest }}
     steps:
@@ -130,21 +129,14 @@ jobs:
             echo "platform_contract_ref and platform_contract_digest do not match" >&2
             exit 1
           }
-          if [[ -n "${APPLICATION_CATALOG_REF}" ]] && [[ ! "${APPLICATION_CATALOG_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]]; then
-            echo "application_catalog_ref must be digest-pinned when provided" >&2
-            exit 1
-          fi
-
           echo "pinned_ref=${PLATFORM_CONTRACT_REF}" >> "${GITHUB_OUTPUT}"
           echo "digest=${PLATFORM_CONTRACT_DIGEST}" >> "${GITHUB_OUTPUT}"
-          echo "catalog_pinned_ref=${APPLICATION_CATALOG_REF}" >> "${GITHUB_OUTPUT}"
 
   resolve-inputs:
     needs: context
     if: github.event_name != 'workflow_run'
     runs-on: ubuntu-latest
     outputs:
-      catalog_pinned_ref: ${{ steps.resolve.outputs.catalog_pinned_ref }}
       pinned_ref: ${{ steps.resolve.outputs.pinned_ref }}
       digest: ${{ steps.resolve.outputs.digest }}
     steps:
@@ -154,7 +146,7 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Resolve platform-contract and catalog from channel tags
+      - name: Resolve platform-contract from channel tags
         id: resolve
         run: |
           set -euo pipefail
@@ -167,13 +159,8 @@ jobs:
             exit 1
           }
 
-          catalog_repo="ghcr.io/techofourown/sw-ourbox-catalog-demo"
-          catalog_digest="$(oras resolve "${catalog_repo}:latest")"
-          catalog_pinned_ref="${catalog_repo}@${catalog_digest}"
-
           echo "pinned_ref=${pinned_ref}" >> "${GITHUB_OUTPUT}"
           echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
-          echo "catalog_pinned_ref=${catalog_pinned_ref}" >> "${GITHUB_OUTPUT}"
 
           mkdir -p dist
           printf '%s\n' "${pinned_ref}" > dist/platform-contract.ref
@@ -218,23 +205,6 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Mint catalog refresh token
-        id: catalog-refresh-token
-        uses: actions/create-github-app-token@v1
-        with:
-          app-id: ${{ secrets.SEMREL_APP_ID }}
-          private-key: ${{ secrets.SEMREL_APP_PRIVATE_KEY }}
-          owner: techofourown
-
-      - name: Select compatible application catalog bundle
-        id: catalog
-        env:
-          EXPECTED_CONTRACT_DIGEST: ${{ needs.resolve-inputs.outputs.digest || needs.recovery-request.outputs.digest }}
-          ORIGINAL_CATALOG_PINNED_REF: ${{ needs.resolve-inputs.outputs.catalog_pinned_ref || needs.recovery-request.outputs.catalog_pinned_ref }}
-          DEFAULT_CATALOG_REPO: ghcr.io/techofourown/sw-ourbox-catalog-demo
-          CATALOG_REPO_DISPATCH_TOKEN: ${{ steps.catalog-refresh-token.outputs.token }}
-        run: bash ./tools/airgap-platform/select-compatible-catalog.sh
-
       - name: Publish immutable candidate bundle
         env:
           ARCH: ${{ matrix.arch }}
@@ -242,7 +212,7 @@ jobs:
           IMMUTABLE_TAG: ${{ needs.context.outputs.immutable_tag || needs.recovery-request.outputs.immutable_tag }}
           OURBOX_PLATFORM_CONTRACT_REF: ${{ needs.resolve-inputs.outputs.pinned_ref || needs.recovery-request.outputs.pinned_ref }}
           OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ needs.resolve-inputs.outputs.digest || needs.recovery-request.outputs.digest }}
-          OURBOX_APPLICATION_CATALOG_REF: ${{ steps.catalog.outputs.pinned_ref }}
+          OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG: "1"
         run: |
           set -euo pipefail
           TAG="${IMMUTABLE_TAG}" \
