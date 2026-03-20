@@ -28,6 +28,9 @@ Purpose:
 
 - records upstream input intent such as repository and approved release lane
 - may record lane-specific intent such as `candidate` versus `nightly`
+- candidate entries should point at immutable published snapshot tags such as
+  `vX.Y.Z` or `vX.Y.Z-<arch>`, while nightly may intentionally remain on a
+  floating nightly lane
 - keeps approval separate from generated immutable ref materialization
 - lets downstream workflows resolve digests at workflow start and record those
   exact identities only in generated provenance outputs
