@@ -68,7 +68,9 @@ PROMOTE_SOURCE_PINNED_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sh
 ```
 
 The build always uses the in-repo `platform-contract/profiles/demo-apps/`
-fixtures as render inputs. No external catalog ref is required.
+catalog/profile intent plus generated application and platform image locks
+resolved from `image-sources.json` and `platform-image-sources.json`. No
+external catalog ref is required.
 
 Key outputs:
 

@@ -7,21 +7,23 @@ contract profile.
 
 - `profile.env`
   - profile-level render inputs used by the platform-contract renderer
-- `platform-images.lock.json`
-  - source of truth for the platform-owned image refs consumed by both
-    `render-contract.py` and `ourbox-substrate`
-- `images.lock.json`
-  - fixture image-lock data kept for local validation and negative tests
 - `catalog.json`
-  - fixture catalog data kept for local validation and negative tests
+  - checked-in application intent consumed by platform-contract rendering
+- `image-sources.json`
+  - checked-in application image source refs resolved into a generated
+    `images.lock.json` during build and validation
+- `platform-image-sources.json`
+  - checked-in platform-owned third-party image source refs resolved into a
+    generated `platform-images.lock.json` during build and validation
 
 ## Where this profile is used
 
-`platform-contract` publication still uses the local `catalog.json` and
-`images.lock.json` fixtures as render inputs. `ourbox-substrate` now consumes
-only `profile.env` plus `platform-images.lock.json` from this directory and no
-longer re-renders the demo application fixtures just to derive platform-owned
-image refs.
+`platform-contract` publication uses the local `catalog.json`,
+`image-sources.json`, and `platform-image-sources.json` intent surfaces, then
+resolves them into generated image lockfiles at build time.
+`ourbox-substrate` consumes only `profile.env` plus
+`platform-image-sources.json` from this directory and no longer re-renders the
+demo application catalog just to derive platform-owned image refs.
 
 Changes here affect the published platform-contract shape and image set.
 Production application catalogs and their image sets are owned by the
@@ -39,10 +41,10 @@ published artifacts that were built from it:
 
 Use this directory when you need to change:
 
-- local render-contract validation coverage
-- negative test fixtures for catalog/image-lock behavior
+- local render-contract application intent
+- application image source intent in `image-sources.json`
+- platform-owned image source intent in `platform-image-sources.json`
 - profile-level routing knobs in `profile.env`
-- platform-owned image refs in `platform-images.lock.json`
 
 Changing the production application catalog or image defaults should happen in
 the standalone `sw-ourbox-catalog-*` repositories instead.

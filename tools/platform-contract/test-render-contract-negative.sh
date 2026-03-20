@@ -4,6 +4,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/ourbox-render-contract-negative.XXXXXX")"
 trap 'rm -rf "${TMP_ROOT}"' EXIT
+FIXTURE_APPLICATION_CATALOG_FILE="${ROOT}/platform-contract/profiles/demo-apps/catalog.json"
+FIXTURE_APPLICATION_IMAGE_SOURCES_FILE="${ROOT}/platform-contract/profiles/demo-apps/image-sources.json"
+FIXTURE_PLATFORM_IMAGE_SOURCES_FILE="${ROOT}/platform-contract/profiles/demo-apps/platform-image-sources.json"
 
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -30,6 +33,8 @@ render_expect_failure() {
        --contract-root "${contract_root}" \
        --output-dir "${out_dir}" \
        --profile demo-apps \
+       --images-lock-file "${contract_root}/generated-images.lock.json" \
+       --platform-images-lock-file "${contract_root}/generated-platform-images.lock.json" \
        --box-host "negative.ourbox.local" \
        --tls-mode "lan-http" \
        --ingress-class "traefik" \
@@ -52,6 +57,16 @@ prepare_contract_root() {
   rm -rf "${dest}"
   mkdir -p "${dest}"
   cp -a "${ROOT}/platform-contract/." "${dest}/"
+  python3 "${ROOT}/tools/platform-contract/resolve-image-sources.py" \
+    --input "${FIXTURE_APPLICATION_IMAGE_SOURCES_FILE}" \
+    --catalog "${FIXTURE_APPLICATION_CATALOG_FILE}" \
+    --profile demo-apps \
+    --output "${dest}/generated-images.lock.json"
+  python3 "${ROOT}/tools/platform-contract/resolve-image-sources.py" \
+    --input "${FIXTURE_PLATFORM_IMAGE_SOURCES_FILE}" \
+    --profile demo-apps \
+    --require-used-by _platform \
+    --output "${dest}/generated-platform-images.lock.json"
 }
 
 contract_missing_route="${TMP_ROOT}/contract-missing-route"
@@ -189,7 +204,7 @@ render_expect_failure \
 
 contract_bad_images="${TMP_ROOT}/contract-bad-images"
 prepare_contract_root "${contract_bad_images}"
-python3 - <<'PY' "${contract_bad_images}/profiles/demo-apps/images.lock.json"
+python3 - <<'PY' "${contract_bad_images}/generated-images.lock.json"
 import json
 import sys
 from pathlib import Path

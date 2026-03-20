@@ -48,7 +48,9 @@ GraphMD YAML frontmatter types are defined in `types/`. Records live in `records
 
 Channel tags: `edge` (main), `v*` (releases). All artifacts are digest-addressable.
 
-Image build repos (e.g., `img-ourbox-matchbox`) consume these artifacts via digest-pinned refs in their `release/official-inputs.env`.
+Image build repos (e.g., `img-ourbox-matchbox`) pin the upstream approved
+snapshot location in `tools/approved-upstream-inputs.upstream.env`, then
+resolve exact digest-pinned refs at workflow start.
 
 ### Workflow safety
 

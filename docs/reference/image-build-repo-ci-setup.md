@@ -277,16 +277,20 @@ Wrong:
 - a checked-in `release/official-inputs.env`-style file is treated as the
   normative official approval surface for TOOO-produced upstream digests
 
+Current steady-state:
+
+- a repo pins the upstream approval record location
+  (for example `tools/approved-upstream-inputs.upstream.env`)
+- official workflows resolve exact immutable refs from that approval record at
+  build start
+- the resolved identities are recorded in generated candidate provenance and
+  publication outputs
+
 Current digests can still be resolved with:
 ```bash
 oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
 oras resolve ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate:beta-<arch>
 ```
-
-During migration, a repository MAY still materialize a generated
-`release/official-inputs.env` for compatibility with existing scripts, but that
-file must be labeled transitional, refreshed from the upstream approval record,
-and never hand-edited as the normative policy surface.
 
 ### `release/official-artifacts.env` — publication targets
 

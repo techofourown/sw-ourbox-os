@@ -78,7 +78,8 @@ set and renders the platform contract.
 The platform contract renderer consumes:
 
 - `catalog.json`
-- `images.lock.json`
+- generated `images.lock.json`
+- generated platform-owned `platform-images.lock.json`
 - `selected-apps.json` written by the installer composer
 
 The renderer uses catalog metadata to produce:
@@ -554,6 +555,7 @@ The platform renderer accepts:
   --output-dir /tmp/rendered \
   --application-catalog /path/to/catalog.json \
   --images-lock-file /path/to/images.lock.json \
+  --platform-images-lock-file /path/to/platform-images.lock.json \
   --selected-apps-file /path/to/selected-apps.json
 ```
 
