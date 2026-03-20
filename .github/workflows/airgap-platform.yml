@@ -275,8 +275,14 @@ jobs:
           grep -q '^k3s/k3s-airgap-images-'${ARCH}'\.tar$' "${TAR_LIST}"
           grep -q '^manifest.env$' "${TAR_LIST}"
           grep -q '^platform/images/' "${TAR_LIST}"
-          ! grep -q '^platform/catalog\.json$' "${TAR_LIST}"
-          ! grep -q '^platform/selected-apps\.json$' "${TAR_LIST}"
+          if grep -q '^platform/catalog\.json$' "${TAR_LIST}"; then
+            echo "airgap bundle must not include platform/catalog.json" >&2
+            exit 1
+          fi
+          if grep -q '^platform/selected-apps\.json$' "${TAR_LIST}"; then
+            echo "airgap bundle must not include platform/selected-apps.json" >&2
+            exit 1
+          fi
           tar -xOzf /tmp/airgap-platform/dist/airgap-platform.tar.gz manifest.env | grep -q '^OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:'
 
       - name: Upload publish outputs
