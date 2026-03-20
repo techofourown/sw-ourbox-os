@@ -438,12 +438,12 @@ class ReleaseControlTests(unittest.TestCase):
             snapshot = {
                 "schema": 1,
                 "kind": "approved-upstream-inputs",
-                "snapshot": "v0.21.1",
+                "snapshot": "v0.21.3",
                 "artifacts": {
                     "matchbox_airgap_platform": {
                         "repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
                         "channels": {
-                            "candidate": "beta-arm64",
+                            "candidate": "v0.21.3-arm64",
                             "nightly": "nightly-arm64",
                         },
                     }
@@ -455,7 +455,7 @@ class ReleaseControlTests(unittest.TestCase):
                 "PATH": f"{stub_dir}:{os.environ['PATH']}",
                 "STUB_ORAS_LOG": str(log_path),
                 "STUB_EXISTING_IMMUTABLE_REF": (
-                    "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:beta-arm64"
+                    "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:v0.21.3-arm64"
                 ),
                 "STUB_EXISTING_IMMUTABLE_DIGEST": (
                     "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -497,12 +497,12 @@ class ReleaseControlTests(unittest.TestCase):
             snapshot = {
                 "schema": 1,
                 "kind": "approved-upstream-inputs",
-                "snapshot": "v0.21.1",
+                "snapshot": "v0.21.3",
                 "artifacts": {
                     "woodbox_airgap_platform": {
                         "repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
                         "channels": {
-                            "candidate": "beta-amd64",
+                            "candidate": "v0.21.3-amd64",
                             "nightly": "nightly-amd64",
                         },
                     }
@@ -546,7 +546,7 @@ class ReleaseControlTests(unittest.TestCase):
                             "OURBOX_AIRGAP_PLATFORM_REF=ghcr.io/techofourown/sw-ourbox-os/"
                             "airgap-platform@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
                         ),
-                        "OURBOX_APPROVED_UPSTREAM_INPUTS_SNAPSHOT=v0.21.1",
+                        "OURBOX_APPROVED_UPSTREAM_INPUTS_SNAPSHOT=v0.21.3",
                         (
                             "OURBOX_APPROVED_UPSTREAM_INPUT_SOURCE_REF="
                             "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:nightly-amd64"
