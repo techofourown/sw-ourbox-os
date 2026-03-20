@@ -12,10 +12,13 @@ SELECTED_APPS_FILE="${OUT_BASE}/selected-apps.json"
 MERGED_SELECTED_APPS_FILE="${OUT_BASE}/selected-apps-merged.json"
 MERGED_CATALOG_FILE="${OUT_BASE}/catalog-merged.json"
 MERGED_IMAGES_LOCK_FILE="${OUT_BASE}/images-lock-merged.json"
+GENERATED_APPLICATION_IMAGES_LOCK_FILE="${OUT_BASE}/images-lock-demo-apps.json"
+GENERATED_PLATFORM_IMAGES_LOCK_FILE="${OUT_BASE}/platform-images-lock-demo-apps.json"
 IDENTITY_CONTRACT_DIR="${OUT_BASE}/identity-contract"
 trap 'rm -rf "${OUT_BASE}"' EXIT
 FIXTURE_APPLICATION_CATALOG_FILE="${ROOT}/platform-contract/profiles/demo-apps/catalog.json"
-FIXTURE_APPLICATION_IMAGES_LOCK_FILE="${ROOT}/platform-contract/profiles/demo-apps/images.lock.json"
+FIXTURE_APPLICATION_IMAGE_SOURCES_FILE="${ROOT}/platform-contract/profiles/demo-apps/image-sources.json"
+FIXTURE_PLATFORM_IMAGE_SOURCES_FILE="${ROOT}/platform-contract/profiles/demo-apps/platform-image-sources.json"
 
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -23,6 +26,18 @@ VERSION="dev"
 if git -C "${ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
   VERSION="$(git -C "${ROOT}" describe --tags --exact-match)"
 fi
+
+python3 "${ROOT}/tools/platform-contract/resolve-image-sources.py" \
+  --input "${FIXTURE_APPLICATION_IMAGE_SOURCES_FILE}" \
+  --catalog "${FIXTURE_APPLICATION_CATALOG_FILE}" \
+  --profile demo-apps \
+  --output "${GENERATED_APPLICATION_IMAGES_LOCK_FILE}"
+
+python3 "${ROOT}/tools/platform-contract/resolve-image-sources.py" \
+  --input "${FIXTURE_PLATFORM_IMAGE_SOURCES_FILE}" \
+  --profile demo-apps \
+  --require-used-by _platform \
+  --output "${GENERATED_PLATFORM_IMAGES_LOCK_FILE}"
 
 render_demo_apps() {
   local out_dir="$1"
@@ -36,6 +51,8 @@ render_demo_apps() {
     --contract-root "${ROOT}/platform-contract" \
     --output-dir "${out_dir}" \
     --profile demo-apps \
+    --images-lock-file "${GENERATED_APPLICATION_IMAGES_LOCK_FILE}" \
+    --platform-images-lock-file "${GENERATED_PLATFORM_IMAGES_LOCK_FILE}" \
     --box-host "validate.ourbox.local" \
     --tls-mode "lan-http" \
     --ingress-class "traefik" \
@@ -99,7 +116,7 @@ render_demo_apps "${OUT_DIR_SUBSET_B}" "${SELECTED_APPS_FILE}"
 
 python3 - <<'PY' \
   "${FIXTURE_APPLICATION_CATALOG_FILE}" \
-  "${FIXTURE_APPLICATION_IMAGES_LOCK_FILE}" \
+  "${GENERATED_APPLICATION_IMAGES_LOCK_FILE}" \
   "${MERGED_CATALOG_FILE}" \
   "${MERGED_IMAGES_LOCK_FILE}"
 import json

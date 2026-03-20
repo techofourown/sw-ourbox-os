@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "kind": "approved-upstream-inputs",
+  "snapshot": "v0.21.1",
+  "artifacts": {
+    "platform_contract": {
+      "repo": "ghcr.io/techofourown/sw-ourbox-os/platform-contract",
+      "channel": "edge"
+    },
+    "matchbox_airgap_platform": {
+      "target": "matchbox",
+      "repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
+      "channel": "beta-arm64"
+    },
+    "woodbox_airgap_platform": {
+      "target": "woodbox",
+      "repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
+      "channel": "beta-amd64"
+    }
+  }
+}

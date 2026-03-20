@@ -7,11 +7,29 @@ These files are intentionally lightweight, human-reviewable control surfaces.
 
 ## Files
 
+- `approved-upstream-inputs.json`
+  - authoritative intent surface for downstream-approved upstream channels;
+    workflows should resolve these selectors to immutable refs at runtime
 - `REVALIDATION_TRIGGER`
   - documented escape hatch for forcing an official republish without a substantive
     source change
 
 ## How each file is used
+
+### `approved-upstream-inputs.json`
+
+Consumed by:
+
+- downstream image-build workflow logic that needs the current approved
+  upstream input policy without checking digest-pinned refs into downstream
+  control-plane files
+
+Purpose:
+
+- records upstream input intent such as repository and approved release lane
+- keeps approval separate from generated immutable ref materialization
+- lets downstream workflows resolve digests at workflow start and record those
+  exact identities only in generated provenance outputs
 
 ### `REVALIDATION_TRIGGER`
 
