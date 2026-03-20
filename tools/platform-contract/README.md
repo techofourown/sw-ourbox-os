@@ -61,21 +61,14 @@ That means this directory is both:
 From the repo root:
 
 ```bash
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
-  ./tools/platform-contract/build.sh
-OURBOX_APPLICATION_CATALOG_REF=ghcr.io/catalog-owner/catalog-repo@sha256:... \
-  ./tools/platform-contract/publish.sh edge
-OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 \
-  ./tools/platform-contract/publish.sh edge
+./tools/platform-contract/build.sh
+./tools/platform-contract/publish.sh edge
 PROMOTE_SOURCE_PINNED_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... ./tools/platform-contract/promote.sh v0.16.2
 ./tools/platform-contract/validate.sh
 ```
 
-For explicit local fixture validation only:
-
-```bash
-OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/platform-contract/build.sh
-```
+The build always uses the in-repo `platform-contract/profiles/demo-apps/`
+fixtures as render inputs. No external catalog ref is required.
 
 Key outputs:
 

@@ -462,8 +462,15 @@ if not status_ref.startswith("docker.io/library/python:3.12-alpine@sha256:"):
 PY
 
 render_expect_failure \
-  missing-catalog-build-input \
-  "OURBOX_APPLICATION_CATALOG_REF is required for platform-contract build" \
+  rejected-catalog-ref \
+  "platform-contract build no longer accepts OURBOX_APPLICATION_CATALOG_REF" \
+  env OURBOX_APPLICATION_CATALOG_REF=ghcr.io/example/catalog@sha256:0000000000000000000000000000000000000000000000000000000000000000 \
+  "${ROOT}/tools/platform-contract/build.sh"
+
+render_expect_failure \
+  rejected-fixture-gate \
+  "platform-contract build no longer uses OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG" \
+  env OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 \
   "${ROOT}/tools/platform-contract/build.sh"
 
 mkdir -p "${IDENTITY_CONTRACT_DIR}"
@@ -533,7 +540,7 @@ identity_after_images_lock="$(identity_output)"
 
 (
   cd "${ROOT}"
-  OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 ./tools/platform-contract/build.sh >/dev/null
+  ./tools/platform-contract/build.sh >/dev/null
 )
 tar -tzf "${ROOT}/dist/platform-contract.tar.gz" \
   | grep -Fx 'platform-contract/landing-status/app.py' >/dev/null \

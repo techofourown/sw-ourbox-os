@@ -23,14 +23,6 @@ command -v node >/dev/null 2>&1 || {
   exit 1
 }
 
-ALLOW_FIXTURE_APPLICATION_CATALOG="${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-0}"
-if [[ -n "${OURBOX_APPLICATION_CATALOG_REF:-}" ]]; then
-  [[ "${OURBOX_APPLICATION_CATALOG_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]] \
-    || die "OURBOX_APPLICATION_CATALOG_REF must be a digest-pinned published application catalog bundle ref"
-elif [[ "${ALLOW_FIXTURE_APPLICATION_CATALOG}" != "1" ]]; then
-  die "OURBOX_APPLICATION_CATALOG_REF is required for publish.sh unless OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG=1 is set"
-fi
-
 "${ROOT}/tools/platform-contract/build.sh"
 # shellcheck disable=SC1090
 source "${DIST_DIR}/platform-contract.meta.env"
