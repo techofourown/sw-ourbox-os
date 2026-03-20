@@ -44,6 +44,9 @@ jobs:
       - name: Install platform-contract validation deps
         run: python3 -m pip install --disable-pip-version-check pyyaml
 
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
       - name: Validate rendered platform contract
         run: bash tools/platform-contract/validate.sh
 

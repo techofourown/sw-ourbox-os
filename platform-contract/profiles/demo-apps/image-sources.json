@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "profile": "demo-apps",
+  "images": [
+    {
+      "name": "nginx",
+      "ref": "docker.io/library/nginx:1.27-alpine",
+      "used_by": [
+        "todo-bloom"
+      ]
+    },
+    {
+      "name": "dufs",
+      "ref": "docker.io/sigoden/dufs:v0.42.0",
+      "used_by": [
+        "dufs"
+      ]
+    },
+    {
+      "name": "flatnotes",
+      "ref": "docker.io/dullage/flatnotes:v5.0",
+      "used_by": [
+        "flatnotes"
+      ]
+    }
+  ]
+}

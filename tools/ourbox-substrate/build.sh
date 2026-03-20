@@ -8,10 +8,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST_DIR="${ROOT}/dist"
 VERSIONS_FILE="${ROOT}/tools/ourbox-substrate/versions.env"
 PLATFORM_PROFILE_ENV_FILE="${ROOT}/platform-contract/profiles/demo-apps/profile.env"
-PLATFORM_IMAGES_LOCK_SOURCE="${ROOT}/platform-contract/profiles/demo-apps/platform-images.lock.json"
+PLATFORM_IMAGE_SOURCES_FILE="${ROOT}/platform-contract/profiles/demo-apps/platform-image-sources.json"
 
 command -v curl >/dev/null 2>&1 || die "curl is required"
 command -v git >/dev/null 2>&1 || die "git is required (to stamp revision)"
+command -v python3 >/dev/null 2>&1 || die "python3 is required"
 command -v tar >/dev/null 2>&1 || die "tar is required"
 
 mkdir -p "${DIST_DIR}"
@@ -96,12 +97,19 @@ mkdir -p "${build_dir}/k3s" "${build_dir}/platform/images"
 [[ -z "${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-}" ]] \
   || die "ourbox-substrate build no longer uses OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG"
 [[ -f "${PLATFORM_PROFILE_ENV_FILE}" ]] || die "Missing ${PLATFORM_PROFILE_ENV_FILE}"
-[[ -f "${PLATFORM_IMAGES_LOCK_SOURCE}" ]] || die "Missing ${PLATFORM_IMAGES_LOCK_SOURCE}"
+[[ -f "${PLATFORM_IMAGE_SOURCES_FILE}" ]] || die "Missing ${PLATFORM_IMAGE_SOURCES_FILE}"
 
 PLATFORM_PROFILE="$(awk -F= '/^OURBOX_PLATFORM_PROFILE=/{print $2; exit}' "${PLATFORM_PROFILE_ENV_FILE}")"
 [[ -n "${PLATFORM_PROFILE}" ]] || die "OURBOX_PLATFORM_PROFILE is missing from ${PLATFORM_PROFILE_ENV_FILE}"
 
-log "Using checked-in platform profile metadata and platform-owned images lock for substrate build."
+GENERATED_PLATFORM_IMAGES_LOCK="${build_dir}/generated-platform-images.lock.json"
+python3 "${ROOT}/tools/platform-contract/resolve-image-sources.py" \
+  --input "${PLATFORM_IMAGE_SOURCES_FILE}" \
+  --profile "${PLATFORM_PROFILE}" \
+  --require-used-by _platform \
+  --output "${GENERATED_PLATFORM_IMAGES_LOCK}"
+
+log "Using checked-in platform profile metadata plus generated platform-owned image lock for substrate build."
 
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -110,7 +118,7 @@ if git -C "${ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
   VERSION="$(git -C "${ROOT}" describe --tags --exact-match)"
 fi
 
-mapfile -t IMAGES < <(python3 - <<'PY' "${PLATFORM_IMAGES_LOCK_SOURCE}" "${PLATFORM_PROFILE}"
+mapfile -t IMAGES < <(python3 - <<'PY' "${GENERATED_PLATFORM_IMAGES_LOCK}" "${PLATFORM_PROFILE}"
 import json
 import sys
 
@@ -158,7 +166,7 @@ if not seen_refs:
     raise SystemExit(f"{source_path} did not contain any platform-owned image entries")
 PY
 )
-IMAGES_LOCK_SHA256="$(sha256sum "${PLATFORM_IMAGES_LOCK_SOURCE}" | awk '{print $1}')"
+IMAGES_LOCK_SHA256="$(sha256sum "${GENERATED_PLATFORM_IMAGES_LOCK}" | awk '{print $1}')"
 log "Resolved ${#IMAGES[@]} unique platform-owned image refs for substrate bundle."
 
 # k3s binaries + substrate images
@@ -249,7 +257,7 @@ OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
 OURBOX_PLATFORM_IMAGES_LOCK_SHA256=${IMAGES_LOCK_SHA256}
 EOF_MANIFEST
 
-cp -a "${PLATFORM_IMAGES_LOCK_SOURCE}" "${build_dir}/platform/images.lock.json"
+cp -a "${GENERATED_PLATFORM_IMAGES_LOCK}" "${build_dir}/platform/images.lock.json"
 cp -a "${PLATFORM_PROFILE_ENV_FILE}" "${build_dir}/platform/profile.env"
 
 cat > "${DIST_DIR}/ourbox-substrate.meta.env" <<EOF_META

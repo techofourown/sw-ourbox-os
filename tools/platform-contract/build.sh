@@ -28,12 +28,28 @@ trap 'rm -rf "${BUILD_DIR}"' EXIT
   || die "platform-contract build no longer uses OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG"
 
 APPLICATION_CATALOG_FILE="${CONTRACT_DIR}/profiles/demo-apps/catalog.json"
-APPLICATION_IMAGES_LOCK_FILE="${CONTRACT_DIR}/profiles/demo-apps/images.lock.json"
+APPLICATION_IMAGE_SOURCES_FILE="${CONTRACT_DIR}/profiles/demo-apps/image-sources.json"
+PLATFORM_IMAGE_SOURCES_FILE="${CONTRACT_DIR}/profiles/demo-apps/platform-image-sources.json"
+GENERATED_APPLICATION_IMAGES_LOCK_FILE="${BUILD_DIR}/generated-images.lock.json"
+GENERATED_PLATFORM_IMAGES_LOCK_FILE="${BUILD_DIR}/generated-platform-images.lock.json"
 
 [[ -f "${APPLICATION_CATALOG_FILE}" ]] || die "demo-apps fixture catalog.json is missing"
-[[ -f "${APPLICATION_IMAGES_LOCK_FILE}" ]] || die "demo-apps fixture images.lock.json is missing"
+[[ -f "${APPLICATION_IMAGE_SOURCES_FILE}" ]] || die "demo-apps fixture image-sources.json is missing"
+[[ -f "${PLATFORM_IMAGE_SOURCES_FILE}" ]] || die "demo-apps fixture platform-image-sources.json is missing"
 
-log "Using in-repo demo-apps catalog fixtures for platform-contract build."
+log "Resolving in-repo demo-apps source refs into generated image lockfiles."
+
+python3 "${ROOT}/tools/platform-contract/resolve-image-sources.py" \
+  --input "${APPLICATION_IMAGE_SOURCES_FILE}" \
+  --catalog "${APPLICATION_CATALOG_FILE}" \
+  --profile demo-apps \
+  --output "${GENERATED_APPLICATION_IMAGES_LOCK_FILE}"
+
+python3 "${ROOT}/tools/platform-contract/resolve-image-sources.py" \
+  --input "${PLATFORM_IMAGE_SOURCES_FILE}" \
+  --profile demo-apps \
+  --require-used-by _platform \
+  --output "${GENERATED_PLATFORM_IMAGES_LOCK_FILE}"
 
 mkdir -p "${BUILD_DIR}/platform-contract"
 mkdir -p \
@@ -49,6 +65,7 @@ cp -a "${CONTRACT_DIR}/landing-status/." "${BUILD_DIR}/platform-contract/landing
 cp -a "${CONTRACT_DIR}/todo-bloom/." "${BUILD_DIR}/platform-contract/todo-bloom/"
 cp -a "${CONTRACT_DIR}/profiles/." "${BUILD_DIR}/platform-contract/profiles/"
 cp -a "${ROOT}/tools/platform-contract/render-contract.py" "${BUILD_DIR}/platform-contract/tools/"
+cp -a "${ROOT}/tools/platform-contract/resolve-image-sources.py" "${BUILD_DIR}/platform-contract/tools/"
 cp -a "${ROOT}/tools/platform-contract/lint-rendered-contract.py" "${BUILD_DIR}/platform-contract/tools/"
 cp -a "${ROOT}/tools/platform-contract/check-target-prereqs.sh" "${BUILD_DIR}/platform-contract/tools/"
 cp -a "${ROOT}/tools/platform-contract/contract-identity.sh" "${BUILD_DIR}/platform-contract/tools/"
@@ -75,7 +92,8 @@ python3 "${ROOT}/tools/platform-contract/render-contract.py" \
   --output-dir "${BUILD_DIR}/platform-contract/rendered/defaults/demo-apps" \
   --profile demo-apps \
   --application-catalog "${APPLICATION_CATALOG_FILE}" \
-  --images-lock-file "${APPLICATION_IMAGES_LOCK_FILE}" \
+  --images-lock-file "${GENERATED_APPLICATION_IMAGES_LOCK_FILE}" \
+  --platform-images-lock-file "${GENERATED_PLATFORM_IMAGES_LOCK_FILE}" \
   --box-host "ourbox.local" \
   --tls-mode "lan-http" \
   --ingress-class "traefik" \

@@ -214,8 +214,12 @@ def load_images_lock(profile_dir: Path, images_lock_override: str | None) -> tup
     return images_lock, images_lock_path
 
 
-def load_platform_images_lock(profile_dir: Path) -> tuple[dict, Path]:
-    platform_images_lock_path = profile_dir / "platform-images.lock.json"
+def load_platform_images_lock(profile_dir: Path, platform_images_lock_override: str | None) -> tuple[dict, Path]:
+    platform_images_lock_path = (
+        Path(platform_images_lock_override).resolve()
+        if platform_images_lock_override
+        else profile_dir / "platform-images.lock.json"
+    )
     if not platform_images_lock_path.exists():
         raise SystemExit(f"platform-images.lock.json not found at {platform_images_lock_path}")
 
@@ -253,12 +257,12 @@ def load_platform_images_lock(profile_dir: Path) -> tuple[dict, Path]:
     return platform_images_lock, platform_images_lock_path
 
 
-def required_platform_image_ref(platform_image_refs: dict[str, str], image_name: str, profile_dir: Path) -> str:
+def required_platform_image_ref(platform_image_refs: dict[str, str], image_name: str, platform_images_lock_path: Path) -> str:
     ref = str(platform_image_refs.get(image_name, "")).strip()
     if ref:
         return ref
     raise SystemExit(
-        f"platform images lock at {profile_dir / 'platform-images.lock.json'} is missing required image {image_name!r}"
+        f"platform images lock at {platform_images_lock_path} is missing required image {image_name!r}"
     )
 
 
@@ -1227,6 +1231,7 @@ def main() -> int:
     parser.add_argument("--profile", default=os.environ.get("OURBOX_PLATFORM_PROFILE", "demo-apps"))
     parser.add_argument("--application-catalog", help="Optional override path for the application catalog JSON")
     parser.add_argument("--images-lock-file", help="Optional override path for the rendered images.lock.json")
+    parser.add_argument("--platform-images-lock-file", help="Optional override path for platform-images.lock.json")
     parser.add_argument("--selected-apps-file", help="Optional selected-applications JSON written by the host-side composer")
     parser.add_argument("--box-host", default=os.environ.get("BOX_HOST", ""))
     parser.add_argument("--tls-mode", default=os.environ.get("TLS_MODE", ""))
@@ -1248,11 +1253,13 @@ def main() -> int:
     ingress_class = args.ingress_class or profile_env["OURBOX_PLATFORM_DEFAULT_INGRESS_CLASS"]
     storage_class = args.storage_class or profile_env["OURBOX_PLATFORM_DEFAULT_STORAGE_CLASS"]
     metadata = load_metadata(contract_root)
-    platform_images_lock, _platform_images_lock_path = load_platform_images_lock(profile_dir)
+    platform_images_lock, platform_images_lock_path = load_platform_images_lock(profile_dir, args.platform_images_lock_file)
     platform_image_refs = {item["name"]: item["ref"] for item in platform_images_lock["images"]}
-    landing_image_ref = required_platform_image_ref(platform_image_refs, PLATFORM_LANDING_IMAGE_NAME, profile_dir)
+    landing_image_ref = required_platform_image_ref(
+        platform_image_refs, PLATFORM_LANDING_IMAGE_NAME, platform_images_lock_path
+    )
     landing_status_image_ref = required_platform_image_ref(
-        platform_image_refs, PLATFORM_LANDING_STATUS_IMAGE_NAME, profile_dir
+        platform_image_refs, PLATFORM_LANDING_STATUS_IMAGE_NAME, platform_images_lock_path
     )
     images_lock, _images_lock_path = load_images_lock(profile_dir, args.images_lock_file)
     image_refs = {item["name"]: item["ref"] for item in images_lock["images"]}

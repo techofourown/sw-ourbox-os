@@ -5,6 +5,7 @@ import importlib.util
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import textwrap
 import unittest
@@ -426,6 +427,134 @@ class ReleaseControlTests(unittest.TestCase):
                     ]
                 )
             self.assertFalse((capture_dir / "catalog.tsv").exists())
+
+    def test_resolve_approved_upstream_input_prints_pinned_ref(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="release-control-test-") as tmpdir:
+            tmp = Path(tmpdir)
+            stub_dir = tmp / "bin"
+            log_path = tmp / "oras.log"
+            stub_dir.mkdir()
+            self.write_stub_oras(stub_dir)
+            snapshot = {
+                "schema": 1,
+                "kind": "approved-upstream-inputs",
+                "snapshot": "v0.21.1",
+                "artifacts": {
+                    "matchbox_airgap_platform": {
+                        "repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
+                        "channels": {
+                            "candidate": "beta-arm64",
+                            "nightly": "nightly-arm64",
+                        },
+                    }
+                },
+            }
+            snapshot_path = tmp / "approved-upstream-inputs.json"
+            snapshot_path.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
+            env = {
+                "PATH": f"{stub_dir}:{os.environ['PATH']}",
+                "STUB_ORAS_LOG": str(log_path),
+                "STUB_EXISTING_IMMUTABLE_REF": (
+                    "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:beta-arm64"
+                ),
+                "STUB_EXISTING_IMMUTABLE_DIGEST": (
+                    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                ),
+            }
+            with EnvOverride(**env):
+                completed = subprocess.run(
+                    [
+                        sys.executable,
+                        str(MODULE_PATH),
+                        "resolve-approved-upstream-input",
+                        "--input-json",
+                        str(snapshot_path),
+                        "--artifact-key",
+                        "matchbox_airgap_platform",
+                        "--channel-key",
+                        "candidate",
+                    ],
+                    cwd=ROOT,
+                    text=True,
+                    capture_output=True,
+                    check=True,
+                )
+            self.assertEqual(
+                completed.stdout.strip(),
+                (
+                    "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@"
+                    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+                ),
+            )
+
+    def test_resolve_approved_upstream_input_writes_github_env(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="release-control-test-") as tmpdir:
+            tmp = Path(tmpdir)
+            stub_dir = tmp / "bin"
+            log_path = tmp / "oras.log"
+            stub_dir.mkdir()
+            self.write_stub_oras(stub_dir)
+            snapshot = {
+                "schema": 1,
+                "kind": "approved-upstream-inputs",
+                "snapshot": "v0.21.1",
+                "artifacts": {
+                    "woodbox_airgap_platform": {
+                        "repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
+                        "channels": {
+                            "candidate": "beta-amd64",
+                            "nightly": "nightly-amd64",
+                        },
+                    }
+                },
+            }
+            snapshot_path = tmp / "approved-upstream-inputs.json"
+            env_path = tmp / "github-env.txt"
+            snapshot_path.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
+            env = {
+                "PATH": f"{stub_dir}:{os.environ['PATH']}",
+                "STUB_ORAS_LOG": str(log_path),
+                "STUB_EXISTING_IMMUTABLE_REF": (
+                    "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:nightly-amd64"
+                ),
+                "STUB_EXISTING_IMMUTABLE_DIGEST": (
+                    "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                ),
+            }
+            with EnvOverride(**env):
+                rc = self.run_main(
+                    [
+                        "resolve-approved-upstream-input",
+                        "--input-json",
+                        str(snapshot_path),
+                        "--artifact-key",
+                        "woodbox_airgap_platform",
+                        "--channel-key",
+                        "nightly",
+                        "--env-var",
+                        "OURBOX_AIRGAP_PLATFORM_REF",
+                        "--github-env",
+                        str(env_path),
+                    ]
+                )
+            self.assertEqual(rc, 0)
+            self.assertEqual(
+                env_path.read_text(encoding="utf-8"),
+                "\n".join(
+                    [
+                        (
+                            "OURBOX_AIRGAP_PLATFORM_REF=ghcr.io/techofourown/sw-ourbox-os/"
+                            "airgap-platform@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                        ),
+                        "OURBOX_APPROVED_UPSTREAM_INPUTS_SNAPSHOT=v0.21.1",
+                        (
+                            "OURBOX_APPROVED_UPSTREAM_INPUT_SOURCE_REF="
+                            "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:nightly-amd64"
+                        ),
+                        "",
+                    ]
+                ),
+            )
 
     def test_update_catalog_renders_append_only_substrate_rows(self) -> None:
         with tempfile.TemporaryDirectory(prefix="release-control-test-") as tmpdir:
