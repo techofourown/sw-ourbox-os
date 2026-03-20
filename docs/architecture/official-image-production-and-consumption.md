@@ -75,6 +75,10 @@ The intended model is:
 
 Official TOOO artifacts and third-party compatible artifacts should differ by publisher identity and provenance, not by secret build steps.
 
+Source-controlled official surfaces should carry intent. Generated build,
+publication, compose, and install records should carry the resolved immutable
+identity for a specific event.
+
 ### 3.2 Separate platform definition from hardware-specific packaging
 
 `sw-ourbox-os` is the upstream platform-definition and integration-contract repository.
@@ -206,10 +210,16 @@ Its job is to answer questions like:
 
 - which payload repo is the default for this installer profile?
 - which catalog tag should be consulted?
-- is there a pinned default artifact reference?
+- which release lane or approved snapshot should be preferred?
 - what are the current stable, beta, nightly, or experimental channel tags?
-- which ourbox-substrate repo, catalog tag, pinned default ref, and moving
-  channel tags should be used after OS selection?
+- which ourbox-substrate repo, catalog tag, and moving channel tags should be
+  used after OS selection?
+
+Install-defaults is an intent surface. In official TOOO-controlled flows it
+should not become a mirrored checked-in digest lock for TOOO-produced upstream
+artifacts. Exact digests belong in generated catalog rows, candidate
+provenance, publish records, mission manifests, and installed-system
+provenance.
 
 ### 4.6 Installer media or flashing tools
 
@@ -361,7 +371,13 @@ This acts as the upstream control plane for "where should this installer look by
 
 A hardware-specific `img-*` repo consumes the chosen platform contract and combines it with hardware-specific integration, boot/runtime behavior, and install mechanics.
 
-In the official lane, upstream artifact refs are resolved dynamically at build time via `oras resolve` against channel tags (`:edge`, `:latest`). This eliminates the need for manually-curated digest lockfiles and the coordination overhead they introduced.
+In the official lane, checked-in source control carries upstream input intent
+such as approved snapshot, channel, profile, or policy. Workflow start then
+resolves that intent to exact upstream digests via `oras resolve` or an
+equivalent publication lookup and records the result in generated candidate
+provenance and publication outputs. Repo-local mirrored digest lockfiles are at
+most transitional migration aids; they are not the intended official control
+plane.
 
 The repo satisfies the target integration contract while still allowing the target substrate to be
 hardware-appropriate.
@@ -389,15 +405,18 @@ Per org policy, official heavy-artifact release capability should remain possibl
 
 The recommended official model for heavy image repos is:
 
-- `beta`: latest official mainline build from pinned upstream refs (`push` to protected `main`)
+- `beta`: latest official mainline build from approved upstream input intent
+  resolved to exact digests at workflow start (`push` to protected `main`)
 - `stable`: promotion of an already-published `beta` digest once both candidate success and matching GitHub Release `published` authorization are present
-- `nightly`: scheduled integration build from floating upstream `edge` refs
+- `nightly`: scheduled integration build from floating upstream `edge` intent
+  resolved at workflow start
 - `exp-labs`: prerelease / experimental promotion of an already-published digest once both candidate success and matching GitHub Release `prereleased` authorization are present
 
 This separates two axes that should not be conflated:
 
 - which source context TOOO trusts (`main` head, prerelease tag, published release)
-- which upstream input policy the build used (pinned curated digests versus floating upstream `edge`)
+- which upstream input policy the build used (approved snapshot / channel
+  intent versus floating upstream `edge`)
 
 Stable promotion should normally re-tag an existing digest rather than rebuilding it, unless the
 stable artifact is intentionally meant to differ in inputs or packaging from the published `beta`
@@ -453,6 +472,9 @@ upstream control-plane question, not something welded forever into every
 installer image.
 
 That gives TOOO a way to change recommended official refs or channels without requiring the installer mechanics themselves to change every time.
+That control-plane surface should describe intent such as repo, catalog,
+channel, or approved snapshot; it should not become a second checked-in
+authority for resolved TOOO-produced digests.
 
 ### 8.2 Installer profiles
 
@@ -480,6 +502,10 @@ At a public-model level, the intended precedence is:
 4. fail closed if the required upstream metadata is unavailable or incompatible
 
 This is the intended public model even if specific targets may realize parts of it incrementally.
+
+In other words: source-controlled official surfaces carry intent, while
+generated catalog rows, candidate provenance, mission manifests, and installed
+release records carry resolved immutable identity.
 
 The normative contracts for this resolver behavior now live in:
 
@@ -550,7 +576,10 @@ Today's model is intentionally minimal and honest:
 - the canonical identity of OCI-shaped artifacts is the digest
 - the canonical identity of file-shaped artifacts should include a stable checksum
 - tags and moving channels are convenience selectors, not the ground truth
-- documentation should prefer digest-pinned or checksum-anchored references when repeatability matters
+- source-controlled official surfaces should prefer intent such as repo,
+  channel, profile, or snapshot name
+- generated records should carry exact digests, pinned refs, or checksums when
+  repeatability matters
 
 This matches the broader TOOO posture:
 

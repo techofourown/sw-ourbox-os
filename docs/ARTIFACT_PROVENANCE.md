@@ -196,13 +196,19 @@ resolving channel tags (`:edge`, `:latest`) dynamically at build time via `oras 
 
 The recommended downstream heavy-artifact model is now promote-first:
 
-- push to protected `main` publishes a promotable `beta` artifact from pinned upstream refs
+- push to protected `main` publishes a promotable `beta` artifact from approved
+  upstream input intent resolved at workflow start
 - matching GitHub Release `published` authorization plus candidate success promotes that digest into `stable`, with whichever condition arrives second waking the retag
-- scheduled integration nightly builds resolve floating upstream `edge` refs and publish `nightly`
+- scheduled integration nightly builds resolve floating upstream `edge` intent
+  and publish `nightly`
 - matching GitHub Release `prereleased` authorization plus candidate success can promote the same digest into `exp-labs`, with whichever condition arrives second waking the retag
 
 This keeps heavy rebuilds attached to meaningful input-policy changes rather than rebuilding the
 same curated input set a second time just to stamp a release channel.
+
+During migration, downstream repos may still materialize those resolved refs in
+generated transitional lockfiles. The authoritative control plane is the
+upstream approval record plus workflow-time resolution, not the checked-in copy.
 
 The canonical downstream release-control plane lives in `tools/release-control/`
 in this repo. It defines the shared release authorization lookup, candidate-run

@@ -259,25 +259,34 @@ The `:=` form respects already-set variables.
 
 All variables in `config.env` must use `:=`.
 
-### `release/official-inputs.env` — digest-pinned downstream lockfile
+### Upstream input approval and resolution
 
-Pin upstream OCI artifacts by digest, not floating tag:
-```bash
-# Right — immutable
-PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:<digest>
+Official source-controlled control-plane surfaces should carry upstream input
+intent, not mirrored TOOO-produced digest pins.
 
-# Wrong — mutable, build is not reproducible
-PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
-```
+Right:
 
-To resolve current digests:
+- a checked-in approval surface identifies the approved snapshot, profile,
+  repository, channel, or equivalent input policy
+- the workflow resolves exact immutable refs at build start
+- the resolved identities are recorded in generated candidate provenance and
+  publication outputs
+
+Wrong:
+
+- a checked-in `release/official-inputs.env`-style file is treated as the
+  normative official approval surface for TOOO-produced upstream digests
+
+Current digests can still be resolved with:
 ```bash
 oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
 oras resolve ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate:beta-<arch>
 ```
 
-Official builds resolve upstream inputs dynamically at build time via
-`oras resolve` against channel tags. No manual lockfile refresh is needed.
+During migration, a repository MAY still materialize a generated
+`release/official-inputs.env` for compatibility with existing scripts, but that
+file must be labeled transitional, refreshed from the upstream approval record,
+and never hand-edited as the normative policy surface.
 
 ### `release/official-artifacts.env` — publication targets
 
@@ -415,7 +424,7 @@ All other tracked files (including docs) are scanned without exception.
 
 ### Repository setup
 - [ ] `tools/config.env` — all variables use `:=` conditional assignment
-- [ ] `release/official-inputs.env` — upstream OCI refs digest-pinned
+- [ ] checked-in official control-plane inputs express upstream intent or approved snapshot selection, not mirrored TOOO-produced digest pins
 - [ ] `release/official-artifacts.env` — publication namespaces and channel tags set
 - [ ] `tools/check-workflow-safety.sh` — copied from Woodbox (no target-specific changes needed)
 - [ ] `tools/check-public-sanitization.sh` — copied; add any target-specific banned legacy names
