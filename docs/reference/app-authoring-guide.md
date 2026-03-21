@@ -713,15 +713,18 @@ oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:stable
 ```
 
 **Selecting an external catalog in the installer.** At the application catalog
-selection step, choose `r` (custom ref) and enter the OCI ref published by
-the catalog repo's CI, for example:
+selection step, customize the catalog set and add the OCI ref published by the
+catalog repo's CI. Prefer the catalog index ref when the repo publishes one, for
+example:
 
 ```
-ghcr.io/johnbenac/anagolay-catalog:latest
+ghcr.io/johnbenac/anagolay-catalog:catalog-amd64
 ```
 
-The installer will pull the bundle, validate the platform contract digest
-binding, and make the catalog's apps available for selection.
+The installer will resolve that index to the newest contract-compatible pinned
+bundle for the selected OS payload, validate the platform contract digest
+binding, and make the catalog's apps available for selection. If you already
+have the exact bundle digest-pinned ref, that is also accepted.
 
 ## 14. Minimal supported authoring surface
 
