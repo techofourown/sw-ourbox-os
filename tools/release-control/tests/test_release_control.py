@@ -438,12 +438,12 @@ class ReleaseControlTests(unittest.TestCase):
             snapshot = {
                 "schema": 1,
                 "kind": "approved-upstream-inputs",
-                "snapshot": "v0.21.3",
+                "snapshot": "v0.23.4",
                 "artifacts": {
                     "matchbox_airgap_platform": {
-                        "repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
+                        "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
                         "channels": {
-                            "candidate": "v0.21.3-arm64",
+                            "candidate": "v0.23.4-arm64",
                             "nightly": "nightly-arm64",
                         },
                     }
@@ -455,7 +455,7 @@ class ReleaseControlTests(unittest.TestCase):
                 "PATH": f"{stub_dir}:{os.environ['PATH']}",
                 "STUB_ORAS_LOG": str(log_path),
                 "STUB_EXISTING_IMMUTABLE_REF": (
-                    "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:v0.21.3-arm64"
+                    "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate:v0.23.4-arm64"
                 ),
                 "STUB_EXISTING_IMMUTABLE_DIGEST": (
                     "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
@@ -482,7 +482,7 @@ class ReleaseControlTests(unittest.TestCase):
             self.assertEqual(
                 completed.stdout.strip(),
                 (
-                    "ghcr.io/techofourown/sw-ourbox-os/airgap-platform@"
+                    "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@"
                     "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
                 ),
             )
@@ -497,12 +497,12 @@ class ReleaseControlTests(unittest.TestCase):
             snapshot = {
                 "schema": 1,
                 "kind": "approved-upstream-inputs",
-                "snapshot": "v0.21.3",
+                "snapshot": "v0.23.4",
                 "artifacts": {
                     "woodbox_airgap_platform": {
-                        "repo": "ghcr.io/techofourown/sw-ourbox-os/airgap-platform",
+                        "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
                         "channels": {
-                            "candidate": "v0.21.3-amd64",
+                            "candidate": "v0.23.4-amd64",
                             "nightly": "nightly-amd64",
                         },
                     }
@@ -515,7 +515,7 @@ class ReleaseControlTests(unittest.TestCase):
                 "PATH": f"{stub_dir}:{os.environ['PATH']}",
                 "STUB_ORAS_LOG": str(log_path),
                 "STUB_EXISTING_IMMUTABLE_REF": (
-                    "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:nightly-amd64"
+                    "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate:nightly-amd64"
                 ),
                 "STUB_EXISTING_IMMUTABLE_DIGEST": (
                     "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
@@ -544,12 +544,12 @@ class ReleaseControlTests(unittest.TestCase):
                     [
                         (
                             "OURBOX_AIRGAP_PLATFORM_REF=ghcr.io/techofourown/sw-ourbox-os/"
-                            "airgap-platform@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+                            "ourbox-substrate@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
                         ),
-                        "OURBOX_APPROVED_UPSTREAM_INPUTS_SNAPSHOT=v0.21.3",
+                        "OURBOX_APPROVED_UPSTREAM_INPUTS_SNAPSHOT=v0.23.4",
                         (
                             "OURBOX_APPROVED_UPSTREAM_INPUT_SOURCE_REF="
-                            "ghcr.io/techofourown/sw-ourbox-os/airgap-platform:nightly-amd64"
+                            "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate:nightly-amd64"
                         ),
                         "",
                     ]
@@ -804,6 +804,83 @@ class ReleaseControlTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(output_text, "")
         self.assertIn("completed unsuccessfully", result.stdout + result.stderr)
+
+
+    def test_advance_approved_snapshot_updates_all_candidate_channels(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="release-control-test-") as tmpdir:
+            tmp = Path(tmpdir)
+            snapshot_dir = tmp / "release"
+            snapshot_dir.mkdir()
+            snapshot_path = snapshot_dir / "approved-upstream-inputs.json"
+            snapshot_path.write_text(
+                json.dumps(
+                    {
+                        "schema": 1,
+                        "kind": "approved-upstream-inputs",
+                        "snapshot": "v0.23.4",
+                        "artifacts": {
+                            "platform_contract": {
+                                "repo": "ghcr.io/techofourown/sw-ourbox-os/platform-contract",
+                                "channels": {
+                                    "candidate": "v0.23.4",
+                                    "nightly": "edge",
+                                },
+                            },
+                            "matchbox_airgap_platform": {
+                                "target": "matchbox",
+                                "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
+                                "channels": {
+                                    "candidate": "v0.23.4-arm64",
+                                    "nightly": "nightly-arm64",
+                                },
+                            },
+                            "woodbox_airgap_platform": {
+                                "target": "woodbox",
+                                "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
+                                "channels": {
+                                    "candidate": "v0.23.4-amd64",
+                                    "nightly": "nightly-amd64",
+                                },
+                            },
+                        },
+                    },
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            advance_script = ROOT / "tools" / "release-control" / "advance-approved-snapshot.py"
+            result = subprocess.run(
+                [sys.executable, str(advance_script), "v0.25.0", "--root", str(tmp)],
+                text=True,
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+
+            updated = json.loads(snapshot_path.read_text(encoding="utf-8"))
+            self.assertEqual(updated["snapshot"], "v0.25.0")
+            self.assertEqual(
+                updated["artifacts"]["platform_contract"]["channels"]["candidate"],
+                "v0.25.0",
+            )
+            self.assertEqual(
+                updated["artifacts"]["matchbox_airgap_platform"]["channels"]["candidate"],
+                "v0.25.0-arm64",
+            )
+            self.assertEqual(
+                updated["artifacts"]["woodbox_airgap_platform"]["channels"]["candidate"],
+                "v0.25.0-amd64",
+            )
+            # Nightly channels must remain untouched.
+            self.assertEqual(
+                updated["artifacts"]["platform_contract"]["channels"]["nightly"],
+                "edge",
+            )
+            self.assertEqual(
+                updated["artifacts"]["matchbox_airgap_platform"]["channels"]["nightly"],
+                "nightly-arm64",
+            )
 
 
 if __name__ == "__main__":

@@ -32,11 +32,18 @@ jobs:
         with:
           node-version: "20"
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
       - name: Semantic Release
         uses: cycjimmy/semantic-release-action@v4
         with:
           extra_plugins: |
             @semantic-release/github
+            @semantic-release/exec
+            @semantic-release/git
         env:
           # semantic-release uses these for GitHub API calls and tag/release creation.
           GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
