@@ -1,12 +1,12 @@
 {
   "schema": 1,
   "kind": "approved-upstream-inputs",
-  "snapshot": "v0.23.4",
+  "snapshot": "v0.23.5",
   "artifacts": {
     "platform_contract": {
       "repo": "ghcr.io/techofourown/sw-ourbox-os/platform-contract",
       "channels": {
-        "candidate": "v0.23.4",
+        "candidate": "v0.23.5",
         "nightly": "edge"
       }
     },
@@ -14,7 +14,7 @@
       "target": "matchbox",
       "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
       "channels": {
-        "candidate": "v0.23.4-arm64",
+        "candidate": "v0.23.5-arm64",
         "nightly": "nightly-arm64"
       }
     },
@@ -22,7 +22,7 @@
       "target": "woodbox",
       "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
       "channels": {
-        "candidate": "v0.23.4-amd64",
+        "candidate": "v0.23.5-amd64",
         "nightly": "nightly-amd64"
       }
     }
