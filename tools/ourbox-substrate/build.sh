@@ -242,8 +242,6 @@ for img in "${IMAGES[@]}"; do
 done
 
 cat > "${build_dir}/manifest.env" <<EOF_MANIFEST
-OURBOX_SUBSTRATE_SCHEMA=1
-OURBOX_SUBSTRATE_KIND=ourbox-substrate
 OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=${REVISION}
 OURBOX_SUBSTRATE_VERSION=${VERSION}
