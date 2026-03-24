@@ -10,7 +10,7 @@
         "nightly": "edge"
       }
     },
-    "matchbox_airgap_platform": {
+    "matchbox_ourbox_substrate": {
       "target": "matchbox",
       "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
       "channels": {
@@ -18,7 +18,7 @@
         "nightly": "nightly-arm64"
       }
     },
-    "woodbox_airgap_platform": {
+    "woodbox_ourbox_substrate": {
       "target": "woodbox",
       "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
       "channels": {

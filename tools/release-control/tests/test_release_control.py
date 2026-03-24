@@ -440,7 +440,7 @@ class ReleaseControlTests(unittest.TestCase):
                 "kind": "approved-upstream-inputs",
                 "snapshot": "v0.23.4",
                 "artifacts": {
-                    "matchbox_airgap_platform": {
+                    "matchbox_ourbox_substrate": {
                         "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
                         "channels": {
                             "candidate": "v0.23.4-arm64",
@@ -470,7 +470,7 @@ class ReleaseControlTests(unittest.TestCase):
                         "--input-json",
                         str(snapshot_path),
                         "--artifact-key",
-                        "matchbox_airgap_platform",
+                        "matchbox_ourbox_substrate",
                         "--channel-key",
                         "candidate",
                     ],
@@ -499,7 +499,7 @@ class ReleaseControlTests(unittest.TestCase):
                 "kind": "approved-upstream-inputs",
                 "snapshot": "v0.23.4",
                 "artifacts": {
-                    "woodbox_airgap_platform": {
+                    "woodbox_ourbox_substrate": {
                         "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
                         "channels": {
                             "candidate": "v0.23.4-amd64",
@@ -528,11 +528,11 @@ class ReleaseControlTests(unittest.TestCase):
                         "--input-json",
                         str(snapshot_path),
                         "--artifact-key",
-                        "woodbox_airgap_platform",
+                        "woodbox_ourbox_substrate",
                         "--channel-key",
                         "nightly",
                         "--env-var",
-                        "OURBOX_AIRGAP_PLATFORM_REF",
+                        "OURBOX_SUBSTRATE_REF",
                         "--github-env",
                         str(env_path),
                     ]
@@ -543,7 +543,7 @@ class ReleaseControlTests(unittest.TestCase):
                 "\n".join(
                     [
                         (
-                            "OURBOX_AIRGAP_PLATFORM_REF=ghcr.io/techofourown/sw-ourbox-os/"
+                            "OURBOX_SUBSTRATE_REF=ghcr.io/techofourown/sw-ourbox-os/"
                             "ourbox-substrate@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
                         ),
                         "OURBOX_APPROVED_UPSTREAM_INPUTS_SNAPSHOT=v0.23.4",
@@ -826,7 +826,7 @@ class ReleaseControlTests(unittest.TestCase):
                                     "nightly": "edge",
                                 },
                             },
-                            "matchbox_airgap_platform": {
+                            "matchbox_ourbox_substrate": {
                                 "target": "matchbox",
                                 "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
                                 "channels": {
@@ -834,7 +834,7 @@ class ReleaseControlTests(unittest.TestCase):
                                     "nightly": "nightly-arm64",
                                 },
                             },
-                            "woodbox_airgap_platform": {
+                            "woodbox_ourbox_substrate": {
                                 "target": "woodbox",
                                 "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
                                 "channels": {
@@ -865,11 +865,11 @@ class ReleaseControlTests(unittest.TestCase):
                 "v0.25.0",
             )
             self.assertEqual(
-                updated["artifacts"]["matchbox_airgap_platform"]["channels"]["candidate"],
+                updated["artifacts"]["matchbox_ourbox_substrate"]["channels"]["candidate"],
                 "v0.25.0-arm64",
             )
             self.assertEqual(
-                updated["artifacts"]["woodbox_airgap_platform"]["channels"]["candidate"],
+                updated["artifacts"]["woodbox_ourbox_substrate"]["channels"]["candidate"],
                 "v0.25.0-amd64",
             )
             # Nightly channels must remain untouched.
@@ -878,7 +878,7 @@ class ReleaseControlTests(unittest.TestCase):
                 "edge",
             )
             self.assertEqual(
-                updated["artifacts"]["matchbox_airgap_platform"]["channels"]["nightly"],
+                updated["artifacts"]["matchbox_ourbox_substrate"]["channels"]["nightly"],
                 "nightly-arm64",
             )
 
