@@ -138,6 +138,19 @@ class ReleaseControlTests(unittest.TestCase):
         stub_path.chmod(0o755)
         return stub_path
 
+    def _effective_source_commit(self) -> str:
+        head = subprocess.check_output(
+            ["git", "-C", str(ROOT), "rev-parse", "HEAD"], text=True
+        ).strip()
+        subject = subprocess.check_output(
+            ["git", "-C", str(ROOT), "log", "-1", "--format=%s", head], text=True
+        ).strip()
+        if subject.startswith("chore(release):"):
+            return subprocess.check_output(
+                ["git", "-C", str(ROOT), "rev-parse", "HEAD^"], text=True
+            ).strip()
+        return head
+
     def run_resolve_promotion_context(
         self,
         *,
@@ -752,10 +765,7 @@ class ReleaseControlTests(unittest.TestCase):
 
     def test_resolve_promotion_context_defers_when_matching_candidate_run_is_pending(self) -> None:
         release_tag = f"codex-shell-test-{uuid.uuid4().hex[:12]}"
-        source_commit = subprocess.check_output(
-            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
-            text=True,
-        ).strip()
+        source_commit = self._effective_source_commit()
         subprocess.run(["git", "-C", str(ROOT), "tag", "-f", release_tag, "HEAD"], check=True)
         try:
             result, output_text = self.run_resolve_promotion_context(
@@ -779,10 +789,7 @@ class ReleaseControlTests(unittest.TestCase):
 
     def test_resolve_promotion_context_fails_when_matching_candidate_run_completed_unsuccessfully(self) -> None:
         release_tag = f"codex-shell-test-{uuid.uuid4().hex[:12]}"
-        source_commit = subprocess.check_output(
-            ["git", "-C", str(ROOT), "rev-parse", "HEAD"],
-            text=True,
-        ).strip()
+        source_commit = self._effective_source_commit()
         subprocess.run(["git", "-C", str(ROOT), "tag", "-f", release_tag, "HEAD"], check=True)
         try:
             result, output_text = self.run_resolve_promotion_context(
