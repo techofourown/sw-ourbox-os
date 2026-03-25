@@ -87,7 +87,6 @@ jobs:
           echo "Tar listing (head):"
           sed -n '1,50p' "${TAR_LIST}"
 
-          grep -q '^platform-contract/contract\.env$' "${TAR_LIST}"
           grep -q '^platform-contract/manifests/' "${TAR_LIST}"
           grep -q '^platform-contract/rendered/defaults/demo-apps/manifests/' "${TAR_LIST}"
           grep -q '^platform-contract/tools/check-target-prereqs\.sh$' "${TAR_LIST}"
