@@ -20,7 +20,6 @@ REQUIRED_ANNOTATIONS = (
     "ourbox.techofourown.io/contract-revision",
     "ourbox.techofourown.io/contract-version",
     "ourbox.techofourown.io/contract-created",
-    "ourbox.techofourown.io/contract-digest",
     "ourbox.techofourown.io/box-host",
     "ourbox.techofourown.io/tls-mode",
     "ourbox.techofourown.io/ingress-class",
