@@ -105,7 +105,7 @@ jobs:
           sed -n '1,50p' "${TAR_LIST}"
 
           grep -q '^k3s/k3s$' "${TAR_LIST}"
-          grep -q "^k3s/k3s-airgap-images-${ARCH}\\.tar$" "${TAR_LIST}"
+          grep -q "^k3s/k3s-images-${ARCH}\\.tar$" "${TAR_LIST}"
           grep -q '^manifest.env$' "${TAR_LIST}"
           grep -q '^platform/images/' "${TAR_LIST}"
           if grep -q '^platform/catalog\.json$' "${TAR_LIST}"; then

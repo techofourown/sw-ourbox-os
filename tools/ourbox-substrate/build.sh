@@ -175,15 +175,15 @@ if [[ "${ARCH}" == "arm64" ]]; then
   BIN_URL="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}/k3s-arm64"
 fi
 
-airgap_tar="k3s-airgap-images-${ARCH}.tar"
-airgap_url="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}/${airgap_tar}"
+k3s_images_tar="k3s-images-${ARCH}.tar"
+k3s_images_url="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}/${k3s_images_tar}"
 
 log "Fetch k3s binary (${ARCH}) @ ${K3S_VERSION}"
 curl -fsSL -o "${build_dir}/k3s/k3s" "${BIN_URL}"
 chmod +x "${build_dir}/k3s/k3s"
 
-log "Fetch k3s airgap images (${ARCH}) @ ${K3S_VERSION}"
-curl -fsSL -o "${build_dir}/k3s/${airgap_tar}" "${airgap_url}"
+log "Fetch k3s images (${ARCH}) @ ${K3S_VERSION}"
+curl -fsSL -o "${build_dir}/k3s/${k3s_images_tar}" "${k3s_images_url}"
 
 # Helper to name tars exactly like Matchbox expects
 image_tar_name() {

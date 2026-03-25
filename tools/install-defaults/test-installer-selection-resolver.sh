@@ -936,7 +936,7 @@ test_substrate_validate_extracted_bundle_rejects_invalid_manifest_contract_diges
   required_contract="sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
 
   mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
-  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
+  touch "${bundle_dir}/k3s/k3s-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
   cat > "${bundle_dir}/manifest.env" <<'EOF_MANIFEST'
 OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=6472fb5919d187daf832082eeaef6086b336a632
@@ -966,7 +966,7 @@ test_substrate_validate_extracted_bundle_exports_manifest_metadata() {
   required_contract="sha256:abababababababababababababababababababababababababababababababab"
 
   mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
-  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
+  touch "${bundle_dir}/k3s/k3s-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
   cat > "${bundle_dir}/manifest.env" <<EOF_MANIFEST
 OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=6472fb5919d187daf832082eeaef6086b336a632
@@ -1016,7 +1016,7 @@ test_substrate_validate_extracted_bundle_rejects_missing_contract_digest_hidden_
   required_contract="sha256:5656565656565656565656565656565656565656565656565656565656565656"
 
   mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
-  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
+  touch "${bundle_dir}/k3s/k3s-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
   cat > "${bundle_dir}/manifest.env" <<'EOF_MANIFEST'
 OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=6472fb5919d187daf832082eeaef6086b336a632
@@ -1038,7 +1038,7 @@ EOF_MANIFEST
   rm -rf "${tmp}"
 }
 
-test_substrate_validate_extracted_bundle_rejects_missing_k3s_airgap_images_tar() {
+test_substrate_validate_extracted_bundle_rejects_missing_k3s_images_tar() {
   local tmp bundle_dir required_contract
   tmp="$(mktemp -d)"
   bundle_dir="${tmp}/bundle"
@@ -1063,7 +1063,7 @@ EOF_MANIFEST
   chmod +x "${bundle_dir}/k3s/k3s"
 
   assert_fails "set -euo pipefail; source '${RESOLVER}'; ourbox_substrate_selection_validate_extracted_bundle '${bundle_dir}' '${required_contract}' 'arm64'" \
-    "substrate bundle validation should reject a missing k3s airgap images tar"
+    "substrate bundle validation should reject a missing k3s images tar"
 
   rm -rf "${tmp}"
 }
@@ -1075,7 +1075,7 @@ test_substrate_validate_extracted_bundle_rejects_missing_platform_image_tars() {
   required_contract="sha256:1212121212121212121212121212121212121212121212121212121212121212"
 
   mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
-  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env"
+  touch "${bundle_dir}/k3s/k3s-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env"
   cat > "${bundle_dir}/manifest.env" <<EOF_MANIFEST
 OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=6472fb5919d187daf832082eeaef6086b336a632
@@ -1126,7 +1126,7 @@ main() {
   test_substrate_validate_extracted_bundle_rejects_invalid_manifest_contract_digest
   test_substrate_validate_extracted_bundle_exports_manifest_metadata
   test_substrate_validate_extracted_bundle_rejects_missing_contract_digest_hidden_by_ambient_env
-  test_substrate_validate_extracted_bundle_rejects_missing_k3s_airgap_images_tar
+  test_substrate_validate_extracted_bundle_rejects_missing_k3s_images_tar
   test_substrate_validate_extracted_bundle_rejects_missing_platform_image_tars
   printf 'installer-selection resolver tests: PASS\n'
 }

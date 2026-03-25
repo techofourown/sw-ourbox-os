@@ -984,7 +984,7 @@ ourbox_substrate_selection_validate_extracted_bundle() {
   local required_contract_digest="$2"
   local expected_arch="$3"
   local manifest="${bundle_dir}/manifest.env"
-  local k3s_images_tar="${bundle_dir}/k3s/k3s-airgap-images-${expected_arch}.tar"
+  local k3s_images_tar="${bundle_dir}/k3s/k3s-images-${expected_arch}.tar"
   local manifest_substrate_source=""
   local manifest_substrate_revision=""
   local manifest_substrate_version=""
@@ -1000,7 +1000,7 @@ ourbox_substrate_selection_validate_extracted_bundle() {
 
   [[ -f "${manifest}" ]] || ourbox_selection_die "ourbox-substrate bundle missing manifest.env: ${manifest}"
   [[ -x "${bundle_dir}/k3s/k3s" ]] || ourbox_selection_die "ourbox-substrate bundle missing k3s binary: ${bundle_dir}/k3s/k3s"
-  [[ -f "${k3s_images_tar}" ]] || ourbox_selection_die "ourbox-substrate bundle missing k3s airgap images tar: ${k3s_images_tar}"
+  [[ -f "${k3s_images_tar}" ]] || ourbox_selection_die "ourbox-substrate bundle missing k3s images tar: ${k3s_images_tar}"
   [[ -f "${bundle_dir}/platform/images.lock.json" ]] || ourbox_selection_die "ourbox-substrate bundle missing platform/images.lock.json"
   [[ -f "${bundle_dir}/platform/profile.env" ]] || ourbox_selection_die "ourbox-substrate bundle missing platform/profile.env"
   [[ -d "${bundle_dir}/platform/images" ]] || ourbox_selection_die "ourbox-substrate bundle missing platform/images directory"
