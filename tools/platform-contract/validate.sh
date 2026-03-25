@@ -20,13 +20,6 @@ FIXTURE_APPLICATION_CATALOG_FILE="${ROOT}/platform-contract/profiles/demo-apps/c
 FIXTURE_APPLICATION_IMAGE_SOURCES_FILE="${ROOT}/platform-contract/profiles/demo-apps/image-sources.json"
 FIXTURE_PLATFORM_IMAGE_SOURCES_FILE="${ROOT}/platform-contract/profiles/demo-apps/platform-image-sources.json"
 
-REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
-CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-VERSION="dev"
-if git -C "${ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
-  VERSION="$(git -C "${ROOT}" describe --tags --exact-match)"
-fi
-
 python3 "${ROOT}/tools/platform-contract/resolve-image-sources.py" \
   --input "${FIXTURE_APPLICATION_IMAGE_SOURCES_FILE}" \
   --catalog "${FIXTURE_APPLICATION_CATALOG_FILE}" \
