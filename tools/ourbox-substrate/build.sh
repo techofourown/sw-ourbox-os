@@ -32,6 +32,74 @@ source "${VERSIONS_FILE}"
 
 : "${K3S_VERSION:?K3S_VERSION not set in versions.env}"
 
+resolve_k3s_images_asset() {
+  local arch="$1"
+  local release_json
+  local release_api
+  local api_token
+  local -a curl_args
+
+  release_json="$(mktemp)"
+  release_api="https://api.github.com/repos/k3s-io/k3s/releases/tags/${K3S_VERSION}"
+  curl_args=(
+    -fsSL
+    -H "Accept: application/vnd.github+json"
+    -o "${release_json}"
+  )
+
+  api_token="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+  if [[ -n "${api_token}" ]]; then
+    curl_args+=(-H "Authorization: Bearer ${api_token}")
+  fi
+
+  if ! curl "${curl_args[@]}" "${release_api}"; then
+    rm -f "${release_json}"
+    die "failed to fetch K3s release metadata for ${K3S_VERSION}"
+  fi
+
+  if ! python3 - "${release_json}" "${arch}" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as fh:
+    data = json.load(fh)
+
+assets = data.get("assets")
+if not isinstance(assets, list):
+    raise SystemExit("release JSON must include an assets list")
+
+arch = sys.argv[2]
+matches = []
+for asset in assets:
+    if not isinstance(asset, dict):
+        continue
+    name = str(asset.get("name", "")).strip()
+    url = str(asset.get("browser_download_url", "")).strip()
+    if not name or not url:
+        continue
+    if not name.startswith("k3s-"):
+        continue
+    if not name.endswith(f"-{arch}.tar"):
+        continue
+    if "images" not in name:
+        continue
+    matches.append(url)
+
+if not matches:
+    raise SystemExit(f"release JSON did not contain a k3s images tar for arch={arch}")
+if len(matches) != 1:
+    raise SystemExit(f"release JSON matched multiple k3s images tar assets for arch={arch}")
+
+print(matches[0])
+PY
+  then
+    rm -f "${release_json}"
+    die "failed to resolve K3s images asset for ${arch}"
+  fi
+
+  rm -f "${release_json}"
+}
+
 # Select container CLI
 pick_cli() {
   for c in docker nerdctl podman; do
@@ -173,7 +241,7 @@ if [[ "${ARCH}" == "arm64" ]]; then
 fi
 
 k3s_images_tar="k3s-images-${ARCH}.tar"
-k3s_images_url="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}/${k3s_images_tar}"
+k3s_images_url="$(resolve_k3s_images_asset "${ARCH}")"
 
 log "Fetch k3s binary (${ARCH}) @ ${K3S_VERSION}"
 curl -fsSL -o "${build_dir}/k3s/k3s" "${BIN_URL}"

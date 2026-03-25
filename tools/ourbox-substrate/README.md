@@ -50,7 +50,7 @@ Checked in here and elsewhere in this repo:
 Fetched during the build:
 
 - the upstream `k3s` binary for the selected architecture
-- the upstream `k3s-images-<arch>.tar`
+- the upstream K3s images tar for the selected architecture
 - each platform-owned image pinned in the generated `platform/images.lock.json`
 
 There is intentionally no checked-in `ourbox-substrate/` payload tree in this
@@ -58,7 +58,8 @@ repository. The artifact is assembled by script from checked-in platform inputs
 plus fetched upstream bytes. The substrate build now reads the checked-in
 platform profile metadata plus platform image source intent and resolves the
 platform-owned image lock at build time; it does not re-render the
-`demo-apps` catalog fixtures and carries no application catalog payload.
+`demo-apps` catalog fixtures and carries no application catalog payload. The
+bundle stores the fetched K3s images tar as `k3s-images-<arch>.tar`.
 
 ## Output shape
 
