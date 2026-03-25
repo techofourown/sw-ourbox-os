@@ -59,7 +59,6 @@ jobs:
       channel: ${{ steps.request.outputs.channel }}
       immutable_tag: ${{ steps.request.outputs.immutable_tag }}
       pinned_ref: ${{ steps.contract.outputs.pinned_ref }}
-      digest: ${{ steps.contract.outputs.digest }}
     steps:
       - name: Download recovery request
         uses: actions/download-artifact@v4
@@ -95,7 +94,7 @@ jobs:
           echo "channel=${CHANNEL}" >> "${GITHUB_OUTPUT}"
           echo "immutable_tag=${IMMUTABLE_TAG}" >> "${GITHUB_OUTPUT}"
 
-      - name: Validate recovery contract inputs
+      - name: Validate recovery platform-contract ref
         id: contract
         run: |
           set -euo pipefail
@@ -113,24 +112,11 @@ jobs:
             echo "Recovery request requires PLATFORM_CONTRACT_REF" >&2
             exit 1
           }
-          [[ -n "${PLATFORM_CONTRACT_DIGEST}" ]] || {
-            echo "Recovery request requires PLATFORM_CONTRACT_DIGEST" >&2
-            exit 1
-          }
           [[ "${PLATFORM_CONTRACT_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
             echo "platform_contract_ref must be digest-pinned" >&2
             exit 1
           }
-          [[ "${PLATFORM_CONTRACT_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
-            echo "platform_contract_digest must be a sha256 digest" >&2
-            exit 1
-          }
-          [[ "${PLATFORM_CONTRACT_REF##*@}" == "${PLATFORM_CONTRACT_DIGEST}" ]] || {
-            echo "platform_contract_ref and platform_contract_digest do not match" >&2
-            exit 1
-          }
           echo "pinned_ref=${PLATFORM_CONTRACT_REF}" >> "${GITHUB_OUTPUT}"
-          echo "digest=${PLATFORM_CONTRACT_DIGEST}" >> "${GITHUB_OUTPUT}"
 
   resolve-inputs:
     needs: context
@@ -138,7 +124,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       pinned_ref: ${{ steps.resolve.outputs.pinned_ref }}
-      digest: ${{ steps.resolve.outputs.digest }}
     steps:
       - name: Install ORAS
         uses: oras-project/setup-oras@v1
@@ -160,7 +145,6 @@ jobs:
           }
 
           echo "pinned_ref=${pinned_ref}" >> "${GITHUB_OUTPUT}"
-          echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
 
           mkdir -p dist
           printf '%s\n' "${pinned_ref}" > dist/platform-contract.ref
@@ -182,7 +166,7 @@ jobs:
          needs.context.result == 'success' &&
          needs.resolve-inputs.result == 'success')
       )
-    runs-on: [self-hosted, official-heavy, airgap-builder]
+    runs-on: [self-hosted, official-heavy, substrate-builder]
     strategy:
       fail-fast: false
       matrix:
@@ -210,8 +194,6 @@ jobs:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
           IMMUTABLE_TAG: ${{ needs.context.outputs.immutable_tag || needs.recovery-request.outputs.immutable_tag }}
-          OURBOX_PLATFORM_CONTRACT_REF: ${{ needs.resolve-inputs.outputs.pinned_ref || needs.recovery-request.outputs.pinned_ref }}
-          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ needs.resolve-inputs.outputs.digest || needs.recovery-request.outputs.digest }}
         run: |
           set -euo pipefail
           TAG="${IMMUTABLE_TAG}" \
@@ -272,7 +254,7 @@ jobs:
           sed -n '1,50p' "${TAR_LIST}"
 
           grep -q '^k3s/k3s$' "${TAR_LIST}"
-          grep -q '^k3s/k3s-airgap-images-'"${ARCH}"'\.tar$' "${TAR_LIST}"
+          grep -q '^k3s/k3s-images-'"${ARCH}"'\.tar$' "${TAR_LIST}"
           grep -q '^manifest.env$' "${TAR_LIST}"
           grep -q '^platform/images/' "${TAR_LIST}"
           if grep -q '^platform/catalog\.json$' "${TAR_LIST}"; then
@@ -283,7 +265,6 @@ jobs:
             echo "substrate bundle must not include platform/selected-apps.json" >&2
             exit 1
           fi
-          tar -xOzf /tmp/ourbox-substrate/dist/ourbox-substrate.tar.gz manifest.env | grep -q '^OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:'
 
       - name: Upload publish outputs
         uses: actions/upload-artifact@v4

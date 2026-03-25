@@ -1,7 +1,7 @@
 self-hosted-runner:
   labels:
     - official-heavy
-    - airgap-builder
+    - substrate-builder
 paths:
   .github/workflows/ourbox-substrate-promote.yml:
     ignore:

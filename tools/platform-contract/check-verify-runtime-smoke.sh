@@ -36,26 +36,11 @@ host	path	expected_status	body_marker	description
 landing.smoke.ourbox.local	/	200	Landing	landing-root
 EOF_ROUTES
 
-cat > "${CONTRACT_DIR}/contract.env" <<'EOF_CONTRACT'
-OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os
-OURBOX_PLATFORM_CONTRACT_REVISION=smoke-revision
-OURBOX_PLATFORM_CONTRACT_VERSION=smoke-version
-EOF_CONTRACT
-printf 'sha256:%064d\n' 0 > "${CONTRACT_DIR}/contract.digest"
-
 cat > "${TMP_ROOT}/release.env" <<'EOF_RELEASE'
-OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os
-OURBOX_PLATFORM_CONTRACT_REVISION=smoke-revision
-OURBOX_PLATFORM_CONTRACT_VERSION=smoke-version
-OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:0000000000000000000000000000000000000000000000000000000000000000
 OURBOX_APPLICATION_CATALOG_NAME="Merged Application Catalog"
 EOF_RELEASE
 
 cat > "${TMP_ROOT}/bad-release.env" <<'EOF_BAD_RELEASE'
-OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os
-OURBOX_PLATFORM_CONTRACT_REVISION=smoke-revision
-OURBOX_PLATFORM_CONTRACT_VERSION=smoke-version
-OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:0000000000000000000000000000000000000000000000000000000000000000
 OURBOX_APPLICATION_CATALOG_NAME=Merged Application Catalog
 EOF_BAD_RELEASE
 
@@ -116,10 +101,6 @@ case "${1:-}" in
       configmap)
         key="${@: -1}"
         case "${key}" in
-          *contract_source*) printf 'https://github.com/techofourown/sw-ourbox-os' ;;
-          *contract_revision*) printf 'smoke-revision' ;;
-          *contract_version*) printf 'smoke-version' ;;
-          *contract_digest*) printf 'sha256:0000000000000000000000000000000000000000000000000000000000000000' ;;
           *profile*) printf 'demo-apps' ;;
           *route_model*) printf 'ingress' ;;
           *box_host*) printf 'smoke.ourbox.local' ;;

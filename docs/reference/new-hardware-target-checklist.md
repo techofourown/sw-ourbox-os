@@ -54,8 +54,8 @@ Suggested summary fields:
   - [ ] fetched at install time,
   - [ ] fetched at first boot,
   - [ ] or consumed another documented way.
-- [ ] The source and revision are recorded.
-- [ ] If OCI packaging is available, the consumer path can pin the contract by digest.
+- [ ] The upstream source and revision or other equivalent provenance are recorded.
+- [ ] If OCI packaging is available, the consumer path can pin consumed upstream artifacts by digest.
 - [ ] If vendoring is used, the update procedure is documented.
 
 ## 4. Installed-system provenance
@@ -66,8 +66,6 @@ Suggested summary fields:
   - [ ] `OURBOX_PRODUCT`
   - [ ] `OURBOX_TARGET`
   - [ ] `OURBOX_VERSION`
-  - [ ] `OURBOX_PLATFORM_CONTRACT_SOURCE`
-  - [ ] `OURBOX_PLATFORM_CONTRACT_REVISION`
 - [ ] Additional payload / installer provenance fields are included where available.
 - [ ] An operator can answer "what am I running?" locally on the target.
 
@@ -96,9 +94,9 @@ Suggested summary fields:
 - [ ] The proposal explains how bootstrap success and failure are surfaced to operators.
 - [ ] The target does not rely on undocumented magic steps.
 
-## 7. Airgap and artifact posture
+## 7. Offline and artifact posture
 
-- [ ] The proposal states whether the target supports airgapped installation.
+- [ ] The proposal states whether the target supports offline installation.
 - [ ] If a substrate bundle is embedded, its location is documented.
 - [ ] The OS payload / installer media / defaults / catalog story is documented at least at a
       public-model level.

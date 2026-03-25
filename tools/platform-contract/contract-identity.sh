@@ -57,7 +57,6 @@ done
 [[ -n "${CONTRACT_DIR}" ]] || die "--contract-dir is required"
 [[ -n "${PROFILE}" ]] || die "--profile is required"
 [[ -n "${BOX_HOST}" ]] || die "--box-host is required"
-[[ -f "${CONTRACT_DIR}/contract.env" ]] || die "contract.env not found in ${CONTRACT_DIR}"
 
 profile_env="${CONTRACT_DIR}/profiles/${PROFILE}/profile.env"
 [[ -f "${profile_env}" ]] || die "profile.env not found for profile ${PROFILE}"
@@ -73,18 +72,6 @@ env_value() {
     return 0
   done < "${file}"
   return 1
-}
-
-contract_value() {
-  local key="$1"
-  local default_value="$2"
-  local value
-  value="$(env_value "${CONTRACT_DIR}/contract.env" "${key}" || true)"
-  if [[ -n "${value}" ]]; then
-    printf '%s\n' "${value}"
-  else
-    printf '%s\n' "${default_value}"
-  fi
 }
 
 profile_value() {
@@ -110,14 +97,6 @@ if [[ -z "${STORAGE_CLASS}" ]]; then
 fi
 if [[ -z "${SELECTED_APPS_FILE}" ]]; then
   SELECTED_APPS_FILE="${CONTRACT_DIR}/selected-apps.json"
-fi
-
-CONTRACT_SOURCE="$(contract_value "OURBOX_PLATFORM_CONTRACT_SOURCE" "https://github.com/techofourown/sw-ourbox-os")"
-CONTRACT_REVISION="$(contract_value "OURBOX_PLATFORM_CONTRACT_REVISION" "unknown")"
-CONTRACT_VERSION="$(contract_value "OURBOX_PLATFORM_CONTRACT_VERSION" "dev")"
-CONTRACT_DIGEST="unknown"
-if [[ -f "${CONTRACT_DIR}/contract.digest" ]]; then
-  CONTRACT_DIGEST="$(tr -d '\n' < "${CONTRACT_DIR}/contract.digest")"
 fi
 
 PROFILE_KIND="$(profile_value "OURBOX_PLATFORM_PROFILE_KIND" "${PROFILE}")"
@@ -189,10 +168,6 @@ if [[ -f "${CONTRACT_DIR}/images.lock.json" ]]; then
 fi
 
 cat <<EOF
-OURBOX_PLATFORM_CONTRACT_SOURCE=${CONTRACT_SOURCE}
-OURBOX_PLATFORM_CONTRACT_REVISION=${CONTRACT_REVISION}
-OURBOX_PLATFORM_CONTRACT_VERSION=${CONTRACT_VERSION}
-OURBOX_PLATFORM_CONTRACT_DIGEST=${CONTRACT_DIGEST}
 OURBOX_PLATFORM_PROFILE=${PROFILE}
 OURBOX_PLATFORM_PROFILE_KIND=${PROFILE_KIND}
 OURBOX_PLATFORM_ROUTE_MODEL=${ROUTE_MODEL}

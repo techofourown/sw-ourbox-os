@@ -212,10 +212,12 @@ The schema defines the common envelope. These sections define what each family M
 ### 5.1 Platform-contract
 
 #### Required `artifact_metadata` keys
-- `OURBOX_PLATFORM_CONTRACT_SOURCE`
-- `OURBOX_PLATFORM_CONTRACT_REVISION`
-- `OURBOX_PLATFORM_CONTRACT_VERSION`
-- `OURBOX_PLATFORM_CONTRACT_CREATED`
+
+None.
+
+The platform-contract publish path currently relies on the common record
+envelope plus `input_metadata`. Family-specific artifact metadata may remain an
+empty object.
 
 #### Required `input_metadata` keys
 - `PROFILE_DEFAULT`
@@ -262,14 +264,9 @@ This record should describe the artifact that was actually published, not every 
 - `K3S_VERSION`
 - `OURBOX_PLATFORM_PROFILE`
 - `OURBOX_PLATFORM_IMAGES_LOCK_SHA256`
-- `OURBOX_PLATFORM_CONTRACT_DIGEST`
 
-For official publication, `OURBOX_PLATFORM_CONTRACT_DIGEST` is mandatory because
-the substrate bundle is contract-bound to the exact published platform-contract
-artifact identity.
-
-If the build can truthfully surface additional contract-input metadata, it
-should include it here.
+If the build can truthfully surface additional non-gating substrate inputs, it
+should include them here.
 
 #### Required `dist_files` keys
 - `payload`
@@ -336,12 +333,7 @@ These examples are illustrative. The real records must be produced from actual b
   "source_commit": "93e087a671428ee9e87688d039a8715abea735a7",
   "source_version": "v0.10.1",
   "created": "2026-03-08T14:00:05Z",
-  "artifact_metadata": {
-    "OURBOX_PLATFORM_CONTRACT_SOURCE": "https://github.com/techofourown/sw-ourbox-os",
-    "OURBOX_PLATFORM_CONTRACT_REVISION": "93e087a671428ee9e87688d039a8715abea735a7",
-    "OURBOX_PLATFORM_CONTRACT_VERSION": "v0.10.1",
-    "OURBOX_PLATFORM_CONTRACT_CREATED": "2026-03-08T14:00:05Z"
-  },
+  "artifact_metadata": {},
   "input_metadata": {
     "PROFILE_DEFAULT": "demo-apps"
   },
@@ -412,7 +404,6 @@ These examples are illustrative. The real records must be produced from actual b
   },
   "input_metadata": {
     "K3S_VERSION": "v1.35.0+k3s1",
-    "OURBOX_PLATFORM_CONTRACT_DIGEST": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "OURBOX_PLATFORM_PROFILE": "demo-apps",
     "OURBOX_PLATFORM_IMAGES_LOCK_SHA256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },

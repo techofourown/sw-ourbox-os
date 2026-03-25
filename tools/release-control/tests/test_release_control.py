@@ -588,7 +588,6 @@ class ReleaseControlTests(unittest.TestCase):
                 "input_metadata": {
                     "K3S_VERSION": "v1.35.0+k3s1",
                     "OURBOX_PLATFORM_PROFILE": "demo-apps",
-                    "OURBOX_PLATFORM_CONTRACT_DIGEST": "sha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157",
                     "OURBOX_PLATFORM_IMAGES_LOCK_SHA256": "f6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118",
                 },
                 "dist_files": {
@@ -602,8 +601,8 @@ class ReleaseControlTests(unittest.TestCase):
             artifact_record_path.write_text(json.dumps(artifact_record, indent=2) + "\n", encoding="utf-8")
             existing_catalog = "\n".join(
                 [
-                    "channel\ttag\tcreated\tversion\trevision\tarch\tplatform_contract_digest\tplatform_profile\tk3s_version\tplatform_images_lock_sha256\tartifact_digest\tpinned_ref",
-                    "beta\tmain-old-arm64\t2026-03-10T00:00:00Z\tv0.15.0\t1111111111111111111111111111111111111111\tarm64\tsha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157\tdemo-apps\tv1.35.0+k3s1\t1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\tsha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\tghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                    "channel\ttag\tcreated\tversion\trevision\tarch\tplatform_profile\tk3s_version\tplatform_images_lock_sha256\tartifact_digest\tpinned_ref",
+                    "beta\tmain-old-arm64\t2026-03-10T00:00:00Z\tv0.15.0\t1111111111111111111111111111111111111111\tarm64\tdemo-apps\tv1.35.0+k3s1\t1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\tsha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\tghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
                 ]
             )
             env = {
@@ -644,9 +643,9 @@ class ReleaseControlTests(unittest.TestCase):
                 (capture_dir / "catalog.tsv").read_text(encoding="utf-8"),
                 "\n".join(
                     [
-                        "channel\ttag\tcreated\tversion\trevision\tarch\tplatform_contract_digest\tplatform_profile\tk3s_version\tplatform_images_lock_sha256\tartifact_digest\tpinned_ref",
-                        "beta\tmain-old-arm64\t2026-03-10T00:00:00Z\tv0.15.0\t1111111111111111111111111111111111111111\tarm64\tsha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157\tdemo-apps\tv1.35.0+k3s1\t1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\tsha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\tghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-                        "stable\tv0.15.1-arm64\t2026-03-11T05:00:00Z\tv0.15.1\t6472fb5919d187daf832082eeaef6086b336a632\tarm64\tsha256:134129e3edaf366728f30c6f86f431c02ec9200793f77f18495cd4d341d90157\tdemo-apps\tv1.35.0+k3s1\tf6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118\tsha256:3f228e4a091b017f156224c663648158d774c7dfcefefdc1cda303023ce20014\tghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:3f228e4a091b017f156224c663648158d774c7dfcefefdc1cda303023ce20014",
+                        "channel\ttag\tcreated\tversion\trevision\tarch\tplatform_profile\tk3s_version\tplatform_images_lock_sha256\tartifact_digest\tpinned_ref",
+                        "beta\tmain-old-arm64\t2026-03-10T00:00:00Z\tv0.15.0\t1111111111111111111111111111111111111111\tarm64\tdemo-apps\tv1.35.0+k3s1\t1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef\tsha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\tghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                        "stable\tv0.15.1-arm64\t2026-03-11T05:00:00Z\tv0.15.1\t6472fb5919d187daf832082eeaef6086b336a632\tarm64\tdemo-apps\tv1.35.0+k3s1\tf6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118\tsha256:3f228e4a091b017f156224c663648158d774c7dfcefefdc1cda303023ce20014\tghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:3f228e4a091b017f156224c663648158d774c7dfcefefdc1cda303023ce20014",
                         "",
                     ]
                 ),

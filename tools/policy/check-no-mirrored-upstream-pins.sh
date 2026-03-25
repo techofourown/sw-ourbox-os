@@ -6,7 +6,7 @@ BAD_REF_RE='ghcr\.io/techofourown/[^[:space:]]+@sha256:[0-9a-f]{64}'
 CONTROL_SURFACE_RE='^(\.github/workflows/|release/|contracts/|schemas/|vendor/[^/]+/adapter\.json$|tools/media-adapter/adapter\.json$|tools/[^/]+\.upstream\.env$)'
 
 if [[ -d "${ROOT}/platform-contract/profiles" ]]; then
-  CONTROL_SURFACE_RE='^(\.github/workflows/|release/|contracts/|platform-contract/profiles/|schemas/|vendor/[^/]+/adapter\.json$|tools/media-adapter/adapter\.json$|tools/[^/]+\.upstream\.env$)'
+  CONTROL_SURFACE_RE='^(\.github/workflows/|release/|contracts/|platform-contract/profiles/|tools/ourbox-substrate/profiles/|schemas/|vendor/[^/]+/adapter\.json$|tools/media-adapter/adapter\.json$|tools/[^/]+\.upstream\.env$)'
 fi
 
 candidate_output=""

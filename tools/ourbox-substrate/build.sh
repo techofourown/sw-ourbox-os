@@ -7,8 +7,9 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST_DIR="${ROOT}/dist"
 VERSIONS_FILE="${ROOT}/tools/ourbox-substrate/versions.env"
-PLATFORM_PROFILE_ENV_FILE="${ROOT}/platform-contract/profiles/demo-apps/profile.env"
-PLATFORM_IMAGE_SOURCES_FILE="${ROOT}/platform-contract/profiles/demo-apps/platform-image-sources.json"
+SUBSTRATE_PROFILE_DIR="${ROOT}/tools/ourbox-substrate/profiles/demo-apps"
+PLATFORM_PROFILE_ENV_FILE="${SUBSTRATE_PROFILE_DIR}/profile.env"
+PLATFORM_IMAGE_SOURCES_FILE="${SUBSTRATE_PROFILE_DIR}/platform-image-sources.json"
 
 command -v curl >/dev/null 2>&1 || die "curl is required"
 command -v git >/dev/null 2>&1 || die "git is required (to stamp revision)"
@@ -30,10 +31,74 @@ esac
 source "${VERSIONS_FILE}"
 
 : "${K3S_VERSION:?K3S_VERSION not set in versions.env}"
-: "${OURBOX_PLATFORM_CONTRACT_REF:?OURBOX_PLATFORM_CONTRACT_REF is required}"
-: "${OURBOX_PLATFORM_CONTRACT_DIGEST:?OURBOX_PLATFORM_CONTRACT_DIGEST is required}"
-[[ "${OURBOX_PLATFORM_CONTRACT_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] \
-  || die "OURBOX_PLATFORM_CONTRACT_DIGEST must be a sha256 digest"
+
+resolve_k3s_images_asset() {
+  local arch="$1"
+  local release_json
+  local release_api
+  local api_token
+  local -a curl_args
+
+  release_json="$(mktemp)"
+  release_api="https://api.github.com/repos/k3s-io/k3s/releases/tags/${K3S_VERSION}"
+  curl_args=(
+    -fsSL
+    -H "Accept: application/vnd.github+json"
+    -o "${release_json}"
+  )
+
+  api_token="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+  if [[ -n "${api_token}" ]]; then
+    curl_args+=(-H "Authorization: Bearer ${api_token}")
+  fi
+
+  if ! curl "${curl_args[@]}" "${release_api}"; then
+    rm -f "${release_json}"
+    die "failed to fetch K3s release metadata for ${K3S_VERSION}"
+  fi
+
+  if ! python3 - "${release_json}" "${arch}" <<'PY'
+import json
+import sys
+
+with open(sys.argv[1], "r", encoding="utf-8") as fh:
+    data = json.load(fh)
+
+assets = data.get("assets")
+if not isinstance(assets, list):
+    raise SystemExit("release JSON must include an assets list")
+
+arch = sys.argv[2]
+matches = []
+for asset in assets:
+    if not isinstance(asset, dict):
+        continue
+    name = str(asset.get("name", "")).strip()
+    url = str(asset.get("browser_download_url", "")).strip()
+    if not name or not url:
+        continue
+    if not name.startswith("k3s-"):
+        continue
+    if not name.endswith(f"-{arch}.tar"):
+        continue
+    if "images" not in name:
+        continue
+    matches.append(url)
+
+if not matches:
+    raise SystemExit(f"release JSON did not contain a k3s images tar for arch={arch}")
+if len(matches) != 1:
+    raise SystemExit(f"release JSON matched multiple k3s images tar assets for arch={arch}")
+
+print(matches[0])
+PY
+  then
+    rm -f "${release_json}"
+    die "failed to resolve K3s images asset for ${arch}"
+  fi
+
+  rm -f "${release_json}"
+}
 
 # Select container CLI
 pick_cli() {
@@ -82,7 +147,7 @@ cleanup() {
 trap cleanup EXIT
 
 if [[ "$(cli_base "${CLI}")" == "podman" ]]; then
-  # The shared rootless overlay store on the airgap builder can produce
+  # The shared rootless overlay store on the substrate builder can produce
   # intermittent "reading blob ... no such file or directory" failures when
   # saving some multi-layer archives. Use an isolated transient store with vfs
   # so each bundle build operates on clean storage.
@@ -109,7 +174,7 @@ python3 "${ROOT}/tools/platform-contract/resolve-image-sources.py" \
   --require-used-by _platform \
   --output "${GENERATED_PLATFORM_IMAGES_LOCK}"
 
-log "Using checked-in platform profile metadata plus generated platform-owned image lock for substrate build."
+log "Using substrate-local platform profile metadata plus generated platform-owned image lock."
 
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -175,15 +240,15 @@ if [[ "${ARCH}" == "arm64" ]]; then
   BIN_URL="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}/k3s-arm64"
 fi
 
-airgap_tar="k3s-airgap-images-${ARCH}.tar"
-airgap_url="https://github.com/k3s-io/k3s/releases/download/${K3S_VERSION}/${airgap_tar}"
+k3s_images_tar="k3s-images-${ARCH}.tar"
+k3s_images_url="$(resolve_k3s_images_asset "${ARCH}")"
 
 log "Fetch k3s binary (${ARCH}) @ ${K3S_VERSION}"
 curl -fsSL -o "${build_dir}/k3s/k3s" "${BIN_URL}"
 chmod +x "${build_dir}/k3s/k3s"
 
-log "Fetch k3s airgap images (${ARCH}) @ ${K3S_VERSION}"
-curl -fsSL -o "${build_dir}/k3s/${airgap_tar}" "${airgap_url}"
+log "Fetch k3s images (${ARCH}) @ ${K3S_VERSION}"
+curl -fsSL -o "${build_dir}/k3s/${k3s_images_tar}" "${k3s_images_url}"
 
 # Helper to name tars exactly like Matchbox expects
 image_tar_name() {
@@ -246,8 +311,6 @@ OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=${REVISION}
 OURBOX_SUBSTRATE_VERSION=${VERSION}
 OURBOX_SUBSTRATE_CREATED=${CREATED}
-OURBOX_PLATFORM_CONTRACT_REF=${OURBOX_PLATFORM_CONTRACT_REF}
-OURBOX_PLATFORM_CONTRACT_DIGEST=${OURBOX_PLATFORM_CONTRACT_DIGEST}
 OURBOX_SUBSTRATE_ARCH=${ARCH}
 K3S_VERSION=${K3S_VERSION}
 OURBOX_PLATFORM_PROFILE=${PLATFORM_PROFILE}
@@ -263,8 +326,6 @@ OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=${REVISION}
 OURBOX_SUBSTRATE_VERSION=${VERSION}
 OURBOX_SUBSTRATE_CREATED=${CREATED}
-OURBOX_PLATFORM_CONTRACT_REF=${OURBOX_PLATFORM_CONTRACT_REF}
-OURBOX_PLATFORM_CONTRACT_DIGEST=${OURBOX_PLATFORM_CONTRACT_DIGEST}
 OURBOX_SUBSTRATE_ARCH=${ARCH}
 EOF_META
 

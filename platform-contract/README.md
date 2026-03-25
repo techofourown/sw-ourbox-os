@@ -41,7 +41,7 @@ The published artifact contains:
 - generated `manifests/`
 - generated `rendered/defaults/...`
 - verification and helper tools copied from `tools/platform-contract/`
-- contract metadata in `contract.env`
+- rendered/profile metadata in `contract.env`
 
 `platform-contract/manifests/` in the published bundle is generated output. The
 checked-in source of truth remains this directory plus the toolchain under
@@ -51,7 +51,7 @@ checked-in source of truth remains this directory plus the toolchain under
 
 This directory defines the contract consumed above the hardware seam:
 
-- generated data surfaces and contract metadata
+- generated data surfaces and render metadata
 - rendered manifests and verification surfaces
 - profile-specific render controls
 
@@ -60,9 +60,10 @@ or for copied standalone catalog/image-lock defaults. Published application
 catalogs are expected to ship their own static app content in the selected app
 images rather than via `asset_dir` overlays from this tree.
 
-The same source tree also provides checked-in platform profile metadata and
-platform-owned image refs for the substrate bundle, but that bundle no longer
-re-renders the demo application fixtures just to derive those platform bytes.
+The substrate bundle now carries its own checked-in profile metadata and
+platform image source intent under `tools/ourbox-substrate/profiles/`, so the
+substance of this tree is the platform-contract artifact itself rather than a
+shared source location for substrate build inputs.
 
 ## Build and validation
 

@@ -20,10 +20,6 @@ esac
 
 command -v oras >/dev/null 2>&1 || die "oras is required (https://oras.land/)"
 command -v node >/dev/null 2>&1 || die "node is required for schema validation of publish records"
-: "${OURBOX_PLATFORM_CONTRACT_REF:?OURBOX_PLATFORM_CONTRACT_REF is required}"
-: "${OURBOX_PLATFORM_CONTRACT_DIGEST:?OURBOX_PLATFORM_CONTRACT_DIGEST is required}"
-[[ "${OURBOX_PLATFORM_CONTRACT_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] \
-  || die "OURBOX_PLATFORM_CONTRACT_DIGEST must be a sha256 digest"
 [[ -z "${OURBOX_APPLICATION_CATALOG_REF:-}" ]] \
   || die "ourbox-substrate publish no longer accepts OURBOX_APPLICATION_CATALOG_REF"
 [[ -z "${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-}" ]] \
@@ -84,7 +80,6 @@ python3 "${ROOT}/tools/publish-records/write-publish-record.py" \
   --artifact-metadata-env "${DIST_DIR}/ourbox-substrate.meta.env" \
   --input K3S_VERSION="${K3S_VERSION}" \
   --input OURBOX_PLATFORM_PROFILE="${OURBOX_PLATFORM_PROFILE}" \
-  --input OURBOX_PLATFORM_CONTRACT_DIGEST="${OURBOX_PLATFORM_CONTRACT_DIGEST}" \
   --input OURBOX_PLATFORM_IMAGES_LOCK_SHA256="${OURBOX_PLATFORM_IMAGES_LOCK_SHA256}" \
   --dist-file payload=dist/ourbox-substrate.tar.gz \
   --dist-file meta_env=dist/ourbox-substrate.meta.env \

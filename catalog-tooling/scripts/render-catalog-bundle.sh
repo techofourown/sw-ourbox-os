@@ -93,10 +93,6 @@ if profile.get("OURBOX_APPLICATION_CATALOG_NAME_SLUG") != name_slug:
 if profile.get("OURBOX_APPLICATION_CATALOG_DEFAULT_APP_IDS") != ",".join(default_app_ids):
     raise SystemExit("profile.env default app ids do not match catalog.json")
 
-platform_contract_digest = os.environ.get("OURBOX_PLATFORM_CONTRACT_DIGEST", "").strip()
-if not DIGEST_RE.fullmatch(platform_contract_digest):
-    raise SystemExit("OURBOX_PLATFORM_CONTRACT_DIGEST must be set in the environment")
-
 app_ids: set[str] = set()
 image_names_used_by_catalog: dict[str, set[str]] = {}
 for app in apps:
@@ -196,7 +192,6 @@ lines = [
     f"OURBOX_APPLICATION_CATALOG_DEFAULT_APP_IDS={','.join(default_app_ids)}",
     f"OURBOX_APPLICATION_CATALOG_APP_COUNT={len(apps)}",
     f"OURBOX_APPLICATION_CATALOG_IMAGE_COUNT={len(resolved_entries)}",
-    f"OURBOX_PLATFORM_CONTRACT_DIGEST={platform_contract_digest}",
 ]
 manifest_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 PY

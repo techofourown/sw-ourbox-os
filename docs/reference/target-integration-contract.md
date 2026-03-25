@@ -115,19 +115,26 @@ Minimum required metadata fields:
 - `OURBOX_PRODUCT`
 - `OURBOX_TARGET`
 - `OURBOX_VERSION`
-- `OURBOX_PLATFORM_CONTRACT_SOURCE`
-- `OURBOX_PLATFORM_CONTRACT_REVISION`
 
 Recommended additional fields:
 - `OURBOX_DEVICE`
 - `OURBOX_SKU`
 - `OURBOX_VARIANT`
-- `OURBOX_PLATFORM_CONTRACT_VERSION`
-- `OURBOX_PLATFORM_CONTRACT_DIGEST`
 - `OURBOX_OS_ARTIFACT_SOURCE` or `OURBOX_OS_REPO`
 - `OURBOX_OS_ARTIFACT_REF`
 - `OURBOX_OS_ARTIFACT_DIGEST`
 - `OURBOX_OS_IMAGE_SHA256` (for file-shaped payloads)
+- `OURBOX_SUBSTRATE_SOURCE`
+- `OURBOX_SUBSTRATE_REVISION`
+- `OURBOX_SUBSTRATE_VERSION`
+- `OURBOX_SUBSTRATE_CREATED`
+- `OURBOX_SUBSTRATE_ARCH`
+- `OURBOX_SUBSTRATE_PROFILE`
+- `OURBOX_SUBSTRATE_K3S_VERSION`
+- `OURBOX_SUBSTRATE_IMAGES_LOCK_SHA256`
+- `OURBOX_SUBSTRATE_ARTIFACT_SOURCE`
+- `OURBOX_SUBSTRATE_REF`
+- `OURBOX_SUBSTRATE_DIGEST`
 - `OURBOX_INSTALLER_ID`
 - `OURBOX_INSTALLER_VERSION`
 - `OURBOX_INSTALLER_GIT_HASH`
@@ -140,7 +147,7 @@ Recommended additional fields:
 The goal is that an operator can answer:
 - what am I running,
 - where did it come from,
-- what exact platform contract did it correspond to?
+- what exact upstream OS and substrate artifacts did it correspond to?
 
 ### 5.3 Persistent data contract
 
@@ -277,7 +284,7 @@ violations.
 | Boot chain / firmware | Yes | Secure boot, QSPI, EEPROM, bootloader, and vendor requirements may differ. |
 | GPU or accelerator stack | Yes | NVIDIA and other target-specific driver/runtime stacks may require repo-local handling. |
 | Partitioning / storage layout | Yes | The stable outcome matters more than identical partition tables. |
-| Flashing or installer transport | Yes | SD, USB, direct host flashing, recovery mode, network install, or airgap staging may all be valid. |
+| Flashing or installer transport | Yes | SD, USB, direct host flashing, recovery mode, network install, or offline staging may all be valid. |
 | Installer UX | Yes | Interactive installer, host-side flasher, or prebuilt image writing can all fit. |
 
 Divergence is acceptable when it is:
