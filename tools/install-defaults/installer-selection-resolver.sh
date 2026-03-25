@@ -642,10 +642,11 @@ ourbox_substrate_catalog_entries() {
     {
       created = $(idx["created"])
       arch = $(idx["arch"])
+      profile = $(idx["platform_profile"])
       lock_sha = $(idx["platform_images_lock_sha256"])
       digest = $(idx["artifact_digest"])
       pinned = $(idx["pinned_ref"])
-      if (created == "" || arch == "") {
+      if (created == "" || arch == "" || profile == "") {
         next
       }
       if (arch !~ /^(arm64|amd64)$/) {
@@ -660,7 +661,7 @@ ourbox_substrate_catalog_entries() {
       if (pinned !~ /^[^[:space:]]+@sha256:[0-9a-f]{64}$/) {
         next
       }
-      print $(idx["channel"]) "\t" $(idx["tag"]) "\t" created "\t" $(idx["version"]) "\t" $(idx["revision"]) "\t" arch "\t" $(idx["platform_profile"]) "\t" $(idx["k3s_version"]) "\t" $(idx["platform_images_lock_sha256"]) "\t" digest "\t" pinned
+      print $(idx["channel"]) "\t" $(idx["tag"]) "\t" created "\t" $(idx["version"]) "\t" $(idx["revision"]) "\t" arch "\t" profile "\t" $(idx["k3s_version"]) "\t" $(idx["platform_images_lock_sha256"]) "\t" digest "\t" pinned
     }
   ' "${catalog_tsv}" | sort -t $'\t' -k3,3r -k2,2r
 }
@@ -704,7 +705,7 @@ ourbox_substrate_determine_channel_ref() {
   catalog_tsv="${catalog_dir}/catalog.tsv"
   catalog_ref="$(ourbox_substrate_catalog_newest_ref "${catalog_tsv}" "${channel}" "${OURBOX_SUBSTRATE_ARCH:-}" || true)"
   if ! ourbox_selection_is_digest_pinned_ref "${catalog_ref}"; then
-    ourbox_selection_log "Substrate catalog has no valid digest-pinned entry for channel '${channel}'."
+    ourbox_selection_log "Substrate catalog has no valid digest-pinned entry for channel '${channel}' and arch '${OURBOX_SUBSTRATE_ARCH:-unknown}'."
     return 1
   fi
 
@@ -851,7 +852,7 @@ ourbox_substrate_selection_select_from_catalog_interactive() {
   echo "Substrate catalog entries (${OURBOX_SUBSTRATE_CATALOG_REF}):"
   for chosen in "${entries[@]}"; do
     IFS=$'\t' read -r channel tag created version _revision _arch profile _k3s_version _lock_sha _artifact_digest pinned_ref <<<"${chosen}"
-    printf "  %d) %-10s %-24s %s %s\n" "${i}" "${channel}" "${tag}" "${version}" "${created}"
+    printf "  %d) %-10s %-24s %s %s %s\n" "${i}" "${channel}" "${tag}" "${version}" "${created}" "${profile}"
     i=$((i + 1))
   done
 
@@ -871,7 +872,7 @@ ourbox_substrate_selection_select_from_catalog_interactive() {
   OURBOX_SUBSTRATE_SELECTED_REF="${pinned_ref}"
   OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE="catalog"
   OURBOX_SUBSTRATE_RELEASE_CHANNEL="${channel}"
-  ourbox_selection_log "Selected ${OURBOX_SUBSTRATE_SELECTED_REF} (channel=${channel}, version=${version})"
+  ourbox_selection_log "Selected ${OURBOX_SUBSTRATE_SELECTED_REF} (channel=${channel}, version=${version}, profile=${profile})"
 }
 
 ourbox_substrate_selection_prompt_custom_ref_interactive() {

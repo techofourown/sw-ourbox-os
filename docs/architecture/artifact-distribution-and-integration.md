@@ -104,23 +104,27 @@ They SHOULD document how they satisfy the target integration contract:
 
 ### Required (documented now; implemented later)
 
-1) **Consumer must be able to pin the platform contract by digest**
-- The image build must have a way to consume a platform contract reference like:
+1) **Consumers must be able to pin upstream OCI artifacts by digest**
+- The image build should have a way to consume immutable refs such as:
   - `.../platform-contract@sha256:...`
+  - `.../ourbox-substrate@sha256:...`
 
-2) **Image must record what platform contract it shipped**
-The installed system SHOULD record:
-- `OURBOX_PLATFORM_CONTRACT_SOURCE`
-- `OURBOX_PLATFORM_CONTRACT_REVISION`
-- `OURBOX_PLATFORM_CONTRACT_VERSION`
+2) **Images must record what upstream artifacts actually shipped**
+The installed system SHOULD record the upstream artifact identities that matter
+to operators, such as:
+- `OURBOX_OS_ARTIFACT_REF`
+- `OURBOX_OS_ARTIFACT_DIGEST`
+- `OURBOX_SUBSTRATE_REF`
+- `OURBOX_SUBSTRATE_DIGEST`
+- `OURBOX_INSTALL_SELECTION_SOURCE`
 
 Recommended location:
 - `/etc/ourbox/release`
 
-3) **Airgap is a packaging concern, not an identity concern**
-- Airgap bundles may embed the contract and image tars.
+3) **Substrate is a packaging concern, not a second identity scheme**
+- Substrate bundles may embed k3s bytes and platform image tar payloads.
 - Identity remains digest-based.
-- In an airgapped environment, the device should still be able to answer: "what digests are these bits?"
+- In an offline environment, the device should still be able to answer: "what exact pinned artifacts am I running?"
 
 4) **Installer defaults are upstream selection data, not target-runtime state**
 - Host-side compose tools may pull `install-defaults` by OCI ref while selecting artifacts.
@@ -135,7 +139,7 @@ Recommended location:
 5) **Consumer must expose an operator-readable installed-system identity**
 At minimum, an operator should be able to determine:
 - which target build is installed,
-- which platform contract source/revision it corresponds to,
+- which upstream OS and substrate artifacts it corresponds to,
 - and where target-specific logs or bootstrap status can be inspected.
 
 6) **Persistent-data behavior must be documented**
@@ -143,9 +147,9 @@ At minimum, an operator should be able to determine:
 - The preferred canonical data root is `/data`, but justified target-specific divergence is allowed.
 
 ### Consumer pinning (operational)
-- Consumers SHOULD pin `ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:<digest>`.
-- The platform-contract workflow writes the digest to `dist/platform-contract.ref` (uploaded as a workflow artifact for each publish).
-- DIY users can also pull `:edge` and read the digest from the ORAS output or GHCR UI before pinning.
+- Consumers SHOULD pin any upstream OCI artifact they consume by digest.
+- The publish workflows write pinned refs such as `dist/platform-contract.ref` and `dist/ourbox-substrate.<arch>.ref`.
+- DIY users can also pull moving tags such as `:edge`, resolve them, and then pin the resulting digest for repeatable builds.
 
 ---
 

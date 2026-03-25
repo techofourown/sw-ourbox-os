@@ -588,7 +588,6 @@ class ReleaseControlTests(unittest.TestCase):
                 "input_metadata": {
                     "K3S_VERSION": "v1.35.0+k3s1",
                     "OURBOX_PLATFORM_PROFILE": "demo-apps",
-
                     "OURBOX_PLATFORM_IMAGES_LOCK_SHA256": "f6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118",
                 },
                 "dist_files": {

@@ -8,13 +8,6 @@ FIXTURE_APPLICATION_CATALOG_FILE="${ROOT}/platform-contract/profiles/demo-apps/c
 FIXTURE_APPLICATION_IMAGE_SOURCES_FILE="${ROOT}/platform-contract/profiles/demo-apps/image-sources.json"
 FIXTURE_PLATFORM_IMAGE_SOURCES_FILE="${ROOT}/platform-contract/profiles/demo-apps/platform-image-sources.json"
 
-REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
-CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
-VERSION="dev"
-if git -C "${ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
-  VERSION="$(git -C "${ROOT}" describe --tags --exact-match)"
-fi
-
 render_expect_failure() {
   local label="$1"
   local expected="$2"
@@ -23,13 +16,7 @@ render_expect_failure() {
   shift 4
   local log_file="${TMP_ROOT}/${label}.log"
 
-  if OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
-     OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
-     OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os \
-     OURBOX_PLATFORM_CONTRACT_REVISION="${REVISION}" \
-     OURBOX_PLATFORM_CONTRACT_VERSION="${VERSION}" \
-     OURBOX_PLATFORM_CONTRACT_CREATED="${CREATED}" \
-     python3 "${ROOT}/tools/platform-contract/render-contract.py" \
+  if python3 "${ROOT}/tools/platform-contract/render-contract.py" \
        --contract-root "${contract_root}" \
        --output-dir "${out_dir}" \
        --profile demo-apps \

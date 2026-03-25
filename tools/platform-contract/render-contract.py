@@ -24,15 +24,6 @@ def literal_representer(dumper, data):
 LiteralDumper.add_representer(LiteralStr, literal_representer)
 
 
-METADATA_KEYS = (
-    "OURBOX_PLATFORM_CONTRACT_SCHEMA",
-    "OURBOX_PLATFORM_CONTRACT_KIND",
-    "OURBOX_PLATFORM_CONTRACT_SOURCE",
-    "OURBOX_PLATFORM_CONTRACT_REVISION",
-    "OURBOX_PLATFORM_CONTRACT_VERSION",
-    "OURBOX_PLATFORM_CONTRACT_CREATED",
-)
-
 CATALOG_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 SELECTION_MODES = {"catalog-defaults", "all-apps", "custom"}
 PLATFORM_LANDING_IMAGE_NAME = "_platform-landing"
@@ -62,21 +53,8 @@ def write_env_file(path: Path, data: dict[str, str]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def load_metadata(contract_root: Path) -> dict[str, str]:
-    data = {key: os.environ.get(key, "") for key in METADATA_KEYS}
-    data.update(load_env_file(contract_root / "contract.env"))
-    defaults = {
-        "OURBOX_PLATFORM_CONTRACT_SCHEMA": "1",
-        "OURBOX_PLATFORM_CONTRACT_KIND": "platform-contract",
-        "OURBOX_PLATFORM_CONTRACT_SOURCE": "https://github.com/techofourown/sw-ourbox-os",
-        "OURBOX_PLATFORM_CONTRACT_REVISION": "unknown",
-        "OURBOX_PLATFORM_CONTRACT_VERSION": "dev",
-        "OURBOX_PLATFORM_CONTRACT_CREATED": "unknown",
-    }
-    for key, value in defaults.items():
-        if not data.get(key):
-            data[key] = value
-    return data
+def load_metadata(_contract_root: Path) -> dict[str, str]:
+    return {}
 
 
 def yaml_dump(path: Path, document: dict) -> None:
@@ -531,7 +509,6 @@ def common_labels(metadata: dict[str, str], profile_env: dict[str, str], compone
         "app.kubernetes.io/part-of": "ourbox-os",
         "app.kubernetes.io/managed-by": "sw-ourbox-os",
         "ourbox.techofourown.io/contract-profile": profile_env["OURBOX_PLATFORM_PROFILE"],
-        "ourbox.techofourown.io/contract-revision": metadata["OURBOX_PLATFORM_CONTRACT_REVISION"][:63],
         "ourbox.techofourown.io/route-model": profile_env["OURBOX_PLATFORM_ROUTE_MODEL"],
     }
 
@@ -545,10 +522,6 @@ def common_annotations(
     storage_class: str,
 ) -> dict[str, str]:
     return {
-        "ourbox.techofourown.io/contract-source": metadata["OURBOX_PLATFORM_CONTRACT_SOURCE"],
-        "ourbox.techofourown.io/contract-revision": metadata["OURBOX_PLATFORM_CONTRACT_REVISION"],
-        "ourbox.techofourown.io/contract-version": metadata["OURBOX_PLATFORM_CONTRACT_VERSION"],
-        "ourbox.techofourown.io/contract-created": metadata["OURBOX_PLATFORM_CONTRACT_CREATED"],
         "ourbox.techofourown.io/contract-profile-kind": profile_env["OURBOX_PLATFORM_PROFILE_KIND"],
         "ourbox.techofourown.io/box-host": box_host,
         "ourbox.techofourown.io/tls-mode": tls_mode,
@@ -1336,10 +1309,6 @@ def main() -> int:
             name="ourbox-platform-contract",
             component="ourbox-platform-contract",
             data={
-                "contract_source": metadata["OURBOX_PLATFORM_CONTRACT_SOURCE"],
-                "contract_revision": metadata["OURBOX_PLATFORM_CONTRACT_REVISION"],
-                "contract_version": metadata["OURBOX_PLATFORM_CONTRACT_VERSION"],
-                "contract_created": metadata["OURBOX_PLATFORM_CONTRACT_CREATED"],
                 "profile": profile_env["OURBOX_PLATFORM_PROFILE"],
                 "profile_kind": profile_env["OURBOX_PLATFORM_PROFILE_KIND"],
                 "route_model": profile_env["OURBOX_PLATFORM_ROUTE_MODEL"],

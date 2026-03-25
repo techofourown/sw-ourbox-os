@@ -17,6 +17,7 @@ It exists because:
 
 - the selected OS payload already carries one baked substrate bundle,
 - operators may want to browse newer or different substrate bundles,
+- that browsing must stay bounded by the selected architecture and bundle shape,
 - and installed systems need a consistent provenance vocabulary describing which
   bundle actually won.
 
@@ -25,6 +26,7 @@ This is the shared contract above the hardware seam for:
 - baked-versus-remote bundle selection,
 - substrate catalog resolution,
 - digest resolution,
+- bundle-shape validation,
 - bundle-source determination,
 - and installed-system substrate provenance.
 
@@ -73,6 +75,10 @@ published `install-defaults` artifact:
 - `OURBOX_SUBSTRATE_REGISTRY_USERNAME`
 - `OURBOX_SUBSTRATE_REGISTRY_PASSWORD`
 
+If the selected OS payload already carries baked substrate metadata, the
+installer may use that metadata to decide whether the baked bundle already
+satisfies the selected ref and to record provenance accurately.
+
 ## 5. OurBox Substrate Artifact Shape
 
 The selected substrate bundle is an OCI artifact whose payload shape is:
@@ -93,7 +99,6 @@ Consumers must treat this as the authoritative upstream shape.
 - `OURBOX_SUBSTRATE_REVISION`
 - `OURBOX_SUBSTRATE_VERSION`
 - `OURBOX_SUBSTRATE_CREATED`
-- `OURBOX_PLATFORM_CONTRACT_REF`
 - `OURBOX_SUBSTRATE_ARCH`
 - `K3S_VERSION`
 - `OURBOX_PLATFORM_PROFILE`
@@ -129,6 +134,8 @@ Shared precedence is:
 1. `OURBOX_SUBSTRATE_REF`
 2. newest valid catalog row for `OURBOX_SUBSTRATE_CHANNEL`
 
+Catalog rows are filtered by the selected channel and required architecture.
+
 ## 8. Digest Resolution Rules
 
 If the selected ref is already digest-pinned, it is used directly.
@@ -160,7 +167,7 @@ If the selected ref equals the baked bundle ref:
 If the selected ref differs:
 
 - the installer may pull the selected bundle from the registry
-- the extracted bundle must pass arch validation before use
+- the extracted bundle must pass arch and bundle-shape validation before use
 - the final bundle source is `registry`
 
 In either case, the installed-system provenance must record the final selected

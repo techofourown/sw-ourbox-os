@@ -20,7 +20,7 @@ concurrency:
 
 jobs:
   revalidate:
-    runs-on: [self-hosted, official-heavy, airgap-builder]
+    runs-on: [self-hosted, official-heavy, substrate-builder]
     timeout-minutes: 180
     strategy:
       fail-fast: false
@@ -51,22 +51,6 @@ jobs:
       - name: Login to GHCR (for pulling upstream platform images)
         run: echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-      - name: Resolve published platform-contract ref
-        id: contract
-        run: |
-          set -euo pipefail
-          contract_repo="ghcr.io/techofourown/sw-ourbox-os/platform-contract"
-          digest="$(oras resolve "${contract_repo}:edge")"
-          [[ "${digest}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
-            echo "platform-contract :edge did not resolve to a valid digest: ${digest}" >&2
-            exit 1
-          }
-
-          {
-            echo "pinned_ref=${contract_repo}@${digest}"
-            echo "digest=${digest}"
-          } >> "${GITHUB_OUTPUT}"
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -84,7 +68,6 @@ jobs:
         env:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
-          OURBOX_PLATFORM_CONTRACT_REF: ${{ steps.contract.outputs.pinned_ref }}
         run: |
           set -euo pipefail
           ARCH="${ARCH}" ./tools/ourbox-substrate/build.sh

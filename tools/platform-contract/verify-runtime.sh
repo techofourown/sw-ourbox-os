@@ -97,7 +97,6 @@ done
 [[ -x "${K3S_BIN}" ]] || die "k3s binary not found: ${K3S_BIN}"
 [[ -f "${KUBECONFIG_PATH}" ]] || die "kubeconfig not found: ${KUBECONFIG_PATH}"
 [[ -f "${RENDER_DIR}/render.env" ]] || die "render.env not found in ${RENDER_DIR}"
-[[ -f "${CONTRACT_DIR}/contract.env" ]] || die "contract.env not found in ${CONTRACT_DIR}"
 command -v python3 >/dev/null 2>&1 || die "python3 is required for route verification"
 
 kubectl_cmd() {
@@ -154,12 +153,7 @@ PY
 
 # shellcheck disable=SC1090,SC1091
 source "${RENDER_DIR}/render.env"
-# shellcheck disable=SC1090,SC1091
-source "${CONTRACT_DIR}/contract.env"
 
-CONTRACT_SOURCE_EXPECTED="${OURBOX_PLATFORM_CONTRACT_SOURCE:-https://github.com/techofourown/sw-ourbox-os}"
-CONTRACT_REVISION_EXPECTED="${OURBOX_PLATFORM_CONTRACT_REVISION:-unknown}"
-CONTRACT_VERSION_EXPECTED="${OURBOX_PLATFORM_CONTRACT_VERSION:-unknown}"
 if [[ -f "${RELEASE_FILE}" ]]; then
   sanitize_release_metadata "${RELEASE_FILE}" || die "failed to parse release metadata file: ${RELEASE_FILE}"
   # shellcheck disable=SC1090,SC1091
@@ -263,9 +257,6 @@ PY
 }
 
 verify_metadata_configmap() {
-  [[ "$(metadata_value contract_source)" == "${CONTRACT_SOURCE_EXPECTED}" ]] || die "ConfigMap contract_source mismatch"
-  [[ "$(metadata_value contract_revision)" == "${CONTRACT_REVISION_EXPECTED}" ]] || die "ConfigMap contract_revision mismatch"
-  [[ "$(metadata_value contract_version)" == "${CONTRACT_VERSION_EXPECTED}" ]] || die "ConfigMap contract_version mismatch"
   [[ "$(metadata_value profile)" == "${OURBOX_PLATFORM_PROFILE}" ]] || die "ConfigMap profile mismatch"
   [[ "$(metadata_value route_model)" == "${OURBOX_PLATFORM_ROUTE_MODEL}" ]] || die "ConfigMap route_model mismatch"
   [[ "$(metadata_value box_host)" == "${BOX_HOST}" ]] || die "ConfigMap box_host mismatch"
@@ -275,12 +266,7 @@ verify_metadata_configmap() {
 }
 
 verify_release_metadata_parity() {
-  [[ -f "${RELEASE_FILE}" ]] || return 0
-  [[ "${OURBOX_PLATFORM_CONTRACT_SOURCE:-}" == "${CONTRACT_SOURCE_EXPECTED}" ]] || die "Release metadata contract source mismatch"
-  [[ "${OURBOX_PLATFORM_CONTRACT_REVISION:-}" == "${CONTRACT_REVISION_EXPECTED}" ]] || die "Release metadata contract revision mismatch"
-  if [[ -n "${OURBOX_PLATFORM_CONTRACT_VERSION:-}" ]]; then
-    [[ "${OURBOX_PLATFORM_CONTRACT_VERSION}" == "${CONTRACT_VERSION_EXPECTED}" ]] || die "Release metadata contract version mismatch"
-  fi
+  return 0
 }
 
 verify_traefik_logs() {

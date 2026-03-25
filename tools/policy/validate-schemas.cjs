@@ -38,12 +38,6 @@ function validatePublishRecordSemantics(filePath) {
   const distFiles = data.dist_files || {};
 
   if (data.artifact_family === 'platform-contract') {
-    requireKeys(artifactMetadata, [
-      'OURBOX_PLATFORM_CONTRACT_SOURCE',
-      'OURBOX_PLATFORM_CONTRACT_REVISION',
-      'OURBOX_PLATFORM_CONTRACT_VERSION',
-      'OURBOX_PLATFORM_CONTRACT_CREATED',
-    ], 'artifact_metadata', errors);
     requireKeys(inputMetadata, ['PROFILE_DEFAULT'], 'input_metadata', errors);
   }
 

@@ -7,8 +7,9 @@ die() { echo "ERROR: $*" >&2; exit 1; }
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DIST_DIR="${ROOT}/dist"
 VERSIONS_FILE="${ROOT}/tools/ourbox-substrate/versions.env"
-PLATFORM_PROFILE_ENV_FILE="${ROOT}/platform-contract/profiles/demo-apps/profile.env"
-PLATFORM_IMAGE_SOURCES_FILE="${ROOT}/platform-contract/profiles/demo-apps/platform-image-sources.json"
+SUBSTRATE_PROFILE_DIR="${ROOT}/tools/ourbox-substrate/profiles/demo-apps"
+PLATFORM_PROFILE_ENV_FILE="${SUBSTRATE_PROFILE_DIR}/profile.env"
+PLATFORM_IMAGE_SOURCES_FILE="${SUBSTRATE_PROFILE_DIR}/platform-image-sources.json"
 
 command -v curl >/dev/null 2>&1 || die "curl is required"
 command -v git >/dev/null 2>&1 || die "git is required (to stamp revision)"
@@ -30,7 +31,6 @@ esac
 source "${VERSIONS_FILE}"
 
 : "${K3S_VERSION:?K3S_VERSION not set in versions.env}"
-: "${OURBOX_PLATFORM_CONTRACT_REF:?OURBOX_PLATFORM_CONTRACT_REF is required}"
 
 # Select container CLI
 pick_cli() {
@@ -79,7 +79,7 @@ cleanup() {
 trap cleanup EXIT
 
 if [[ "$(cli_base "${CLI}")" == "podman" ]]; then
-  # The shared rootless overlay store on the airgap builder can produce
+  # The shared rootless overlay store on the substrate builder can produce
   # intermittent "reading blob ... no such file or directory" failures when
   # saving some multi-layer archives. Use an isolated transient store with vfs
   # so each bundle build operates on clean storage.
@@ -106,7 +106,7 @@ python3 "${ROOT}/tools/platform-contract/resolve-image-sources.py" \
   --require-used-by _platform \
   --output "${GENERATED_PLATFORM_IMAGES_LOCK}"
 
-log "Using checked-in platform profile metadata plus generated platform-owned image lock for substrate build."
+log "Using substrate-local platform profile metadata plus generated platform-owned image lock."
 
 REVISION="$(git -C "${ROOT}" rev-parse HEAD)"
 CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
@@ -243,7 +243,6 @@ OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=${REVISION}
 OURBOX_SUBSTRATE_VERSION=${VERSION}
 OURBOX_SUBSTRATE_CREATED=${CREATED}
-OURBOX_PLATFORM_CONTRACT_REF=${OURBOX_PLATFORM_CONTRACT_REF}
 OURBOX_SUBSTRATE_ARCH=${ARCH}
 K3S_VERSION=${K3S_VERSION}
 OURBOX_PLATFORM_PROFILE=${PLATFORM_PROFILE}
@@ -259,7 +258,6 @@ OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=${REVISION}
 OURBOX_SUBSTRATE_VERSION=${VERSION}
 OURBOX_SUBSTRATE_CREATED=${CREATED}
-OURBOX_PLATFORM_CONTRACT_REF=${OURBOX_PLATFORM_CONTRACT_REF}
 OURBOX_SUBSTRATE_ARCH=${ARCH}
 EOF_META
 

@@ -517,6 +517,8 @@ They define, among other things:
 - the remote install-defaults bundle shape,
 - row-order-independent catalog resolution by `created`,
 - fail-closed digest resolution,
+- the rule that substrate catalog rows and extracted bundles must satisfy the
+  selected architecture and bundle-shape validation,
 - and the standard provenance vocabulary recorded on installed systems.
 
 ### 8.4 Why catalogs exist
@@ -591,7 +593,7 @@ Catalogs do not replace digests. They make moving selectors legible by telling t
 
 - what immutable thing a selector points to
 - what version and source revision it represents
-- what platform contract it was associated with
+- what target shape it carries, such as arch, profile, and k3s version
 - what checksum or digest the final payload has
 
 ### 10.3 Future: signatures, SBOMs, provenance, compatibility metadata
@@ -621,7 +623,7 @@ Good present-tense language is:
 An installed OurBox system should be able to answer:
 
 - what exact OS payload was installed?
-- what platform contract did it correspond to?
+- what substrate bundle and platform profile did it correspond to?
 - where did the payload come from?
 - what default-selection path produced this result?
 - was the artifact selected by channel or by exact pinned ref?
@@ -634,13 +636,21 @@ The recommended home for this metadata is a stable local record such as:
 - `/etc/ourbox/release`
 - or another well-documented equivalent
 
-### 11.2 Platform contract fields
+### 11.2 Recommended substrate fields
 
-Per existing `sw-ourbox-os` artifact-distribution guidance, the installed system should surface at least:
+Where a target stages or selects `ourbox-substrate`, the installed system should surface:
 
-- `OURBOX_PLATFORM_CONTRACT_SOURCE`
-- `OURBOX_PLATFORM_CONTRACT_REVISION`
-- `OURBOX_PLATFORM_CONTRACT_VERSION`
+- `OURBOX_SUBSTRATE_SOURCE`
+- `OURBOX_SUBSTRATE_REVISION`
+- `OURBOX_SUBSTRATE_VERSION`
+- `OURBOX_SUBSTRATE_CREATED`
+- `OURBOX_SUBSTRATE_ARCH`
+- `OURBOX_SUBSTRATE_PROFILE`
+- `OURBOX_SUBSTRATE_K3S_VERSION`
+- `OURBOX_SUBSTRATE_IMAGES_LOCK_SHA256`
+- `OURBOX_SUBSTRATE_ARTIFACT_SOURCE`
+- `OURBOX_SUBSTRATE_REF`
+- `OURBOX_SUBSTRATE_DIGEST`
 
 ### 11.3 Recommended OS payload fields
 

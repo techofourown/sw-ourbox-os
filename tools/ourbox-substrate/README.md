@@ -26,7 +26,7 @@ Published lanes:
 It packages:
 
 - the `k3s` binary for one target architecture
-- the matching upstream k3s airgap image tar
+- the matching upstream k3s images tar
 - the platform-owned image archives listed in the generated
   `platform/images.lock.json`
 
@@ -34,10 +34,9 @@ The artifact is architecture-specific, but the source code is not split by
 architecture. `arm64` and `amd64` both use the same scripts here with a different
 `ARCH` value.
 
-Official publication is also bound to the exact published platform-contract
-artifact identity via:
-
-- `OURBOX_PLATFORM_CONTRACT_REF`
+Official publication builds from the checked-in platform profile metadata and
+generated platform-owned image lock in this repository. It does not carry a
+separate contract-digest compatibility gate.
 
 ## What is checked in vs fetched at build time
 
@@ -45,13 +44,13 @@ Checked in here and elsewhere in this repo:
 
 - `build.sh`, `publish.sh`, `promote.sh`
 - `versions.env` for pinned upstream k3s version
-- `platform-contract/profiles/demo-apps/profile.env`
-- `platform-contract/profiles/demo-apps/platform-image-sources.json`
+- `tools/ourbox-substrate/profiles/demo-apps/profile.env`
+- `tools/ourbox-substrate/profiles/demo-apps/platform-image-sources.json`
 
 Fetched during the build:
 
 - the upstream `k3s` binary for the selected architecture
-- the upstream `k3s-airgap-images-<arch>.tar`
+- the upstream `k3s-images-<arch>.tar`
 - each platform-owned image pinned in the generated `platform/images.lock.json`
 
 There is intentionally no checked-in `ourbox-substrate/` payload tree in this
@@ -83,7 +82,6 @@ The tarball contains:
 - `OURBOX_SUBSTRATE_REVISION`
 - `OURBOX_SUBSTRATE_VERSION`
 - `OURBOX_SUBSTRATE_CREATED`
-- `OURBOX_PLATFORM_CONTRACT_REF`
 - `OURBOX_SUBSTRATE_ARCH`
 - `K3S_VERSION`
 - `OURBOX_PLATFORM_PROFILE`
@@ -112,26 +110,21 @@ Catalog maintenance:
 
 Candidate publication behavior:
 
-- the official substrate publish workflow resolves `platform-contract:edge`
-- it then builds a platform-owned substrate bundle from `main`
+- the official substrate publish workflow builds a platform-owned substrate bundle from `main`
 - installer-time application catalog selection remains a separate concern and is
   not resolved during official substrate publication
 
 Build:
 
 ```bash
-OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 ARCH=arm64 ./tools/ourbox-substrate/build.sh
-OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 ARCH=amd64 ./tools/ourbox-substrate/build.sh
 ```
 
 Build and publish:
 
 ```bash
-OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 ARCH=arm64 ./tools/ourbox-substrate/publish.sh arm64 beta
-OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
 ARCH=amd64 ./tools/ourbox-substrate/publish.sh amd64 nightly
 ```
 
@@ -151,8 +144,8 @@ PROMOTE_SOURCE_PINNED_REF=ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha
 
 ## How official publication works
 
-- `.github/workflows/ourbox-substrate.yml` publishes the platform-contract first,
-  then builds contract-bound, platform-owned substrate bundles from `main`.
+- `.github/workflows/ourbox-substrate.yml` resolves the currently published
+  `platform-contract` ref, then builds platform-owned substrate bundles from `main`.
 - Official mainline publication moves `beta-<arch>`.
 - Scheduled integration publication moves `nightly-<arch>`.
 - Promotion workflows later re-tag the exact published digest into:

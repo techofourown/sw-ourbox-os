@@ -20,7 +20,6 @@ esac
 
 command -v oras >/dev/null 2>&1 || die "oras is required (https://oras.land/)"
 command -v node >/dev/null 2>&1 || die "node is required for schema validation of publish records"
-: "${OURBOX_PLATFORM_CONTRACT_REF:?OURBOX_PLATFORM_CONTRACT_REF is required}"
 [[ -z "${OURBOX_APPLICATION_CATALOG_REF:-}" ]] \
   || die "ourbox-substrate publish no longer accepts OURBOX_APPLICATION_CATALOG_REF"
 [[ -z "${OURBOX_ALLOW_FIXTURE_APPLICATION_CATALOG:-}" ]] \

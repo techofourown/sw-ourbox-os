@@ -12,8 +12,8 @@ and
 | Artifact | Registry path | Description |
 |---|---|---|
 | Platform contract | `ghcr.io/techofourown/sw-ourbox-os/platform-contract` | Baseline manifests, platform configuration, gateway/access-mode defaults, and contract metadata baked into every OurBox OS image |
-| OurBox Substrate (arm64) | `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate` (official lanes: `beta-arm64`, `nightly-arm64`, `stable-arm64`, `exp-labs-arm64`) | k3s binary + airgap images + platform images for ARM64 devices (Matchbox, Cinderbox) |
-| OurBox Substrate (amd64) | `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate` (official lanes: `beta-amd64`, `nightly-amd64`, `stable-amd64`, `exp-labs-amd64`) | k3s binary + airgap images + platform images for x86-64 devices (Woodbox) |
+| OurBox Substrate (arm64) | `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate` (official lanes: `beta-arm64`, `nightly-arm64`, `stable-arm64`, `exp-labs-arm64`) | k3s binary + k3s images tar + platform images for ARM64 devices (Matchbox, Cinderbox) |
+| OurBox Substrate (amd64) | `ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate` (official lanes: `beta-amd64`, `nightly-amd64`, `stable-amd64`, `exp-labs-amd64`) | k3s binary + k3s images tar + platform images for x86-64 devices (Woodbox) |
 | Install defaults | `ghcr.io/techofourown/sw-ourbox-os/install-defaults` | Installer configuration defaults baked into installer media |
 
 All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identity is by digest.
@@ -53,8 +53,8 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 |---|---|
 | Build platform contract | `./tools/platform-contract/build.sh` |
 | Publish platform contract | `./tools/platform-contract/publish.sh [tag]` |
-| Build ourbox-substrate | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... ARCH=arm64 ./tools/ourbox-substrate/build.sh` |
-| Publish ourbox-substrate | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... ARCH=arm64 ./tools/ourbox-substrate/publish.sh arm64 [tag]` |
+| Build ourbox-substrate | `ARCH=arm64 ./tools/ourbox-substrate/build.sh` |
+| Publish ourbox-substrate | `ARCH=arm64 ./tools/ourbox-substrate/publish.sh arm64 [tag]` |
 | Build install defaults | `./tools/install-defaults/build.sh` |
 | Publish install defaults | `TAG=edge ./tools/install-defaults/publish.sh [tag]` |
 | Validate GraphMD dataset | `npm test` |
@@ -75,7 +75,7 @@ image lock. No external application-catalog ref is accepted or required.
 
 | Workflow | File | Runner | Trigger |
 |---|---|---|---|
-| OurBox Substrate | `.github/workflows/ourbox-substrate.yml` | `[self-hosted, official-heavy, airgap-builder]` | Push to `main` (source-filtered) + scheduled nightly integration publish |
+| OurBox Substrate | `.github/workflows/ourbox-substrate.yml` | Dedicated self-hosted heavy-artifact runner labels | Push to `main` (source-filtered) + scheduled nightly integration publish |
 | OurBox Substrate Promote Release | `.github/workflows/ourbox-substrate-promote.yml` | `ubuntu-latest` | Candidate completion or release publication; promotes only when both candidate success and matching GitHub Release `published` or `prereleased` authorization are present |
 | Platform Contract | `.github/workflows/platform-contract.yml` | `ubuntu-latest` | Push to `main` (source-filtered) |
 | Platform Contract Promote Release | `.github/workflows/platform-contract-promote.yml` | `ubuntu-latest` | Candidate completion or release publication; promotes only when both OurBox Substrate candidate success and matching GitHub Release `published` authorization are present |
@@ -83,7 +83,7 @@ image lock. No external application-catalog ref is accepted or required.
 | Install Defaults Promote Stable | `.github/workflows/install-defaults-promote.yml` | `ubuntu-latest` | `workflow_run` after successful `Install Defaults` release publication for a matching non-prerelease `v*` tag |
 
 `ourbox-substrate.yml` runs on organization-controlled build infrastructure in the
-`official-heavy-artifacts` runner group, publishes the bound platform-contract
+`official-heavy-artifacts` runner group, publishes the sibling platform-contract
 artifact first, then publishes one immutable candidate digest per source revision
 and tags either `beta-<arch>` or `nightly-<arch>` from that digest. It appends
 catalog rows only from those official channel moves. `ourbox-substrate-promote.yml`
@@ -91,9 +91,9 @@ is lightweight and promotes the exact push-main candidate digest into
 `stable-<arch>`, `exp-labs-<arch>`, and `v*-<arch>` only after both the
 candidate run and a matching GitHub Release authorization exist; whichever
 arrives second wakes promotion. `platform-contract-promote.yml` follows that
-same dual-condition model for the bound platform-contract digest uploaded by
-the successful `OurBox Substrate` candidate run, so `platform-contract:v*` is
-the same artifact identity the promoted substrate bundles were built against.
+same dual-condition model for the platform-contract digest published from the
+same release path, so release promotion stays aligned without introducing a
+second heavy build.
 `platform-contract.yml` and `install-defaults.yml` run on GitHub-hosted runners
 (they are lightweight and do not require dedicated hardware).
 
@@ -156,7 +156,7 @@ does not materially affect a specific artifact. This is intentional: `paths-igno
 (over-builds) rather than risking silent skips.
 
 Release-event triggers are not filtered for the lightweight workflows that still use them.
-Airgap version promotion no longer dispatches a second heavy release build; it waits for the
+Substrate version promotion no longer dispatches a second heavy release build; it waits for the
 push-triggered candidate build to finish and then checks for matching release authorization.
 `install-defaults:stable` promotion likewise follows the successful release-publish workflow
 instead of racing it in parallel from the same release event.

@@ -55,10 +55,11 @@ resolve exact digest-pinned refs at workflow start.
 ### Workflow safety
 
 `tools/check-workflow-safety.sh` enforces:
-1. No self-hosted workflow triggered by `pull_request`/`pull_request_target` — prevents untrusted PR code on privileged airgap builders
+1. No self-hosted workflow triggered by `pull_request`/`pull_request_target` — prevents untrusted PR code on privileged heavy-artifact builders
 2. No official publish workflow exposes `workflow_dispatch` — official publication flows only from push-to-main or tag push
 
-Official publish workflows (`ourbox-substrate.yml`) run on `[self-hosted, official-heavy, airgap-builder]` per [ADR-0008](https://github.com/techofourown/org-techofourown/blob/main/docs/decisions/ADR-0008-adopt-organization-controlled-build-infrastructure-for-heavy-artifacts.md). Lightweight workflows (`platform-contract.yml`, `install-defaults.yml`) run on `ubuntu-latest`.
+Official publish workflows (`ourbox-substrate.yml`) run on the dedicated self-hosted heavy-artifact
+label set per [ADR-0008](https://github.com/techofourown/org-techofourown/blob/main/docs/decisions/ADR-0008-adopt-organization-controlled-build-infrastructure-for-heavy-artifacts.md). Lightweight workflows (`platform-contract.yml`, `install-defaults.yml`) run on `ubuntu-latest`.
 
 ## Conventions
 

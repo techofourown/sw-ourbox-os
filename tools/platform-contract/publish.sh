@@ -24,18 +24,24 @@ command -v node >/dev/null 2>&1 || {
 }
 
 "${ROOT}/tools/platform-contract/build.sh"
-# shellcheck disable=SC1090
-source "${DIST_DIR}/platform-contract.meta.env"
+
+SOURCE_REPO="https://github.com/techofourown/sw-ourbox-os"
+SOURCE_COMMIT="$(git -C "${ROOT}" rev-parse HEAD)"
+SOURCE_VERSION="dev"
+if git -C "${ROOT}" describe --tags --exact-match >/dev/null 2>&1; then
+  SOURCE_VERSION="$(git -C "${ROOT}" describe --tags --exact-match)"
+fi
+CREATED="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
 pushd "${ROOT}" >/dev/null
 set +e
 OUT="$(oras push "${REF}" \
   --artifact-type "${ARTIFACT_TYPE}" \
   "${BLOB_REL}:application/gzip" \
-  --annotation "org.opencontainers.image.source=${OURBOX_PLATFORM_CONTRACT_SOURCE}" \
-  --annotation "org.opencontainers.image.revision=${OURBOX_PLATFORM_CONTRACT_REVISION}" \
-  --annotation "org.opencontainers.image.version=${OURBOX_PLATFORM_CONTRACT_VERSION}" \
-  --annotation "org.opencontainers.image.created=${OURBOX_PLATFORM_CONTRACT_CREATED}" \
+  --annotation "org.opencontainers.image.source=${SOURCE_REPO}" \
+  --annotation "org.opencontainers.image.revision=${SOURCE_COMMIT}" \
+  --annotation "org.opencontainers.image.version=${SOURCE_VERSION}" \
+  --annotation "org.opencontainers.image.created=${CREATED}" \
   --annotation "techofourown.artifact.kind=platform-contract" \
   2>&1)"
 STATUS=$?
@@ -67,10 +73,10 @@ python3 "${ROOT}/tools/publish-records/write-publish-record.py" \
   --artifact-ref "${REF}" \
   --artifact-pinned-ref "${PINNED}" \
   --artifact-digest "${DIGEST}" \
-  --source-repo "${OURBOX_PLATFORM_CONTRACT_SOURCE}" \
-  --source-commit "${OURBOX_PLATFORM_CONTRACT_REVISION}" \
-  --source-version "${OURBOX_PLATFORM_CONTRACT_VERSION}" \
-  --created "${OURBOX_PLATFORM_CONTRACT_CREATED}" \
+  --source-repo "${SOURCE_REPO}" \
+  --source-commit "${SOURCE_COMMIT}" \
+  --source-version "${SOURCE_VERSION}" \
+  --created "${CREATED}" \
   --artifact-metadata-env "${DIST_DIR}/platform-contract.meta.env" \
   --input PROFILE_DEFAULT=demo-apps \
   --dist-file payload=dist/platform-contract.tar.gz \

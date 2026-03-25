@@ -386,6 +386,10 @@ This file is installer-facing catalog metadata. At minimum it should include:
 
 Keep it in sync with `catalog.json`.
 
+This file is catalog identity and default-selection metadata. It should track
+the catalog id, slug, and default app ids that the installer presents to the
+operator. Do not use it as a second compatibility gate.
+
 ### 4.10 Publish the catalog bundle
 
 Minimum publish behavior:
@@ -692,8 +696,9 @@ ghcr.io/johnbenac/anagolay-catalog:catalog-amd64
 ```
 
 The installer will resolve that index to the newest pinned bundle for the
-selected OS payload and make the catalog's apps available for selection. If you
-already have the exact bundle digest-pinned ref, that is also accepted.
+selected channel and target architecture, validate the bundle shape,
+and make the catalog's apps available for selection. If you already
+have the exact bundle digest-pinned ref, that is also accepted.
 
 ## 14. Minimal supported authoring surface
 

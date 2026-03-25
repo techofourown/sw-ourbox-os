@@ -62,13 +62,7 @@ render_demo_apps() {
     render_cmd+=(--selected-apps-file "${selected_apps_file}")
   fi
 
-  OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
-  OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
-  OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os \
-  OURBOX_PLATFORM_CONTRACT_REVISION="${REVISION}" \
-  OURBOX_PLATFORM_CONTRACT_VERSION="${VERSION}" \
-  OURBOX_PLATFORM_CONTRACT_CREATED="${CREATED}" \
-    "${render_cmd[@]}"
+  "${render_cmd[@]}"
 }
 
 render_expect_failure() {
@@ -77,13 +71,7 @@ render_expect_failure() {
   shift 2
   local log_file="${OUT_BASE}/${label}.log"
 
-  if OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
-    OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
-    OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os \
-    OURBOX_PLATFORM_CONTRACT_REVISION="${REVISION}" \
-    OURBOX_PLATFORM_CONTRACT_VERSION="${VERSION}" \
-    OURBOX_PLATFORM_CONTRACT_CREATED="${CREATED}" \
-    "$@" >"${log_file}" 2>&1; then
+  if "$@" >"${log_file}" 2>&1; then
     echo "expected failure for ${label}" >&2
     cat "${log_file}" >&2
     exit 1
@@ -268,12 +256,6 @@ cat > "${MERGED_SELECTED_APPS_FILE}" <<'EOF'
 }
 EOF
 
-OURBOX_PLATFORM_CONTRACT_SCHEMA=1 \
-OURBOX_PLATFORM_CONTRACT_KIND=platform-contract \
-OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os \
-OURBOX_PLATFORM_CONTRACT_REVISION="${REVISION}" \
-OURBOX_PLATFORM_CONTRACT_VERSION="${VERSION}" \
-OURBOX_PLATFORM_CONTRACT_CREATED="${CREATED}" \
 python3 "${ROOT}/tools/platform-contract/render-contract.py" \
   --contract-root "${ROOT}/platform-contract" \
   --output-dir "${OUT_DIR_MERGED}" \
@@ -493,13 +475,6 @@ render_expect_failure \
 
 mkdir -p "${IDENTITY_CONTRACT_DIR}"
 cp -a "${ROOT}/platform-contract/." "${IDENTITY_CONTRACT_DIR}/"
-cat > "${IDENTITY_CONTRACT_DIR}/contract.env" <<EOF_CONTRACT
-OURBOX_PLATFORM_CONTRACT_SOURCE=https://github.com/techofourown/sw-ourbox-os
-OURBOX_PLATFORM_CONTRACT_REVISION=${REVISION}
-OURBOX_PLATFORM_CONTRACT_VERSION=${VERSION}
-OURBOX_PLATFORM_CONTRACT_CREATED=${CREATED}
-EOF_CONTRACT
-printf 'sha256:%064d\n' 0 > "${IDENTITY_CONTRACT_DIR}/contract.digest"
 cp -f "${OUT_DIR_SUBSET_A}/catalog.json" "${IDENTITY_CONTRACT_DIR}/catalog.json"
 cp -f "${OUT_DIR_SUBSET_A}/images.lock.json" "${IDENTITY_CONTRACT_DIR}/images.lock.json"
 cp -f "${SELECTED_APPS_FILE}" "${IDENTITY_CONTRACT_DIR}/selected-apps.json"

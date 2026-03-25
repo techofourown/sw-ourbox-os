@@ -88,7 +88,7 @@ Recommended pattern:
 1. Publish digest-pinned catalog rows for each supported release lane.
 2. Keep `OS_CATALOG_TAG` aligned with the official catalog surface for that target.
 3. Keep `OURBOX_SUBSTRATE_CATALOG_TAG` aligned with the official substrate catalog surface for that installer architecture.
-4. Let consumers resolve the newest contract-compatible pinned ref from those catalogs.
+4. Let consumers resolve the newest pinned ref for the selected lane and architecture from those catalogs.
 5. Fail closed when the required upstream catalog data is missing or incompatible.
 
 CI publishing strategy:

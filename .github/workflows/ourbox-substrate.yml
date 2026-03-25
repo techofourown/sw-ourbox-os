@@ -94,7 +94,7 @@ jobs:
           echo "channel=${CHANNEL}" >> "${GITHUB_OUTPUT}"
           echo "immutable_tag=${IMMUTABLE_TAG}" >> "${GITHUB_OUTPUT}"
 
-      - name: Validate recovery contract inputs
+      - name: Validate recovery platform-contract ref
         id: contract
         run: |
           set -euo pipefail
@@ -145,6 +145,7 @@ jobs:
           }
 
           echo "pinned_ref=${pinned_ref}" >> "${GITHUB_OUTPUT}"
+
           mkdir -p dist
           printf '%s\n' "${pinned_ref}" > dist/platform-contract.ref
 
@@ -165,7 +166,7 @@ jobs:
          needs.context.result == 'success' &&
          needs.resolve-inputs.result == 'success')
       )
-    runs-on: [self-hosted, official-heavy, airgap-builder]
+    runs-on: [self-hosted, official-heavy, substrate-builder]
     strategy:
       fail-fast: false
       matrix:
@@ -193,7 +194,6 @@ jobs:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
           IMMUTABLE_TAG: ${{ needs.context.outputs.immutable_tag || needs.recovery-request.outputs.immutable_tag }}
-          OURBOX_PLATFORM_CONTRACT_REF: ${{ needs.resolve-inputs.outputs.pinned_ref || needs.recovery-request.outputs.pinned_ref }}
         run: |
           set -euo pipefail
           TAG="${IMMUTABLE_TAG}" \
@@ -265,7 +265,6 @@ jobs:
             echo "substrate bundle must not include platform/selected-apps.json" >&2
             exit 1
           fi
-
 
       - name: Upload publish outputs
         uses: actions/upload-artifact@v4
