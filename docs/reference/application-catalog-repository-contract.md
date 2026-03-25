@@ -43,7 +43,6 @@ An application catalog repository does not own:
 
 Each published application catalog bundle should:
 
-- be bound to an exact `OURBOX_PLATFORM_CONTRACT_DIGEST`
 - be architecture-specific when the downstream transport requires it
 - carry the current rendered image set for that catalog
 - carry `catalog.json` so the host-side installer can present:

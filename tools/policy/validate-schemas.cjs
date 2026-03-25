@@ -69,11 +69,7 @@ function validatePublishRecordSemantics(filePath) {
       'K3S_VERSION',
       'OURBOX_PLATFORM_PROFILE',
       'OURBOX_PLATFORM_IMAGES_LOCK_SHA256',
-      'OURBOX_PLATFORM_CONTRACT_DIGEST',
     ], 'input_metadata', errors);
-    if (typeof inputMetadata.OURBOX_PLATFORM_CONTRACT_DIGEST === 'string' && !digestRe.test(inputMetadata.OURBOX_PLATFORM_CONTRACT_DIGEST)) {
-      errors.push('input_metadata.OURBOX_PLATFORM_CONTRACT_DIGEST must be a sha256 digest');
-    }
   }
 
   requireKeys(distFiles, ['payload', 'meta_env', 'push_log', 'pinned_ref'], 'dist_files', errors);

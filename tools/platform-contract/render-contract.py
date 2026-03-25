@@ -31,7 +31,6 @@ METADATA_KEYS = (
     "OURBOX_PLATFORM_CONTRACT_REVISION",
     "OURBOX_PLATFORM_CONTRACT_VERSION",
     "OURBOX_PLATFORM_CONTRACT_CREATED",
-    "OURBOX_PLATFORM_CONTRACT_DIGEST",
 )
 
 CATALOG_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
@@ -66,9 +65,6 @@ def write_env_file(path: Path, data: dict[str, str]) -> None:
 def load_metadata(contract_root: Path) -> dict[str, str]:
     data = {key: os.environ.get(key, "") for key in METADATA_KEYS}
     data.update(load_env_file(contract_root / "contract.env"))
-    digest_path = contract_root / "contract.digest"
-    if digest_path.exists():
-        data["OURBOX_PLATFORM_CONTRACT_DIGEST"] = digest_path.read_text(encoding="utf-8").strip()
     defaults = {
         "OURBOX_PLATFORM_CONTRACT_SCHEMA": "1",
         "OURBOX_PLATFORM_CONTRACT_KIND": "platform-contract",
@@ -76,7 +72,6 @@ def load_metadata(contract_root: Path) -> dict[str, str]:
         "OURBOX_PLATFORM_CONTRACT_REVISION": "unknown",
         "OURBOX_PLATFORM_CONTRACT_VERSION": "dev",
         "OURBOX_PLATFORM_CONTRACT_CREATED": "unknown",
-        "OURBOX_PLATFORM_CONTRACT_DIGEST": "unknown",
     }
     for key, value in defaults.items():
         if not data.get(key):
@@ -554,7 +549,6 @@ def common_annotations(
         "ourbox.techofourown.io/contract-revision": metadata["OURBOX_PLATFORM_CONTRACT_REVISION"],
         "ourbox.techofourown.io/contract-version": metadata["OURBOX_PLATFORM_CONTRACT_VERSION"],
         "ourbox.techofourown.io/contract-created": metadata["OURBOX_PLATFORM_CONTRACT_CREATED"],
-        "ourbox.techofourown.io/contract-digest": metadata["OURBOX_PLATFORM_CONTRACT_DIGEST"],
         "ourbox.techofourown.io/contract-profile-kind": profile_env["OURBOX_PLATFORM_PROFILE_KIND"],
         "ourbox.techofourown.io/box-host": box_host,
         "ourbox.techofourown.io/tls-mode": tls_mode,
@@ -1346,7 +1340,6 @@ def main() -> int:
                 "contract_revision": metadata["OURBOX_PLATFORM_CONTRACT_REVISION"],
                 "contract_version": metadata["OURBOX_PLATFORM_CONTRACT_VERSION"],
                 "contract_created": metadata["OURBOX_PLATFORM_CONTRACT_CREATED"],
-                "contract_digest": metadata["OURBOX_PLATFORM_CONTRACT_DIGEST"],
                 "profile": profile_env["OURBOX_PLATFORM_PROFILE"],
                 "profile_kind": profile_env["OURBOX_PLATFORM_PROFILE_KIND"],
                 "route_model": profile_env["OURBOX_PLATFORM_ROUTE_MODEL"],

@@ -383,30 +383,8 @@ This file is installer-facing catalog metadata. At minimum it should include:
 - `OURBOX_APPLICATION_CATALOG_ID`
 - `OURBOX_APPLICATION_CATALOG_NAME_SLUG`
 - `OURBOX_APPLICATION_CATALOG_DEFAULT_APP_IDS`
-- `OURBOX_PLATFORM_CONTRACT_DIGEST`
 
 Keep it in sync with `catalog.json`.
-
-**Finding the platform contract digest.** The digest identifies the platform
-contract bundle that this catalog's apps are designed to run against. Use the
-digest of the current stable release:
-
-```
-oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:stable
-```
-
-Or use the `edge` channel for pre-release development:
-
-```
-oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge
-```
-
-The digest in `profile.env` is validated by the installer's
-`validate-media.sh` at compose time. If a mismatch is detected between the
-catalog bundle's digest and the OS payload's declared contract digest, the
-installer will reject the media. When the platform contract is updated,
-bump `OURBOX_PLATFORM_CONTRACT_DIGEST` in `profile.env`, re-run the publish
-workflow, and use the new catalog bundle ref in the installer.
 
 ### 4.10 Publish the catalog bundle
 
@@ -704,14 +682,6 @@ be merged by the installer.
 `image-sources.json` references these refs directly; no `techofourown`
 namespace is required.
 
-**Platform contract digest.** External catalog maintainers must still pin the
-same `OURBOX_PLATFORM_CONTRACT_DIGEST` as the OS payload they expect to run
-on. Obtain the digest from:
-
-```
-oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:stable
-```
-
 **Selecting an external catalog in the installer.** At the application catalog
 selection step, customize the catalog set and add the OCI ref published by the
 catalog repo's CI. Prefer the catalog index ref when the repo publishes one, for
@@ -721,10 +691,9 @@ example:
 ghcr.io/johnbenac/anagolay-catalog:catalog-amd64
 ```
 
-The installer will resolve that index to the newest contract-compatible pinned
-bundle for the selected OS payload, validate the platform contract digest
-binding, and make the catalog's apps available for selection. If you already
-have the exact bundle digest-pinned ref, that is also accepted.
+The installer will resolve that index to the newest pinned bundle for the
+selected OS payload and make the catalog's apps available for selection. If you
+already have the exact bundle digest-pinned ref, that is also accepted.
 
 ## 14. Minimal supported authoring surface
 

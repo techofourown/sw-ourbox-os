@@ -207,7 +207,7 @@ ourbox_selection_catalog_entries() {
       for (i = 1; i <= NF; i++) {
         idx[$i] = i
       }
-      if (!idx["channel"] || !idx["tag"] || !idx["created"] || !idx["version"] || !idx["platform_contract_digest"] || !idx["pinned_ref"]) {
+      if (!idx["channel"] || !idx["tag"] || !idx["created"] || !idx["version"] || !idx["pinned_ref"]) {
         exit 0
       }
       next
@@ -221,7 +221,7 @@ ourbox_selection_catalog_entries() {
       if (pinned !~ /^[^[:space:]]+@sha256:[0-9a-f]{64}$/) {
         next
       }
-      print $(idx["channel"]) "\t" $(idx["tag"]) "\t" created "\t" $(idx["version"]) "\t" $(idx["platform_contract_digest"]) "\t" pinned
+      print $(idx["channel"]) "\t" $(idx["tag"]) "\t" created "\t" $(idx["version"]) "\t" pinned
     }
   ' "${catalog_tsv}" | sort -t $'\t' -k3,3r -k2,2r
 }
@@ -388,7 +388,6 @@ ourbox_selection_select_from_catalog_interactive() {
   local tag=""
   local created=""
   local version=""
-  local contract=""
   local pinned_ref=""
   local i=1
   local -a entries=()
@@ -409,8 +408,8 @@ ourbox_selection_select_from_catalog_interactive() {
   echo
   echo "Catalog entries (${OURBOX_CATALOG_REF}):"
   for chosen in "${entries[@]}"; do
-    IFS=$'\t' read -r channel tag created version contract pinned_ref <<<"${chosen}"
-    printf "  %d) %-12s %-30s %s %s %s\n" "${i}" "${channel}" "${tag}" "${version}" "${created}" "${contract}"
+    IFS=$'\t' read -r channel tag created version pinned_ref <<<"${chosen}"
+    printf "  %d) %-12s %-30s %s %s\n" "${i}" "${channel}" "${tag}" "${version}" "${created}"
     i=$((i + 1))
   done
 
@@ -426,12 +425,12 @@ ourbox_selection_select_from_catalog_interactive() {
   fi
 
   chosen="${entries[$((pick - 1))]}"
-  IFS=$'\t' read -r channel tag created version contract pinned_ref <<<"${chosen}"
+  IFS=$'\t' read -r channel tag created version pinned_ref <<<"${chosen}"
   normalized_channel="$(ourbox_selection_normalize_release_channel "${channel}")"
   OURBOX_SELECTED_REF="${pinned_ref}"
   OURBOX_INSTALL_SELECTION_SOURCE="catalog"
   OURBOX_RELEASE_CHANNEL="${normalized_channel}"
-  ourbox_selection_log "Selected ${OURBOX_SELECTED_REF} (channel=${normalized_channel}, version=${version}, contract=${contract})"
+  ourbox_selection_log "Selected ${OURBOX_SELECTED_REF} (channel=${normalized_channel}, version=${version})"
 }
 
 ourbox_selection_prompt_custom_ref_interactive() {
@@ -599,12 +598,9 @@ ourbox_selection_finalize_registry_ref() {
 }
 
 ourbox_substrate_selection_require_context() {
-  local required_contract_digest="${1:-}"
-
   [[ -n "${OURBOX_SUBSTRATE_REPO:-}" ]] || ourbox_selection_die "OURBOX_SUBSTRATE_REPO is required for ourbox-substrate selection"
   [[ "${OURBOX_SUBSTRATE_ARCH:-}" =~ ^(arm64|amd64)$ ]] || ourbox_selection_die "OURBOX_SUBSTRATE_ARCH must be arm64 or amd64 for ourbox-substrate selection"
   [[ -n "${OURBOX_SUBSTRATE_CHANNEL:-}" ]] || ourbox_selection_die "OURBOX_SUBSTRATE_CHANNEL is required for ourbox-substrate selection"
-  ourbox_selection_is_sha256_digest "${required_contract_digest}" || ourbox_selection_die "required platform contract digest must be a sha256:<64 hex> for ourbox-substrate selection"
 }
 
 ourbox_substrate_selection_pull_catalog() {
@@ -638,7 +634,7 @@ ourbox_substrate_catalog_entries() {
       for (i = 1; i <= NF; i++) {
         idx[$i] = i
       }
-      if (!idx["channel"] || !idx["tag"] || !idx["created"] || !idx["version"] || !idx["revision"] || !idx["arch"] || !idx["platform_contract_digest"] || !idx["platform_profile"] || !idx["k3s_version"] || !idx["platform_images_lock_sha256"] || !idx["artifact_digest"] || !idx["pinned_ref"]) {
+      if (!idx["channel"] || !idx["tag"] || !idx["created"] || !idx["version"] || !idx["revision"] || !idx["arch"] || !idx["platform_profile"] || !idx["k3s_version"] || !idx["platform_images_lock_sha256"] || !idx["artifact_digest"] || !idx["pinned_ref"]) {
         exit 0
       }
       next
@@ -646,17 +642,13 @@ ourbox_substrate_catalog_entries() {
     {
       created = $(idx["created"])
       arch = $(idx["arch"])
-      contract = $(idx["platform_contract_digest"])
       lock_sha = $(idx["platform_images_lock_sha256"])
       digest = $(idx["artifact_digest"])
       pinned = $(idx["pinned_ref"])
-      if (created == "" || arch == "" || contract == "") {
+      if (created == "" || arch == "") {
         next
       }
       if (arch !~ /^(arm64|amd64)$/) {
-        next
-      }
-      if (contract !~ /^sha256:[0-9a-f]{64}$/) {
         next
       }
       if (lock_sha !~ /^[0-9a-f]{64}$/) {
@@ -668,7 +660,7 @@ ourbox_substrate_catalog_entries() {
       if (pinned !~ /^[^[:space:]]+@sha256:[0-9a-f]{64}$/) {
         next
       }
-      print $(idx["channel"]) "\t" $(idx["tag"]) "\t" created "\t" $(idx["version"]) "\t" $(idx["revision"]) "\t" arch "\t" contract "\t" $(idx["platform_profile"]) "\t" $(idx["k3s_version"]) "\t" $(idx["platform_images_lock_sha256"]) "\t" digest "\t" pinned
+      print $(idx["channel"]) "\t" $(idx["tag"]) "\t" created "\t" $(idx["version"]) "\t" $(idx["revision"]) "\t" arch "\t" $(idx["platform_profile"]) "\t" $(idx["k3s_version"]) "\t" $(idx["platform_images_lock_sha256"]) "\t" digest "\t" pinned
     }
   ' "${catalog_tsv}" | sort -t $'\t' -k3,3r -k2,2r
 }
@@ -676,12 +668,11 @@ ourbox_substrate_catalog_entries() {
 ourbox_substrate_catalog_newest_ref() {
   local catalog_tsv="$1"
   local channel="$2"
-  local required_contract_digest="$3"
-  local required_arch="$4"
+  local required_arch="$3"
   local row=""
 
-  row="$(ourbox_substrate_catalog_entries "${catalog_tsv}" | awk -F'\t' -v ch="${channel}" -v digest="${required_contract_digest}" -v arch="${required_arch}" '
-    $1 == ch && $6 == arch && $7 == digest { print; exit }
+  row="$(ourbox_substrate_catalog_entries "${catalog_tsv}" | awk -F'\t' -v ch="${channel}" -v arch="${required_arch}" '
+    $1 == ch && $6 == arch { print; exit }
   ' || true)"
   [[ -n "${row}" ]] || return 1
   printf '%s\n' "${row##*$'\t'}"
@@ -689,12 +680,11 @@ ourbox_substrate_catalog_newest_ref() {
 
 ourbox_substrate_determine_channel_ref() {
   local catalog_dir="$1"
-  local required_contract_digest="$2"
-  local channel="${3:-${OURBOX_SUBSTRATE_CHANNEL}}"
+  local channel="${2:-${OURBOX_SUBSTRATE_CHANNEL}}"
   local catalog_tsv=""
   local catalog_ref=""
 
-  ourbox_substrate_selection_require_context "${required_contract_digest}"
+  ourbox_substrate_selection_require_context
 
   OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE=""
   OURBOX_SUBSTRATE_RELEASE_CHANNEL=""
@@ -712,9 +702,9 @@ ourbox_substrate_determine_channel_ref() {
   fi
 
   catalog_tsv="${catalog_dir}/catalog.tsv"
-  catalog_ref="$(ourbox_substrate_catalog_newest_ref "${catalog_tsv}" "${channel}" "${required_contract_digest}" "${OURBOX_SUBSTRATE_ARCH:-}" || true)"
+  catalog_ref="$(ourbox_substrate_catalog_newest_ref "${catalog_tsv}" "${channel}" "${OURBOX_SUBSTRATE_ARCH:-}" || true)"
   if ! ourbox_selection_is_digest_pinned_ref "${catalog_ref}"; then
-    ourbox_selection_log "Substrate catalog has no valid digest-pinned entry for channel '${channel}' and contract '${required_contract_digest}'."
+    ourbox_selection_log "Substrate catalog has no valid digest-pinned entry for channel '${channel}'."
     return 1
   fi
 
@@ -726,9 +716,8 @@ ourbox_substrate_determine_channel_ref() {
 
 ourbox_substrate_determine_default_ref() {
   local catalog_dir="$1"
-  local required_contract_digest="$2"
 
-  ourbox_substrate_selection_require_context "${required_contract_digest}"
+  ourbox_substrate_selection_require_context
 
   OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE=""
   OURBOX_SUBSTRATE_RELEASE_CHANNEL=""
@@ -741,7 +730,7 @@ ourbox_substrate_determine_default_ref() {
     return 0
   fi
 
-  ourbox_substrate_determine_channel_ref "${catalog_dir}" "${required_contract_digest}" "${OURBOX_SUBSTRATE_CHANNEL}"
+  ourbox_substrate_determine_channel_ref "${catalog_dir}" "${OURBOX_SUBSTRATE_CHANNEL}"
 }
 
 ourbox_substrate_selection_show_default_choice() {
@@ -767,7 +756,7 @@ ourbox_substrate_selection_show_default_choice() {
   if [[ "${default_available}" == "1" ]]; then
     echo "  [ENTER] Use default"
   fi
-  echo "  c       Choose channel (prefers newest contract-matching catalog row for that lane)"
+  echo "  c       Choose channel (prefers newest catalog row for that lane)"
   echo "  l       List from catalog (if available)"
   echo "  r       Enter custom OCI ref (tag or digest)"
   echo "  o       Override substrate repo (custom registry/fork)"
@@ -801,7 +790,6 @@ ourbox_substrate_selection_override_repo_interactive() {
 
 ourbox_substrate_selection_choose_channel_interactive() {
   local catalog_dir="$1"
-  local required_contract_digest="$2"
   local pick=""
 
   echo "Channels:"
@@ -822,12 +810,11 @@ ourbox_substrate_selection_choose_channel_interactive() {
       ;;
   esac
 
-  ourbox_substrate_determine_channel_ref "${catalog_dir}" "${required_contract_digest}" "${OURBOX_SUBSTRATE_CHANNEL}"
+  ourbox_substrate_determine_channel_ref "${catalog_dir}" "${OURBOX_SUBSTRATE_CHANNEL}"
 }
 
 ourbox_substrate_selection_select_from_catalog_interactive() {
   local catalog_dir="$1"
-  local required_contract_digest="$2"
   local catalog_tsv=""
   local pick=""
   local chosen=""
@@ -837,7 +824,6 @@ ourbox_substrate_selection_select_from_catalog_interactive() {
   local version=""
   local _revision=""
   local _arch=""
-  local contract=""
   local profile=""
   local _k3s_version=""
   local _lock_sha=""
@@ -853,19 +839,19 @@ ourbox_substrate_selection_select_from_catalog_interactive() {
   }
 
   catalog_tsv="${catalog_dir}/catalog.tsv"
-  mapfile -t entries < <(ourbox_substrate_catalog_entries "${catalog_tsv}" | awk -F'\t' -v digest="${required_contract_digest}" -v arch="${OURBOX_SUBSTRATE_ARCH:-}" '
-    $6 == arch && $7 == digest { print }
+  mapfile -t entries < <(ourbox_substrate_catalog_entries "${catalog_tsv}" | awk -F'\t' -v arch="${OURBOX_SUBSTRATE_ARCH:-}" '
+    $6 == arch { print }
   ')
   if [[ "${#entries[@]}" -eq 0 ]]; then
-    ourbox_selection_log "Substrate catalog pulled (${OURBOX_SUBSTRATE_CATALOG_REF}) but contained no matching rows for arch=${OURBOX_SUBSTRATE_ARCH:-unknown} contract=${required_contract_digest}."
+    ourbox_selection_log "Substrate catalog pulled (${OURBOX_SUBSTRATE_CATALOG_REF}) but contained no matching rows for arch=${OURBOX_SUBSTRATE_ARCH:-unknown}."
     return 1
   fi
 
   echo
   echo "Substrate catalog entries (${OURBOX_SUBSTRATE_CATALOG_REF}):"
   for chosen in "${entries[@]}"; do
-    IFS=$'\t' read -r channel tag created version _revision _arch contract profile _k3s_version _lock_sha _artifact_digest pinned_ref <<<"${chosen}"
-    printf "  %d) %-10s %-24s %s %s %s\n" "${i}" "${channel}" "${tag}" "${version}" "${created}" "${contract}"
+    IFS=$'\t' read -r channel tag created version _revision _arch profile _k3s_version _lock_sha _artifact_digest pinned_ref <<<"${chosen}"
+    printf "  %d) %-10s %-24s %s %s\n" "${i}" "${channel}" "${tag}" "${version}" "${created}"
     i=$((i + 1))
   done
 
@@ -881,11 +867,11 @@ ourbox_substrate_selection_select_from_catalog_interactive() {
   fi
 
   chosen="${entries[$((pick - 1))]}"
-  IFS=$'\t' read -r channel tag created version _revision _arch contract profile _k3s_version _lock_sha _artifact_digest pinned_ref <<<"${chosen}"
+  IFS=$'\t' read -r channel tag created version _revision _arch profile _k3s_version _lock_sha _artifact_digest pinned_ref <<<"${chosen}"
   OURBOX_SUBSTRATE_SELECTED_REF="${pinned_ref}"
   OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE="catalog"
   OURBOX_SUBSTRATE_RELEASE_CHANNEL="${channel}"
-  ourbox_selection_log "Selected ${OURBOX_SUBSTRATE_SELECTED_REF} (channel=${channel}, version=${version}, contract=${contract})"
+  ourbox_selection_log "Selected ${OURBOX_SUBSTRATE_SELECTED_REF} (channel=${channel}, version=${version})"
 }
 
 ourbox_substrate_selection_prompt_custom_ref_interactive() {
@@ -904,7 +890,6 @@ ourbox_substrate_selection_prompt_custom_ref_interactive() {
 
 ourbox_substrate_selection_interactive_select_ref() {
   local catalog_root="$1"
-  local required_contract_digest="$2"
   local default_catalog_dir="${catalog_root}/default"
   local channel_catalog_dir="${catalog_root}/channel"
   local list_catalog_dir="${catalog_root}/list"
@@ -919,7 +904,7 @@ ourbox_substrate_selection_interactive_select_ref() {
   OURBOX_SUBSTRATE_RELEASE_CHANNEL=""
 
   while [[ -z "${OURBOX_SUBSTRATE_SELECTED_REF}" ]]; do
-    if ourbox_substrate_determine_default_ref "${default_catalog_dir}" "${required_contract_digest}"; then
+    if ourbox_substrate_determine_default_ref "${default_catalog_dir}"; then
       default_ref="${OURBOX_SUBSTRATE_SELECTED_REF}"
       default_source="${OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE}"
       default_channel="${OURBOX_SUBSTRATE_RELEASE_CHANNEL}"
@@ -946,10 +931,10 @@ ourbox_substrate_selection_interactive_select_ref() {
         fi
         ;;
       c)
-        ourbox_substrate_selection_choose_channel_interactive "${channel_catalog_dir}" "${required_contract_digest}" || true
+        ourbox_substrate_selection_choose_channel_interactive "${channel_catalog_dir}" || true
         ;;
       l)
-        ourbox_substrate_selection_select_from_catalog_interactive "${list_catalog_dir}" "${required_contract_digest}" || true
+        ourbox_substrate_selection_select_from_catalog_interactive "${list_catalog_dir}" || true
         ;;
       r)
         ourbox_substrate_selection_prompt_custom_ref_interactive || true
@@ -981,15 +966,13 @@ ourbox_substrate_selection_finalize_registry_ref() {
 
 ourbox_substrate_selection_validate_extracted_bundle() {
   local bundle_dir="$1"
-  local required_contract_digest="$2"
-  local expected_arch="$3"
+  local expected_arch="$2"
   local manifest="${bundle_dir}/manifest.env"
   local k3s_images_tar="${bundle_dir}/k3s/k3s-images-${expected_arch}.tar"
   local manifest_substrate_source=""
   local manifest_substrate_revision=""
   local manifest_substrate_version=""
   local manifest_substrate_created=""
-  local manifest_platform_contract_digest=""
   local manifest_substrate_arch=""
   local manifest_k3s_version=""
   local manifest_platform_profile=""
@@ -1010,7 +993,7 @@ ourbox_substrate_selection_validate_extracted_bundle() {
   manifest_dump="$(
     (
       unset OURBOX_SUBSTRATE_SOURCE OURBOX_SUBSTRATE_REVISION OURBOX_SUBSTRATE_VERSION
-      unset OURBOX_SUBSTRATE_CREATED OURBOX_PLATFORM_CONTRACT_DIGEST OURBOX_SUBSTRATE_ARCH
+      unset OURBOX_SUBSTRATE_CREATED OURBOX_SUBSTRATE_ARCH
       unset K3S_VERSION OURBOX_PLATFORM_PROFILE OURBOX_PLATFORM_IMAGES_LOCK_PATH OURBOX_PLATFORM_IMAGES_LOCK_SHA256
       # shellcheck disable=SC1090
       source "${manifest}"
@@ -1019,7 +1002,6 @@ ourbox_substrate_selection_validate_extracted_bundle() {
         "${OURBOX_SUBSTRATE_REVISION-}" \
         "${OURBOX_SUBSTRATE_VERSION-}" \
         "${OURBOX_SUBSTRATE_CREATED-}" \
-        "${OURBOX_PLATFORM_CONTRACT_DIGEST-}" \
         "${OURBOX_SUBSTRATE_ARCH-}" \
         "${K3S_VERSION-}" \
         "${OURBOX_PLATFORM_PROFILE-}" \
@@ -1029,27 +1011,23 @@ ourbox_substrate_selection_validate_extracted_bundle() {
     )
   )" || ourbox_selection_die "failed to parse ourbox-substrate manifest: ${manifest}"
   mapfile -t manifest_fields <<<"${manifest_dump}"
-  [[ "${#manifest_fields[@]}" -eq 11 && "${manifest_fields[10]}" == "__OURBOX_SUBSTRATE_MANIFEST_END__" ]] \
+  [[ "${#manifest_fields[@]}" -eq 10 && "${manifest_fields[9]}" == "__OURBOX_SUBSTRATE_MANIFEST_END__" ]] \
     || ourbox_selection_die "ourbox-substrate manifest parse produced an unexpected field set: ${manifest}"
   manifest_substrate_source="${manifest_fields[0]}"
   manifest_substrate_revision="${manifest_fields[1]}"
   manifest_substrate_version="${manifest_fields[2]}"
   manifest_substrate_created="${manifest_fields[3]}"
-  manifest_platform_contract_digest="${manifest_fields[4]}"
-  manifest_substrate_arch="${manifest_fields[5]}"
-  manifest_k3s_version="${manifest_fields[6]}"
-  manifest_platform_profile="${manifest_fields[7]}"
-  manifest_platform_images_lock_path="${manifest_fields[8]}"
-  manifest_platform_images_lock_sha256="${manifest_fields[9]}"
+  manifest_substrate_arch="${manifest_fields[4]}"
+  manifest_k3s_version="${manifest_fields[5]}"
+  manifest_platform_profile="${manifest_fields[6]}"
+  manifest_platform_images_lock_path="${manifest_fields[7]}"
+  manifest_platform_images_lock_sha256="${manifest_fields[8]}"
 
   [[ -n "${manifest_substrate_source}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_SUBSTRATE_SOURCE"
   [[ -n "${manifest_substrate_revision}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_SUBSTRATE_REVISION"
   [[ -n "${manifest_substrate_version}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_SUBSTRATE_VERSION"
   [[ -n "${manifest_substrate_created}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_SUBSTRATE_CREATED"
-  ourbox_selection_is_sha256_digest "${required_contract_digest}" || ourbox_selection_die "required platform contract digest must be a sha256:<64 hex> before validating ourbox-substrate bundle"
-  ourbox_selection_is_sha256_digest "${manifest_platform_contract_digest}" || ourbox_selection_die "ourbox-substrate manifest carries invalid OURBOX_PLATFORM_CONTRACT_DIGEST"
   [[ "${manifest_substrate_arch}" == "${expected_arch}" ]] || ourbox_selection_die "ourbox-substrate bundle arch mismatch: expected ${expected_arch}, got ${manifest_substrate_arch:-unknown}"
-  [[ "${manifest_platform_contract_digest}" == "${required_contract_digest}" ]] || ourbox_selection_die "ourbox-substrate bundle contract digest mismatch: expected ${required_contract_digest}, got ${manifest_platform_contract_digest}"
   [[ -n "${manifest_k3s_version}" ]] || ourbox_selection_die "ourbox-substrate manifest missing K3S_VERSION"
   [[ -n "${manifest_platform_profile}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_PLATFORM_PROFILE"
   [[ -n "${manifest_platform_images_lock_path}" ]] || ourbox_selection_die "ourbox-substrate manifest missing OURBOX_PLATFORM_IMAGES_LOCK_PATH"

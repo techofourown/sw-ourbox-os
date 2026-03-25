@@ -262,11 +262,6 @@ This record should describe the artifact that was actually published, not every 
 - `K3S_VERSION`
 - `OURBOX_PLATFORM_PROFILE`
 - `OURBOX_PLATFORM_IMAGES_LOCK_SHA256`
-- `OURBOX_PLATFORM_CONTRACT_DIGEST`
-
-For official publication, `OURBOX_PLATFORM_CONTRACT_DIGEST` is mandatory because
-the substrate bundle is contract-bound to the exact published platform-contract
-artifact identity.
 
 If the build can truthfully surface additional contract-input metadata, it
 should include it here.
@@ -412,7 +407,6 @@ These examples are illustrative. The real records must be produced from actual b
   },
   "input_metadata": {
     "K3S_VERSION": "v1.35.0+k3s1",
-    "OURBOX_PLATFORM_CONTRACT_DIGEST": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "OURBOX_PLATFORM_PROFILE": "demo-apps",
     "OURBOX_PLATFORM_IMAGES_LOCK_SHA256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },

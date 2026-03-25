@@ -22,8 +22,6 @@ need_cmd tar
 : "${GITHUB_SHA:?GITHUB_SHA is required}"
 : "${GITHUB_RUN_ID:?GITHUB_RUN_ID is required}"
 : "${GITHUB_RUN_ATTEMPT:?GITHUB_RUN_ATTEMPT is required}"
-: "${OURBOX_PLATFORM_CONTRACT_DIGEST:?OURBOX_PLATFORM_CONTRACT_DIGEST is required}"
-
 RUNNER_TEMP="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 
 REF="ghcr.io/${GITHUB_REPOSITORY}:latest"

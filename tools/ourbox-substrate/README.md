@@ -38,7 +38,6 @@ Official publication is also bound to the exact published platform-contract
 artifact identity via:
 
 - `OURBOX_PLATFORM_CONTRACT_REF`
-- `OURBOX_PLATFORM_CONTRACT_DIGEST`
 
 ## What is checked in vs fetched at build time
 
@@ -85,7 +84,6 @@ The tarball contains:
 - `OURBOX_SUBSTRATE_VERSION`
 - `OURBOX_SUBSTRATE_CREATED`
 - `OURBOX_PLATFORM_CONTRACT_REF`
-- `OURBOX_PLATFORM_CONTRACT_DIGEST`
 - `OURBOX_SUBSTRATE_ARCH`
 - `K3S_VERSION`
 - `OURBOX_PLATFORM_PROFILE`
@@ -123,10 +121,8 @@ Build:
 
 ```bash
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
-OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
 ARCH=arm64 ./tools/ourbox-substrate/build.sh
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
-OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
 ARCH=amd64 ./tools/ourbox-substrate/build.sh
 ```
 
@@ -134,10 +130,8 @@ Build and publish:
 
 ```bash
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
-OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
 ARCH=arm64 ./tools/ourbox-substrate/publish.sh arm64 beta
 OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... \
-OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... \
 ARCH=amd64 ./tools/ourbox-substrate/publish.sh amd64 nightly
 ```
 
