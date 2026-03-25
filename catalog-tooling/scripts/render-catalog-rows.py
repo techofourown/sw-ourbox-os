@@ -5,7 +5,6 @@ import argparse
 import csv
 import hashlib
 import json
-import os
 import re
 from pathlib import Path
 
@@ -19,7 +18,6 @@ HEADER = [
     "version",
     "revision",
     "arch",
-    "platform_contract_digest",
     "platform_profile",
     "platform_images_lock_sha256",
     "artifact_digest",
@@ -60,7 +58,6 @@ def render_row(
     version: str,
     revision: str,
     arch: str,
-    platform_contract_digest: str,
     platform_profile: str,
     images_lock_sha256: str,
     artifact_digest: str,
@@ -78,8 +75,6 @@ def render_row(
         raise SystemExit("revision must be non-empty")
     if not arch:
         raise SystemExit("arch must be non-empty")
-    if not DIGEST_RE.fullmatch(platform_contract_digest):
-        raise SystemExit("platform contract digest must be sha256-pinned")
     if not platform_profile:
         raise SystemExit("platform profile must be non-empty")
     if not re.fullmatch(r"[0-9a-f]{64}", images_lock_sha256):
@@ -96,7 +91,6 @@ def render_row(
         "version": version,
         "revision": revision,
         "arch": arch,
-        "platform_contract_digest": platform_contract_digest,
         "platform_profile": platform_profile,
         "platform_images_lock_sha256": images_lock_sha256,
         "artifact_digest": artifact_digest,
@@ -143,7 +137,6 @@ def main() -> int:
         version=str(args.version).strip(),
         revision=str(args.revision).strip(),
         arch=str(args.arch).strip(),
-        platform_contract_digest=os.environ.get("OURBOX_PLATFORM_CONTRACT_DIGEST", "").strip(),
         platform_profile=catalog_id,
         images_lock_sha256=sha256_file(images_lock),
         artifact_digest=str(args.artifact_digest).strip(),

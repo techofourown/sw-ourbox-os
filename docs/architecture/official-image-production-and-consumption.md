@@ -517,8 +517,6 @@ They define, among other things:
 - the remote install-defaults bundle shape,
 - row-order-independent catalog resolution by `created`,
 - fail-closed digest resolution,
-- the rule that substrate catalog rows and extracted bundles must match the
-  selected OS payload's `OURBOX_PLATFORM_CONTRACT_DIGEST`,
 - and the standard provenance vocabulary recorded on installed systems.
 
 ### 8.4 Why catalogs exist
@@ -643,7 +641,6 @@ Per existing `sw-ourbox-os` artifact-distribution guidance, the installed system
 - `OURBOX_PLATFORM_CONTRACT_SOURCE`
 - `OURBOX_PLATFORM_CONTRACT_REVISION`
 - `OURBOX_PLATFORM_CONTRACT_VERSION`
-- `OURBOX_PLATFORM_CONTRACT_DIGEST`
 
 ### 11.3 Recommended OS payload fields
 

@@ -17,8 +17,6 @@ It exists because:
 
 - the selected OS payload already carries one baked substrate bundle,
 - operators may want to browse newer or different substrate bundles,
-- that browsing must stay bounded by the selected OS payload's
-  `OURBOX_PLATFORM_CONTRACT_DIGEST`,
 - and installed systems need a consistent provenance vocabulary describing which
   bundle actually won.
 
@@ -27,7 +25,6 @@ This is the shared contract above the hardware seam for:
 - baked-versus-remote bundle selection,
 - substrate catalog resolution,
 - digest resolution,
-- contract-digest validation,
 - bundle-source determination,
 - and installed-system substrate provenance.
 
@@ -76,13 +73,6 @@ published `install-defaults` artifact:
 - `OURBOX_SUBSTRATE_REGISTRY_USERNAME`
 - `OURBOX_SUBSTRATE_REGISTRY_PASSWORD`
 
-The lane is additionally bounded by a required runtime input derived from the
-selected OS payload metadata:
-
-- selected OS payload `OURBOX_PLATFORM_CONTRACT_DIGEST`
-
-This digest is not optional for the browsing lane.
-
 ## 5. OurBox Substrate Artifact Shape
 
 The selected substrate bundle is an OCI artifact whose payload shape is:
@@ -104,7 +94,6 @@ Consumers must treat this as the authoritative upstream shape.
 - `OURBOX_SUBSTRATE_VERSION`
 - `OURBOX_SUBSTRATE_CREATED`
 - `OURBOX_PLATFORM_CONTRACT_REF`
-- `OURBOX_PLATFORM_CONTRACT_DIGEST`
 - `OURBOX_SUBSTRATE_ARCH`
 - `K3S_VERSION`
 - `OURBOX_PLATFORM_PROFILE`
@@ -121,14 +110,13 @@ Catalogs are published in the same OCI repo as the bundle:
 The TSV schema for both arch catalogs is:
 
 ```tsv
-channel	tag	created	version	revision	arch	platform_contract_digest	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
+channel	tag	created	version	revision	arch	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
 ```
 
 Rules:
 
 - `channel` uses only `stable`, `beta`, `nightly`, `exp-labs`
 - `arch` is `arm64` or `amd64`
-- `platform_contract_digest` is mandatory
 - `pinned_ref` must be digest-pinned
 - resolver picks the newest matching row by explicit `created`
 
@@ -141,27 +129,7 @@ Shared precedence is:
 1. `OURBOX_SUBSTRATE_REF`
 2. newest valid catalog row for `OURBOX_SUBSTRATE_CHANNEL`
 
-Catalog resolution must also satisfy the contract filter rule in the next
-section.
-
-## 8. Contract-Digest Filter Rule
-
-The substrate browser is bounded by the selected OS payload's
-`OURBOX_PLATFORM_CONTRACT_DIGEST`.
-
-That means:
-
-1. resolve the OS payload first,
-2. read `OURBOX_PLATFORM_CONTRACT_DIGEST` from the selected OS payload metadata,
-3. filter substrate catalog rows to that digest,
-4. reject any selected substrate bundle whose extracted `manifest.env` carries a
-   different contract digest.
-
-The selected substrate bundle may change the mutable bundle contents for
-platform-owned container image payloads and k3s payloads, but it may not
-replace the selected OS payload's platform-contract files in this rollout.
-
-## 9. Digest Resolution Rules
+## 8. Digest Resolution Rules
 
 If the selected ref is already digest-pinned, it is used directly.
 
@@ -179,7 +147,7 @@ If `oras resolve` fails:
 - when that escape hatch is used, provenance must explicitly record
   `OURBOX_SUBSTRATE_DIGEST=unresolved`
 
-## 10. Bundle-Source Rule
+## 9. Bundle-Source Rule
 
 Installers should compare the selected substrate ref with the baked substrate bundle
 already described by the selected OS payload metadata.
@@ -192,13 +160,13 @@ If the selected ref equals the baked bundle ref:
 If the selected ref differs:
 
 - the installer may pull the selected bundle from the registry
-- the extracted bundle must pass arch and contract-digest validation before use
+- the extracted bundle must pass arch validation before use
 - the final bundle source is `registry`
 
 In either case, the installed-system provenance must record the final selected
 bundle and the actual selection source.
 
-## 11. Standard Provenance Vocabulary
+## 10. Standard Provenance Vocabulary
 
 Installed systems should write the following fields to `/etc/ourbox/release`:
 
@@ -229,7 +197,7 @@ Shared value expectations:
 `OURBOX_SUBSTRATE_RELEASE_CHANNEL` should be populated only when channel
 semantics actually participated in selection, typically for `catalog`.
 
-## 12. Current Adoption Boundary
+## 11. Current Adoption Boundary
 
 Woodbox and legacy direct-selection consumers may realize this shared contract
 directly.

@@ -85,7 +85,6 @@ jobs:
           ARCH: ${{ matrix.arch }}
           CONTAINER_CLI: podman
           OURBOX_PLATFORM_CONTRACT_REF: ${{ steps.contract.outputs.pinned_ref }}
-          OURBOX_PLATFORM_CONTRACT_DIGEST: ${{ steps.contract.outputs.digest }}
         run: |
           set -euo pipefail
           ARCH="${ARCH}" ./tools/ourbox-substrate/build.sh

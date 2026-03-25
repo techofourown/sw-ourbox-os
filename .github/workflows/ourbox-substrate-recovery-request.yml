@@ -7,10 +7,6 @@ on:
         description: Digest-pinned platform-contract ref to publish from
         required: true
         type: string
-      platform_contract_digest:
-        description: sha256 digest for the existing platform-contract artifact
-        required: true
-        type: string
       immutable_tag:
         description: Immutable ourbox-substrate tag to publish, for example main-50e9a7a6aa2c
         required: true
@@ -36,7 +32,6 @@ jobs:
       - name: Validate recovery request inputs
         env:
           PLATFORM_CONTRACT_REF: ${{ inputs.platform_contract_ref }}
-          PLATFORM_CONTRACT_DIGEST: ${{ inputs.platform_contract_digest }}
           IMMUTABLE_TAG: ${{ inputs.immutable_tag }}
           CHANNEL: ${{ inputs.channel }}
         run: |
@@ -44,14 +39,6 @@ jobs:
 
           [[ "${PLATFORM_CONTRACT_REF}" =~ ^[^[:space:]]+@sha256:[0-9a-f]{64}$ ]] || {
             echo "platform_contract_ref must be digest-pinned" >&2
-            exit 1
-          }
-          [[ "${PLATFORM_CONTRACT_DIGEST}" =~ ^sha256:[0-9a-f]{64}$ ]] || {
-            echo "platform_contract_digest must be a sha256 digest" >&2
-            exit 1
-          }
-          [[ "${PLATFORM_CONTRACT_REF##*@}" == "${PLATFORM_CONTRACT_DIGEST}" ]] || {
-            echo "platform_contract_ref and platform_contract_digest do not match" >&2
             exit 1
           }
           [[ -n "${IMMUTABLE_TAG}" ]] || {
@@ -66,7 +53,6 @@ jobs:
       - name: Write recovery request artifact
         env:
           PLATFORM_CONTRACT_REF: ${{ inputs.platform_contract_ref }}
-          PLATFORM_CONTRACT_DIGEST: ${{ inputs.platform_contract_digest }}
           IMMUTABLE_TAG: ${{ inputs.immutable_tag }}
           CHANNEL: ${{ inputs.channel }}
         run: |
@@ -74,7 +60,6 @@ jobs:
           mkdir -p dist/recovery-request
           cat > dist/recovery-request/recovery-request.env <<EOF
           PLATFORM_CONTRACT_REF=${PLATFORM_CONTRACT_REF}
-          PLATFORM_CONTRACT_DIGEST=${PLATFORM_CONTRACT_DIGEST}
           IMMUTABLE_TAG=${IMMUTABLE_TAG}
           CHANNEL=${CHANNEL}
           EOF

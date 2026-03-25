@@ -113,7 +113,6 @@ The installed system SHOULD record:
 - `OURBOX_PLATFORM_CONTRACT_SOURCE`
 - `OURBOX_PLATFORM_CONTRACT_REVISION`
 - `OURBOX_PLATFORM_CONTRACT_VERSION`
-- `OURBOX_PLATFORM_CONTRACT_DIGEST` (when available)
 
 Recommended location:
 - `/etc/ourbox/release`

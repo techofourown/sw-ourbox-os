@@ -23,11 +23,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oras-project/setup-oras@v1
       - run: bash bootstrap.sh
-      - name: Resolve platform contract digest
-        run: |
-          set -euo pipefail
-          digest="$(oras resolve ghcr.io/techofourown/sw-ourbox-os/platform-contract:edge)"
-          echo "OURBOX_PLATFORM_CONTRACT_DIGEST=${digest}" >> "${GITHUB_ENV}"
       - name: Login to GHCR
         run: echo "${GITHUB_TOKEN}" | oras login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
         env:

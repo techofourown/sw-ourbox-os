@@ -53,8 +53,8 @@ All are published as ORAS OCI artifacts (non-runnable) to GHCR. Canonical identi
 |---|---|
 | Build platform contract | `./tools/platform-contract/build.sh` |
 | Publish platform contract | `./tools/platform-contract/publish.sh [tag]` |
-| Build ourbox-substrate | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... ARCH=arm64 ./tools/ourbox-substrate/build.sh` |
-| Publish ourbox-substrate | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... OURBOX_PLATFORM_CONTRACT_DIGEST=sha256:... ARCH=arm64 ./tools/ourbox-substrate/publish.sh arm64 [tag]` |
+| Build ourbox-substrate | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... ARCH=arm64 ./tools/ourbox-substrate/build.sh` |
+| Publish ourbox-substrate | `OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:... ARCH=arm64 ./tools/ourbox-substrate/publish.sh arm64 [tag]` |
 | Build install defaults | `./tools/install-defaults/build.sh` |
 | Publish install defaults | `TAG=edge ./tools/install-defaults/publish.sh [tag]` |
 | Validate GraphMD dataset | `npm test` |

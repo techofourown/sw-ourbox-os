@@ -143,7 +143,6 @@ Expected minimum columns used by the resolver:
 - `tag`
 - `created`
 - `version`
-- `platform_contract_digest`
 - `pinned_ref`
 
 Additional catalog columns are allowed.

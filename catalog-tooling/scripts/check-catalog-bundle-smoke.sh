@@ -116,8 +116,6 @@ for raw_line in profile_lines:
 
 PY
 
-export OURBOX_PLATFORM_CONTRACT_DIGEST="sha256:0000000000000000000000000000000000000000000000000000000000000000"
-
 bash "${WORK_ROOT}/scripts/render-catalog-bundle.sh"
 
 test -f "${WORK_ROOT}/dist/application-catalog-bundle.tar.gz"
@@ -144,7 +142,6 @@ python3 - <<'PY' \
   "${WORK_ROOT}/catalog/image-sources.json" \
   "${WORK_ROOT}/dist/images.lock.json"
 import json
-import os
 import re
 import sys
 from pathlib import Path
@@ -179,9 +176,6 @@ if manifest.get("OURBOX_APPLICATION_CATALOG_APP_COUNT") != str(len(catalog["apps
     raise SystemExit("manifest app count mismatch")
 if manifest.get("OURBOX_APPLICATION_CATALOG_IMAGE_COUNT") != str(len(images_lock["images"])):
     raise SystemExit("manifest image count mismatch")
-expected_digest = os.environ["OURBOX_PLATFORM_CONTRACT_DIGEST"]
-if manifest.get("OURBOX_PLATFORM_CONTRACT_DIGEST") != expected_digest:
-    raise SystemExit("manifest platform contract digest does not match environment fixture")
 if profile.get("OURBOX_APPLICATION_CATALOG_ID") != catalog["catalog_id"]:
     raise SystemExit("profile catalog id mismatch")
 if profile.get("OURBOX_APPLICATION_CATALOG_NAME_SLUG") != expected_slug:
@@ -218,7 +212,6 @@ python3 "${WORK_ROOT}/scripts/render-catalog-rows.py" \
 python3 - <<'PY' "${TMP_ROOT}/catalog.tsv" "${WORK_ROOT}/catalog/profile.env" "${WORK_ROOT}/catalog/catalog.json"
 import csv
 import json
-import os
 import sys
 from pathlib import Path
 
@@ -241,7 +234,6 @@ expected = {
     "version": "main-deadbeefcafe",
     "revision": "deadbeefcafedeadbeefcafedeadbeefcafedead",
     "arch": "amd64",
-    "platform_contract_digest": os.environ["OURBOX_PLATFORM_CONTRACT_DIGEST"],
     "platform_profile": catalog["catalog_id"],
     "artifact_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
     "pinned_ref": "ghcr.io/example/sw-ourbox-catalog-example@sha256:1111111111111111111111111111111111111111111111111111111111111111",

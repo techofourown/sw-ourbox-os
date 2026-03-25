@@ -164,8 +164,8 @@ test_precedence_prefers_os_ref_then_catalog() {
 
   mkdir -p "${catalog_src}"
   cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
-channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
-stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111	stable-row
+channel	tag	created	version	variant	target	sku	git_sha	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111	stable-row
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -205,11 +205,11 @@ test_catalog_resolution_uses_newest_valid_created_timestamp() {
 
   mkdir -p "${catalog_src}"
   cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
-channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
-stable	v0.5.0-x86	2026-03-07T07:34:04Z	v0.5.0	prod	x86	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-woodbox-os@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	old-good
-stable	v0.5.9-x86	2026-03-07T23:59:59Z	v0.5.9	prod	x86	TOO	def	sha256:2	v1	sha256:b	sha256:b	ghcr.io/techofourown/ourbox-woodbox-os:stable	not-digest-pinned
-nightly	nightly-x86	2026-03-08T00:00:01Z	nightly	prod	x86	TOO	ghi	sha256:3	v1	sha256:c	sha256:c	ghcr.io/techofourown/ourbox-woodbox-os@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc	nightly-row
-stable	v0.5.3-x86	2026-03-07T23:08:54Z	v0.5.3	prod	x86	TOO	jkl	sha256:4	v1	sha256:d	sha256:d	ghcr.io/techofourown/ourbox-woodbox-os@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb	newest-valid
+channel	tag	created	version	variant	target	sku	git_sha	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+stable	v0.5.0-x86	2026-03-07T07:34:04Z	v0.5.0	prod	x86	TOO	abc	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-woodbox-os@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	old-good
+stable	v0.5.9-x86	2026-03-07T23:59:59Z	v0.5.9	prod	x86	TOO	def	v1	sha256:b	sha256:b	ghcr.io/techofourown/ourbox-woodbox-os:stable	not-digest-pinned
+nightly	nightly-x86	2026-03-08T00:00:01Z	nightly	prod	x86	TOO	ghi	v1	sha256:c	sha256:c	ghcr.io/techofourown/ourbox-woodbox-os@sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc	nightly-row
+stable	v0.5.3-x86	2026-03-07T23:08:54Z	v0.5.3	prod	x86	TOO	jkl	v1	sha256:d	sha256:d	ghcr.io/techofourown/ourbox-woodbox-os@sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb	newest-valid
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -244,8 +244,8 @@ test_catalog_resolution_accepts_legacy_target_qualified_channel_rows() {
 
   mkdir -p "${catalog_src}"
   cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
-channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
-rpi-stable	v0.9.9-rpi	2026-03-09T01:23:45Z	v0.9.9	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:9999999999999999999999999999999999999999999999999999999999999999	legacy-channel-row
+channel	tag	created	version	variant	target	sku	git_sha	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+rpi-stable	v0.9.9-rpi	2026-03-09T01:23:45Z	v0.9.9	prod	rpi	TOO	abc	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:9999999999999999999999999999999999999999999999999999999999999999	legacy-channel-row
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -304,8 +304,8 @@ test_catalog_requires_valid_digest_row() {
 
   mkdir -p "${catalog_src}"
   cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
-channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	img_sha256	artifact_digest	pinned_ref
-stable	v0.9.4-rpi	2026-03-08T01:23:18Z	v0.9.4	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os:rpi-stable
+channel	tag	created	version	variant	target	sku	git_sha	k3s_version	img_sha256	artifact_digest	pinned_ref
+stable	v0.9.4-rpi	2026-03-08T01:23:18Z	v0.9.4	prod	rpi	TOO	abc	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os:rpi-stable
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -378,8 +378,8 @@ test_interactive_accepts_default_ref() {
 
   mkdir -p "${catalog_src}"
   cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
-channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
-stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:${digest}	stable-row
+channel	tag	created	version	variant	target	sku	git_sha	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:${digest}	stable-row
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -418,8 +418,8 @@ test_interactive_repo_override_rederives_catalog_default() {
 
   mkdir -p "${catalog_src}"
   cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
-channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
-stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	localhost:5000/custom/ourbox-matchbox-os@sha256:${digest}	stable-row
+channel	tag	created	version	variant	target	sku	git_sha	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	v1	sha256:a	sha256:a	localhost:5000/custom/ourbox-matchbox-os@sha256:${digest}	stable-row
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -458,9 +458,9 @@ test_interactive_channel_pick_prefers_selected_catalog_row() {
 
   mkdir -p "${catalog_src}"
   cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
-channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
-stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111	stable-row
-beta	v0.9.1-rpi	2026-03-08T02:00:00Z	v0.9.1	prod	rpi	TOO	def	sha256:2	v1	sha256:b	sha256:b	ghcr.io/techofourown/ourbox-matchbox-os@sha256:2222222222222222222222222222222222222222222222222222222222222222	beta-row
+channel	tag	created	version	variant	target	sku	git_sha	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111	stable-row
+beta	v0.9.1-rpi	2026-03-08T02:00:00Z	v0.9.1	prod	rpi	TOO	def	v1	sha256:b	sha256:b	ghcr.io/techofourown/ourbox-matchbox-os@sha256:2222222222222222222222222222222222222222222222222222222222222222	beta-row
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -498,9 +498,9 @@ test_interactive_catalog_pick_returns_pinned_ref() {
 
   mkdir -p "${catalog_src}"
   cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
-channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
-stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111	stable-row
-beta	v0.9.1-rpi	2026-03-08T02:00:00Z	v0.9.1	prod	rpi	TOO	def	sha256:2	v1	sha256:b	sha256:b	ghcr.io/techofourown/ourbox-matchbox-os@sha256:2222222222222222222222222222222222222222222222222222222222222222	beta-row
+channel	tag	created	version	variant	target	sku	git_sha	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111	stable-row
+beta	v0.9.1-rpi	2026-03-08T02:00:00Z	v0.9.1	prod	rpi	TOO	def	v1	sha256:b	sha256:b	ghcr.io/techofourown/ourbox-matchbox-os@sha256:2222222222222222222222222222222222222222222222222222222222222222	beta-row
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -538,8 +538,8 @@ test_interactive_catalog_pick_normalizes_legacy_channel_name() {
 
   mkdir -p "${catalog_src}"
   cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
-channel	tag	created	version	variant	target	sku	git_sha	platform_contract_digest	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
-rpi-stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	sha256:1	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111	legacy-stable-row
+channel	tag	created	version	variant	target	sku	git_sha	k3s_version	payload_sha256	artifact_digest	pinned_ref	notes
+rpi-stable	v0.9.0-rpi	2026-03-08T01:00:00Z	v0.9.0	prod	rpi	TOO	abc	v1	sha256:a	sha256:a	ghcr.io/techofourown/ourbox-matchbox-os@sha256:1111111111111111111111111111111111111111111111111111111111111111	legacy-stable-row
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -655,11 +655,10 @@ test_finalize_registry_ref_fails_closed_without_dev_override() {
 }
 
 test_substrate_default_precedence_prefers_exact_ref_then_catalog() {
-  local tmp fake_oras_dir catalog_src contract_digest ref_digest catalog_digest
+  local tmp fake_oras_dir catalog_src ref_digest catalog_digest
   tmp="$(mktemp -d)"
   fake_oras_dir="${tmp}/bin"
   catalog_src="${tmp}/catalog-src"
-  contract_digest="sha256:1111111111111111111111111111111111111111111111111111111111111111"
   ref_digest="2222222222222222222222222222222222222222222222222222222222222222"
   catalog_digest="3333333333333333333333333333333333333333333333333333333333333333"
 
@@ -668,8 +667,8 @@ test_substrate_default_precedence_prefers_exact_ref_then_catalog() {
 
   mkdir -p "${catalog_src}"
   cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
-channel	tag	created	version	revision	arch	platform_contract_digest	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
-stable	stable-arm64	2026-03-09T00:00:00Z	v0.15.0	aaaa1111	arm64	${contract_digest}	demo-apps	v1.35.0+k3s1	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	sha256:${catalog_digest}	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:${catalog_digest}
+channel	tag	created	version	revision	arch	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
+stable	stable-arm64	2026-03-09T00:00:00Z	v0.15.0	aaaa1111	arm64	demo-apps	v1.35.0+k3s1	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	sha256:${catalog_digest}	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:${catalog_digest}
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -684,13 +683,13 @@ EOF_CATALOG
 
   OURBOX_SUBSTRATE_REF="ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:${ref_digest}"
   ourbox_substrate_selection_reset_state
-  ourbox_substrate_determine_default_ref "${tmp}/catalog" "${contract_digest}"
+  ourbox_substrate_determine_default_ref "${tmp}/catalog"
   assert_eq "${OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE}" "ourbox-substrate-ref" "OURBOX_SUBSTRATE_REF should have highest precedence"
   assert_eq "${OURBOX_SUBSTRATE_SELECTED_REF}" "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:${ref_digest}" "OURBOX_SUBSTRATE_REF should be selected directly"
 
   OURBOX_SUBSTRATE_REF=""
   ourbox_substrate_selection_reset_state
-  ourbox_substrate_determine_default_ref "${tmp}/catalog" "${contract_digest}"
+  ourbox_substrate_determine_default_ref "${tmp}/catalog"
   assert_eq "${OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE}" "catalog" "catalog resolution should supply the default when no exact substrate ref is set"
   assert_eq "${OURBOX_SUBSTRATE_SELECTED_REF}" "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:${catalog_digest}" "catalog resolution should choose the matching digest-pinned row"
 
@@ -698,24 +697,22 @@ EOF_CATALOG
 }
 
 test_substrate_catalog_resolution_uses_newest_matching_created_timestamp() {
-  local tmp fake_oras_dir catalog_src contract_a contract_b expected
+  local tmp fake_oras_dir catalog_src expected
   tmp="$(mktemp -d)"
   fake_oras_dir="${tmp}/bin"
   catalog_src="${tmp}/catalog-src"
-  contract_a="sha256:4444444444444444444444444444444444444444444444444444444444444444"
-  contract_b="sha256:5555555555555555555555555555555555555555555555555555555555555555"
-  expected="ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:7777777777777777777777777777777777777777777777777777777777777777"
+  expected="ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:9999999999999999999999999999999999999999999999999999999999999999"
 
   make_fake_oras "${fake_oras_dir}"
   export PATH="${fake_oras_dir}:${PATH}"
 
   mkdir -p "${catalog_src}"
-  cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
-channel	tag	created	version	revision	arch	platform_contract_digest	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
-stable	stable-arm64	2026-03-08T00:00:00Z	v0.14.0	aaaa1111	arm64	${contract_a}	demo-apps	v1.35.0+k3s1	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	sha256:6666666666666666666666666666666666666666666666666666666666666666	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:6666666666666666666666666666666666666666666666666666666666666666
-stable	stable-arm64	2026-03-09T00:00:00Z	v0.15.0	bbbb2222	arm64	${contract_a}	demo-apps	v1.35.0+k3s1	bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb	sha256:7777777777777777777777777777777777777777777777777777777777777777	${expected}
-stable	stable-arm64	2026-03-10T00:00:00Z	v0.16.0	cccc3333	amd64	${contract_a}	demo-apps	v1.35.0+k3s1	cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc	sha256:8888888888888888888888888888888888888888888888888888888888888888	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:8888888888888888888888888888888888888888888888888888888888888888
-stable	stable-arm64	2026-03-11T00:00:00Z	v0.17.0	dddd4444	arm64	${contract_b}	demo-apps	v1.35.0+k3s1	dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd	sha256:9999999999999999999999999999999999999999999999999999999999999999	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:9999999999999999999999999999999999999999999999999999999999999999
+  cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
+channel	tag	created	version	revision	arch	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
+stable	stable-arm64	2026-03-08T00:00:00Z	v0.14.0	aaaa1111	arm64	demo-apps	v1.35.0+k3s1	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	sha256:6666666666666666666666666666666666666666666666666666666666666666	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:6666666666666666666666666666666666666666666666666666666666666666
+stable	stable-arm64	2026-03-09T00:00:00Z	v0.15.0	bbbb2222	arm64	demo-apps	v1.35.0+k3s1	bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb	sha256:7777777777777777777777777777777777777777777777777777777777777777	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:7777777777777777777777777777777777777777777777777777777777777777
+stable	stable-arm64	2026-03-10T00:00:00Z	v0.16.0	cccc3333	amd64	demo-apps	v1.35.0+k3s1	cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc	sha256:8888888888888888888888888888888888888888888888888888888888888888	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:8888888888888888888888888888888888888888888888888888888888888888
+stable	stable-arm64	2026-03-11T00:00:00Z	v0.17.0	dddd4444	arm64	demo-apps	v1.35.0+k3s1	dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd	sha256:9999999999999999999999999999999999999999999999999999999999999999	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:9999999999999999999999999999999999999999999999999999999999999999
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -730,20 +727,19 @@ EOF_CATALOG
   OURBOX_SUBSTRATE_CATALOG_TAG="catalog-arm64"
 
   ourbox_substrate_selection_reset_state
-  ourbox_substrate_determine_default_ref "${tmp}/catalog" "${contract_a}"
+  ourbox_substrate_determine_default_ref "${tmp}/catalog"
 
-  assert_eq "${OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE}" "catalog" "substrate resolver should prefer catalog rows when a matching digest-pinned row exists"
+  assert_eq "${OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE}" "catalog" "substrate resolver should prefer catalog rows when a digest-pinned row exists"
   assert_eq "${OURBOX_SUBSTRATE_RELEASE_CHANNEL}" "stable" "substrate catalog resolution should preserve the selected release channel"
-  assert_eq "${OURBOX_SUBSTRATE_SELECTED_REF}" "${expected}" "substrate catalog resolution should choose the newest matching row by created timestamp"
+  assert_eq "${OURBOX_SUBSTRATE_SELECTED_REF}" "${expected}" "substrate catalog resolution should choose the newest arm64 row by created timestamp"
 
   rm -rf "${tmp}"
 }
 
 test_substrate_channel_requires_catalog_when_no_exact_ref() {
-  local tmp fake_oras_dir contract_digest
+  local tmp fake_oras_dir
   tmp="$(mktemp -d)"
   fake_oras_dir="${tmp}/bin"
-  contract_digest="sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
   make_fake_oras "${fake_oras_dir}"
   export PATH="${fake_oras_dir}:${PATH}"
@@ -760,7 +756,7 @@ test_substrate_channel_requires_catalog_when_no_exact_ref() {
   OURBOX_SUBSTRATE_CATALOG_TAG="catalog-amd64"
 
   ourbox_substrate_selection_reset_state
-  if ourbox_substrate_determine_default_ref "${tmp}/catalog" "${contract_digest}"; then
+  if ourbox_substrate_determine_default_ref "${tmp}/catalog"; then
     printf 'ASSERTION FAILED: substrate selection should require a matching catalog row when no exact ref is set\n' >&2
     exit 1
   fi
@@ -772,50 +768,10 @@ test_substrate_channel_requires_catalog_when_no_exact_ref() {
   rm -rf "${tmp}"
 }
 
-test_substrate_catalog_filters_non_matching_contract_digest() {
-  local tmp fake_oras_dir catalog_src required_contract other_contract
-  tmp="$(mktemp -d)"
-  fake_oras_dir="${tmp}/bin"
-  catalog_src="${tmp}/catalog-src"
-  required_contract="sha256:1212121212121212121212121212121212121212121212121212121212121212"
-  other_contract="sha256:3434343434343434343434343434343434343434343434343434343434343434"
-
-  make_fake_oras "${fake_oras_dir}"
-  export PATH="${fake_oras_dir}:${PATH}"
-
-  mkdir -p "${catalog_src}"
-  cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
-channel	tag	created	version	revision	arch	platform_contract_digest	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
-stable	stable-arm64	2026-03-09T00:00:00Z	v0.15.0	aaaa1111	arm64	${other_contract}	demo-apps	v1.35.0+k3s1	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	sha256:5656565656565656565656565656565656565656565656565656565656565656	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:5656565656565656565656565656565656565656565656565656565656565656
-EOF_CATALOG
-  export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
-
-  # shellcheck disable=SC1090
-  source "${RESOLVER}"
-
-  OURBOX_SUBSTRATE_REPO="ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate"
-  OURBOX_SUBSTRATE_ARCH="arm64"
-  OURBOX_SUBSTRATE_CHANNEL="stable"
-  OURBOX_SUBSTRATE_REF=""
-  OURBOX_SUBSTRATE_CATALOG_ENABLED="1"
-  OURBOX_SUBSTRATE_CATALOG_TAG="catalog-arm64"
-
-  ourbox_substrate_selection_reset_state
-  if ourbox_substrate_determine_default_ref "${tmp}/catalog" "${required_contract}"; then
-    printf 'ASSERTION FAILED: substrate selection should reject catalog rows whose platform contract digest does not match the selected OS payload\n' >&2
-    exit 1
-  fi
-
-  assert_eq "${OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE}" "" "substrate resolver should reject catalog rows whose platform contract digest does not match the selected OS payload"
-  assert_eq "${OURBOX_SUBSTRATE_SELECTED_REF}" "" "substrate resolver should leave the selected ref empty when no contract-matching row exists"
-
-  rm -rf "${tmp}"
-}
 
 test_substrate_interactive_repo_override_supports_custom_ref_without_catalog_default() {
-  local tmp captured contract_digest custom_digest
+  local tmp captured custom_digest
   tmp="$(mktemp -d)"
-  contract_digest="sha256:7878787878787878787878787878787878787878787878787878787878787878"
   custom_digest="9090909090909090909090909090909090909090909090909090909090909090"
 
   captured="$(
@@ -829,7 +785,7 @@ test_substrate_interactive_repo_override_supports_custom_ref_without_catalog_def
       OURBOX_SUBSTRATE_CATALOG_ENABLED='0'
       OURBOX_SUBSTRATE_CATALOG_TAG='catalog-arm64'
       ourbox_substrate_selection_reset_state
-      ourbox_substrate_selection_interactive_select_ref '${tmp}/catalog' '${contract_digest}' >/dev/null
+      ourbox_substrate_selection_interactive_select_ref '${tmp}/catalog' >/dev/null
       printf '%s\t%s\t%s\t%s\t%s\n' \"\$OURBOX_SUBSTRATE_SELECTED_REF\" \"\$OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_SUBSTRATE_RELEASE_CHANNEL:-}\" \"\$OURBOX_SUBSTRATE_REPO\" \"\$OURBOX_SUBSTRATE_CATALOG_TAG\"
     " 2>/dev/null
   )"
@@ -840,21 +796,22 @@ test_substrate_interactive_repo_override_supports_custom_ref_without_catalog_def
 }
 
 test_substrate_interactive_channel_pick_prefers_catalog_row() {
-  local tmp fake_oras_dir catalog_src captured contract_digest beta_digest
+  local tmp fake_oras_dir catalog_src captured beta_digest
   tmp="$(mktemp -d)"
   fake_oras_dir="${tmp}/bin"
   catalog_src="${tmp}/catalog-src"
-  contract_digest="sha256:5656565656565656565656565656565656565656565656565656565656565656"
   beta_digest="bcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbcbc"
 
   make_fake_oras "${fake_oras_dir}"
   export PATH="${fake_oras_dir}:${PATH}"
 
   mkdir -p "${catalog_src}"
-  cat > "${catalog_src}/catalog.tsv" <<EOF_CATALOG
-channel	tag	created	version	revision	arch	platform_contract_digest	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
-stable	stable-arm64	2026-03-08T01:00:00Z	v0.9.0	aaaa1111	arm64	${contract_digest}	demo-apps	v1.35.0+k3s1	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	sha256:1111111111111111111111111111111111111111111111111111111111111111	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:1111111111111111111111111111111111111111111111111111111111111111
-beta	beta-arm64	2026-03-08T02:00:00Z	v0.9.1	bbbb2222	arm64	${contract_digest}	demo-apps	v1.35.0+k3s1	bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb	sha256:${beta_digest}	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:${beta_digest}
+  cat > "${catalog_src}/catalog.tsv" <<'EOF_CATALOG'
+channel	tag	created	version	revision	arch	platform_profile	k3s_version	platform_images_lock_sha256	artifact_digest	pinned_ref
+stable	stable-arm64	2026-03-08T01:00:00Z	v0.9.0	aaaa1111	arm64	demo-apps	v1.35.0+k3s1	aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa	sha256:1111111111111111111111111111111111111111111111111111111111111111	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:1111111111111111111111111111111111111111111111111111111111111111
+EOF_CATALOG
+  cat >> "${catalog_src}/catalog.tsv" <<EOF_CATALOG
+beta	beta-arm64	2026-03-08T02:00:00Z	v0.9.1	bbbb2222	arm64	demo-apps	v1.35.0+k3s1	bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb	sha256:${beta_digest}	ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate@sha256:${beta_digest}
 EOF_CATALOG
   export FAKE_ORAS_CATALOG_DIR="${catalog_src}"
 
@@ -871,7 +828,7 @@ EOF_CATALOG
       OURBOX_SUBSTRATE_CATALOG_ENABLED='1'
       OURBOX_SUBSTRATE_CATALOG_TAG='catalog-arm64'
       ourbox_substrate_selection_reset_state
-      ourbox_substrate_selection_interactive_select_ref '${tmp}/catalog' '${contract_digest}' >/dev/null
+      ourbox_substrate_selection_interactive_select_ref '${tmp}/catalog' >/dev/null
       printf '%s\t%s\t%s\n' \"\$OURBOX_SUBSTRATE_SELECTED_REF\" \"\$OURBOX_SUBSTRATE_INSTALL_SELECTION_SOURCE\" \"\${OURBOX_SUBSTRATE_RELEASE_CHANNEL:-}\"
     " 2>/dev/null
   )"
@@ -929,11 +886,11 @@ test_substrate_finalize_registry_ref_dev_override_marks_unresolved() {
   rm -rf "${tmp}"
 }
 
-test_substrate_validate_extracted_bundle_rejects_invalid_manifest_contract_digest() {
-  local tmp bundle_dir required_contract
+
+test_substrate_validate_extracted_bundle_exports_manifest_metadata() {
+  local tmp bundle_dir
   tmp="$(mktemp -d)"
   bundle_dir="${tmp}/bundle"
-  required_contract="sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
 
   mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
   touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
@@ -942,38 +899,7 @@ OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=6472fb5919d187daf832082eeaef6086b336a632
 OURBOX_SUBSTRATE_VERSION=v0.15.1
 OURBOX_SUBSTRATE_CREATED=2026-03-11T04:59:06Z
-OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:1111111111111111111111111111111111111111111111111111111111111111
-OURBOX_PLATFORM_CONTRACT_DIGEST=invalid-digest
-OURBOX_SUBSTRATE_ARCH=arm64
-K3S_VERSION=v1.35.0+k3s1
-OURBOX_PLATFORM_PROFILE=demo-apps
-OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
-OURBOX_PLATFORM_IMAGES_LOCK_SHA256=f6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118
-EOF_MANIFEST
-  printf '#!/bin/sh\nexit 0\n' > "${bundle_dir}/k3s/k3s"
-  chmod +x "${bundle_dir}/k3s/k3s"
-
-  assert_fails "set -euo pipefail; source '${RESOLVER}'; ourbox_substrate_selection_validate_extracted_bundle '${bundle_dir}' '${required_contract}' 'arm64'" \
-    "substrate manifest validation should reject an invalid platform contract digest"
-
-  rm -rf "${tmp}"
-}
-
-test_substrate_validate_extracted_bundle_exports_manifest_metadata() {
-  local tmp bundle_dir required_contract
-  tmp="$(mktemp -d)"
-  bundle_dir="${tmp}/bundle"
-  required_contract="sha256:abababababababababababababababababababababababababababababababab"
-
-  mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
-  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
-  cat > "${bundle_dir}/manifest.env" <<EOF_MANIFEST
-OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
-OURBOX_SUBSTRATE_REVISION=6472fb5919d187daf832082eeaef6086b336a632
-OURBOX_SUBSTRATE_VERSION=v0.15.1
-OURBOX_SUBSTRATE_CREATED=2026-03-11T04:59:06Z
-OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@${required_contract}
-OURBOX_PLATFORM_CONTRACT_DIGEST=${required_contract}
+OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:abababababababababababababababababababababababababababababababab
 OURBOX_SUBSTRATE_ARCH=arm64
 K3S_VERSION=v1.35.0+k3s1
 OURBOX_PLATFORM_PROFILE=demo-apps
@@ -995,7 +921,7 @@ EOF_MANIFEST
   OURBOX_SUBSTRATE_K3S_VERSION="stale-k3s"
   OURBOX_SUBSTRATE_IMAGES_LOCK_SHA256="stale-lock"
 
-  ourbox_substrate_selection_validate_extracted_bundle "${bundle_dir}" "${required_contract}" "arm64"
+  ourbox_substrate_selection_validate_extracted_bundle "${bundle_dir}" "arm64"
 
   assert_eq "${OURBOX_SUBSTRATE_SOURCE}" "https://github.com/techofourown/sw-ourbox-os" "validated bundle should export substrate source"
   assert_eq "${OURBOX_SUBSTRATE_REVISION}" "6472fb5919d187daf832082eeaef6086b336a632" "validated bundle should export substrate revision"
@@ -1009,20 +935,20 @@ EOF_MANIFEST
   rm -rf "${tmp}"
 }
 
-test_substrate_validate_extracted_bundle_rejects_missing_contract_digest_hidden_by_ambient_env() {
-  local tmp bundle_dir required_contract
+
+test_substrate_validate_extracted_bundle_rejects_missing_k3s_airgap_images_tar() {
+  local tmp bundle_dir
   tmp="$(mktemp -d)"
   bundle_dir="${tmp}/bundle"
-  required_contract="sha256:5656565656565656565656565656565656565656565656565656565656565656"
 
   mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
-  touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
+  touch "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
   cat > "${bundle_dir}/manifest.env" <<'EOF_MANIFEST'
 OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=6472fb5919d187daf832082eeaef6086b336a632
 OURBOX_SUBSTRATE_VERSION=v0.15.1
 OURBOX_SUBSTRATE_CREATED=2026-03-11T04:59:06Z
-OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:5656565656565656565656565656565656565656565656565656565656565656
+OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef
 OURBOX_SUBSTRATE_ARCH=arm64
 K3S_VERSION=v1.35.0+k3s1
 OURBOX_PLATFORM_PROFILE=demo-apps
@@ -1032,57 +958,25 @@ EOF_MANIFEST
   printf '#!/bin/sh\nexit 0\n' > "${bundle_dir}/k3s/k3s"
   chmod +x "${bundle_dir}/k3s/k3s"
 
-  assert_fails "set -euo pipefail; source '${RESOLVER}'; export OURBOX_PLATFORM_CONTRACT_DIGEST='${required_contract}'; ourbox_substrate_selection_validate_extracted_bundle '${bundle_dir}' '${required_contract}' 'arm64'" \
-    "ambient shell variables must not satisfy missing substrate manifest fields"
-
-  rm -rf "${tmp}"
-}
-
-test_substrate_validate_extracted_bundle_rejects_missing_k3s_airgap_images_tar() {
-  local tmp bundle_dir required_contract
-  tmp="$(mktemp -d)"
-  bundle_dir="${tmp}/bundle"
-  required_contract="sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef"
-
-  mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
-  touch "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env" "${bundle_dir}/platform/images/platform.tar"
-  cat > "${bundle_dir}/manifest.env" <<EOF_MANIFEST
-OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
-OURBOX_SUBSTRATE_REVISION=6472fb5919d187daf832082eeaef6086b336a632
-OURBOX_SUBSTRATE_VERSION=v0.15.1
-OURBOX_SUBSTRATE_CREATED=2026-03-11T04:59:06Z
-OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@${required_contract}
-OURBOX_PLATFORM_CONTRACT_DIGEST=${required_contract}
-OURBOX_SUBSTRATE_ARCH=arm64
-K3S_VERSION=v1.35.0+k3s1
-OURBOX_PLATFORM_PROFILE=demo-apps
-OURBOX_PLATFORM_IMAGES_LOCK_PATH=platform/images.lock.json
-OURBOX_PLATFORM_IMAGES_LOCK_SHA256=f6d6171f7065059b7d7008961d0fecc5b7d65075dd7c7c3514ee5d8418f48118
-EOF_MANIFEST
-  printf '#!/bin/sh\nexit 0\n' > "${bundle_dir}/k3s/k3s"
-  chmod +x "${bundle_dir}/k3s/k3s"
-
-  assert_fails "set -euo pipefail; source '${RESOLVER}'; ourbox_substrate_selection_validate_extracted_bundle '${bundle_dir}' '${required_contract}' 'arm64'" \
+  assert_fails "set -euo pipefail; source '${RESOLVER}'; ourbox_substrate_selection_validate_extracted_bundle '${bundle_dir}' 'arm64'" \
     "substrate bundle validation should reject a missing k3s airgap images tar"
 
   rm -rf "${tmp}"
 }
 
 test_substrate_validate_extracted_bundle_rejects_missing_platform_image_tars() {
-  local tmp bundle_dir required_contract
+  local tmp bundle_dir
   tmp="$(mktemp -d)"
   bundle_dir="${tmp}/bundle"
-  required_contract="sha256:1212121212121212121212121212121212121212121212121212121212121212"
 
   mkdir -p "${bundle_dir}/k3s" "${bundle_dir}/platform/images"
   touch "${bundle_dir}/k3s/k3s-airgap-images-arm64.tar" "${bundle_dir}/platform/images.lock.json" "${bundle_dir}/platform/profile.env"
-  cat > "${bundle_dir}/manifest.env" <<EOF_MANIFEST
+  cat > "${bundle_dir}/manifest.env" <<'EOF_MANIFEST'
 OURBOX_SUBSTRATE_SOURCE=https://github.com/techofourown/sw-ourbox-os
 OURBOX_SUBSTRATE_REVISION=6472fb5919d187daf832082eeaef6086b336a632
 OURBOX_SUBSTRATE_VERSION=v0.15.1
 OURBOX_SUBSTRATE_CREATED=2026-03-11T04:59:06Z
-OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@${required_contract}
-OURBOX_PLATFORM_CONTRACT_DIGEST=${required_contract}
+OURBOX_PLATFORM_CONTRACT_REF=ghcr.io/techofourown/sw-ourbox-os/platform-contract@sha256:1212121212121212121212121212121212121212121212121212121212121212
 OURBOX_SUBSTRATE_ARCH=arm64
 K3S_VERSION=v1.35.0+k3s1
 OURBOX_PLATFORM_PROFILE=demo-apps
@@ -1092,7 +986,7 @@ EOF_MANIFEST
   printf '#!/bin/sh\nexit 0\n' > "${bundle_dir}/k3s/k3s"
   chmod +x "${bundle_dir}/k3s/k3s"
 
-  assert_fails "set -euo pipefail; source '${RESOLVER}'; ourbox_substrate_selection_validate_extracted_bundle '${bundle_dir}' '${required_contract}' 'arm64'" \
+  assert_fails "set -euo pipefail; source '${RESOLVER}'; ourbox_substrate_selection_validate_extracted_bundle '${bundle_dir}' 'arm64'" \
     "substrate bundle validation should reject missing platform image tar payloads"
 
   rm -rf "${tmp}"
@@ -1118,14 +1012,11 @@ main() {
   test_substrate_default_precedence_prefers_exact_ref_then_catalog
   test_substrate_catalog_resolution_uses_newest_matching_created_timestamp
   test_substrate_channel_requires_catalog_when_no_exact_ref
-  test_substrate_catalog_filters_non_matching_contract_digest
   test_substrate_interactive_repo_override_supports_custom_ref_without_catalog_default
   test_substrate_interactive_channel_pick_prefers_catalog_row
   test_substrate_finalize_registry_ref_resolves_digest
   test_substrate_finalize_registry_ref_dev_override_marks_unresolved
-  test_substrate_validate_extracted_bundle_rejects_invalid_manifest_contract_digest
   test_substrate_validate_extracted_bundle_exports_manifest_metadata
-  test_substrate_validate_extracted_bundle_rejects_missing_contract_digest_hidden_by_ambient_env
   test_substrate_validate_extracted_bundle_rejects_missing_k3s_airgap_images_tar
   test_substrate_validate_extracted_bundle_rejects_missing_platform_image_tars
   printf 'installer-selection resolver tests: PASS\n'
