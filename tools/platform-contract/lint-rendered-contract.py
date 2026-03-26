@@ -24,7 +24,7 @@ REQUIRED_ANNOTATIONS = (
 EXPECTED_ROUTE_MARKERS = {
     "landing-root": {
         "body_marker": "Your apps, served by your machine, to your phone.",
-        "source_file": None,
+        "source_file": "landing/index.html",
     },
     "landing-app-status": {
         "body_marker": "ourbox-landing-status",
@@ -351,7 +351,9 @@ def main() -> int:
 
     configmap_names = {(resource["metadata"].get("namespace", ""), resource["metadata"]["name"]) for resource in configmaps}
     expected_asset_maps = {
-        ("ourbox-system", "landing-assets"): {"ourbox-apps.json"},
+        ("ourbox-system", "landing-assets"): {
+            path.name for path in sorted((contract_root / "landing").iterdir()) if path.is_file()
+        } | {"ourbox-apps.json"},
         ("ourbox-system", "landing-status-assets"): {
             path.name for path in sorted((contract_root / "landing-status").iterdir()) if path.is_file()
         } | {"ourbox-app-targets.json"},

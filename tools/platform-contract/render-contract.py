@@ -1008,6 +1008,14 @@ def emit_landing_infra(
     # --- Landing page (nginx serving the app-directory page) ---
     landing_service_name = "landing"
     landing_assets = landing_assets_data(box_host, landing_apps)
+    landing_html_dir = contract_root / "landing"
+    if not landing_html_dir.is_dir():
+        raise SystemExit(f"landing HTML directory not found at {landing_html_dir}")
+    for html_file in sorted(landing_html_dir.iterdir()):
+        if html_file.is_file():
+            landing_assets[html_file.name] = LiteralStr(html_file.read_text(encoding="utf-8"))
+    if "index.html" not in landing_assets:
+        raise SystemExit(f"landing HTML directory at {landing_html_dir} must contain index.html")
     landing_configmap_name = f"{landing_service_name}-assets"
     yaml_dump(
         manifests_dir / f"{landing_service_name}-configmap.yaml",
