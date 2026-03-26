@@ -32,6 +32,37 @@ There is no special "developer lane." There is only explicit trust.
 
 ---
 
+## The rule: intent in source control, identity at build time
+
+Source-controlled official surfaces carry **intent**:
+approved snapshot name, repository, channel, profile, or policy label.
+
+Builds resolve **identity**: exact digest, exact commit SHA, exact version tag — at
+the moment the build runs.
+
+**No human should ever manually update a digest, version number, or commit SHA in
+source control.** If a human is typing a hash or version number into a checked-in
+file, the automation is incomplete.
+
+This applies uniformly to:
+
+- OCI artifact references (platform contract, substrate, install-defaults)
+- vendored tool revisions (installer SSH helper, release-control module, any shared
+  script vendored from an upstream repo)
+- any other generated lockfile or pinned-identity record
+
+A checked-in digest or hardcoded commit SHA is a symptom that the release automation
+has a gap. The right fix is to close the gap, not to normalize the manual step.
+
+The automation rule is:
+1. upstream publishes (via its own release process)
+2. downstream source control records the approved intent (snapshot name, channel, or
+   equivalent policy label) — this is what humans commit
+3. build workflow resolves exact identity from that intent at build start
+4. resolved identity is recorded in generated provenance outputs, not in source control
+
+---
+
 ## Boundary: platform contract above the hardware seam
 
 `sw-ourbox-os` standardizes the platform above the hardware seam. `img-*` repositories own the

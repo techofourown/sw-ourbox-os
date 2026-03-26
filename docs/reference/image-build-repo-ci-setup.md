@@ -180,6 +180,15 @@ Downstream CI must diff-check the vendored files against that pinned upstream re
 Candidate workflows must emit `candidate-provenance.json`, and stable / exp-labs promotion
 must download, validate, and consume that provenance file only.
 
+**The revision pin in `.upstream.env` files must not be updated manually.** Per the
+intent / identity rule (see
+`docs/architecture/artifact-distribution-and-integration.md`), commit SHAs belong in
+generated outputs, not in human-maintained source files. The intended mechanism is that
+the upstream release process auto-advances the pin — so the `.upstream.env` file records
+an intent label (approved snapshot, moving tag, or equivalent), not a bare commit hash.
+If a `.upstream.env` file contains a hardcoded commit SHA today, that is a gap in the
+release automation that should be closed, not a pattern to follow.
+
 ### Workflow safety rules
 
 `tools/check-workflow-safety.sh` (run in CI) enforces two rules:
@@ -261,8 +270,10 @@ All variables in `config.env` must use `:=`.
 
 ### Upstream input approval and resolution
 
-Official source-controlled control-plane surfaces should carry upstream input
-intent, not mirrored TOOO-produced digest pins.
+The **intent / identity rule** (see
+`docs/architecture/artifact-distribution-and-integration.md`) governs all
+upstream inputs, whether they are OCI artifact references or vendored tool
+revisions: source control carries intent; builds resolve identity.
 
 Right:
 
@@ -276,6 +287,8 @@ Wrong:
 
 - a checked-in `release/official-inputs.env`-style file is treated as the
   normative official approval surface for TOOO-produced upstream digests
+- a `.upstream.env` vendoring pin contains a bare commit SHA that a human is
+  expected to update when upstream changes
 
 Current steady-state:
 
@@ -428,7 +441,7 @@ All other tracked files (including docs) are scanned without exception.
 
 ### Repository setup
 - [ ] `tools/config.env` — all variables use `:=` conditional assignment
-- [ ] checked-in official control-plane inputs express upstream intent or approved snapshot selection, not mirrored TOOO-produced digest pins
+- [ ] checked-in official control-plane inputs express upstream intent or approved snapshot selection, not mirrored TOOO-produced digest pins or hardcoded commit SHAs — see intent / identity rule
 - [ ] `release/official-artifacts.env` — publication namespaces and channel tags set
 - [ ] `tools/check-workflow-safety.sh` — copied from Woodbox (no target-specific changes needed)
 - [ ] `tools/check-public-sanitization.sh` — copied; add any target-specific banned legacy names
