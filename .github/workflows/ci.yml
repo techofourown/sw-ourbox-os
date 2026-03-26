@@ -108,6 +108,9 @@ jobs:
       - name: Run release-control tests
         run: python3 -m unittest discover -s tools/release-control/tests -p 'test_*.py'
 
+      - name: Run resolve-promotable-release smoke
+        run: bash tools/release-control/check-resolve-promotable-release-smoke.sh
+
   pr-batch-big-picture:
     name: PR batch comparison tool tests
     runs-on: ubuntu-latest
