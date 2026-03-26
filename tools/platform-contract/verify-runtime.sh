@@ -16,6 +16,8 @@ TRAEFIK_SELECTOR="app.kubernetes.io/name=traefik"
 TRAEFIK_LOG_SINCE="10m"
 SKIP_TRAEFIK_LOG_CHECK=0
 ROUTE_BASE_URL="http://127.0.0.1"
+READY_NODES_TIMEOUT_SECS=120
+READY_NODES_POLL_INTERVAL_SECS=2
 SANITIZED_RELEASE_ENV=""
 
 cleanup() {
@@ -84,6 +86,16 @@ while [[ $# -gt 0 ]]; do
     --route-base-url)
       [[ $# -ge 2 ]] || die "--route-base-url requires a value"
       ROUTE_BASE_URL="$2"
+      shift 2
+      ;;
+    --ready-nodes-timeout-secs)
+      [[ $# -ge 2 ]] || die "--ready-nodes-timeout-secs requires a value"
+      READY_NODES_TIMEOUT_SECS="$2"
+      shift 2
+      ;;
+    --ready-nodes-poll-interval-secs)
+      [[ $# -ge 2 ]] || die "--ready-nodes-poll-interval-secs requires a value"
+      READY_NODES_POLL_INTERVAL_SECS="$2"
       shift 2
       ;;
     *)
@@ -167,10 +179,26 @@ if [[ "${HTTP_ROUTES_FILE}" != /* ]]; then
 fi
 [[ -f "${HTTP_ROUTES_FILE}" ]] || die "http-routes.tsv not found: ${HTTP_ROUTES_FILE}"
 
-check_ready_nodes() {
-  local ready_count
-  ready_count="$(kubectl_cmd get nodes -o jsonpath='{range .items[*]}{range .status.conditions[?(@.type=="Ready")]}{.status}{"\n"}{end}{end}' | grep -c '^True$' || true)"
-  [[ "${ready_count}" -gt 0 ]] || die "No Ready k3s nodes found"
+count_ready_nodes() {
+  kubectl_cmd get nodes -o jsonpath='{range .items[*]}{range .status.conditions[?(@.type=="Ready")]}{.status}{"\n"}{end}{end}' \
+    | grep -c '^True$' || true
+}
+
+wait_for_ready_nodes() {
+  local ready_count deadline
+  deadline=$((SECONDS + READY_NODES_TIMEOUT_SECS))
+
+  while true; do
+    ready_count="$(count_ready_nodes)"
+    if [[ "${ready_count}" -gt 0 ]]; then
+      log "Found ${ready_count} Ready k3s node(s)"
+      return 0
+    fi
+    if (( SECONDS >= deadline )); then
+      die "No Ready k3s nodes found after ${READY_NODES_TIMEOUT_SECS}s"
+    fi
+    sleep "${READY_NODES_POLL_INTERVAL_SECS}"
+  done
 }
 
 wait_for_contract_deployments() {
@@ -290,7 +318,7 @@ verify_traefik_logs() {
 }
 
 log "Verifying k3s node readiness"
-check_ready_nodes
+wait_for_ready_nodes
 
 log "Verifying contract-owned deployments"
 wait_for_contract_deployments "${READINESS_LABEL_SELECTOR}"
