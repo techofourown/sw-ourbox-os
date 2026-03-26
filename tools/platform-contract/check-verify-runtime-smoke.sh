@@ -87,7 +87,18 @@ case "${1:-}" in
   get)
     case "${2:-}" in
       nodes)
-        printf 'True\n'
+        ready_after="$(cat "${K3S_READY_AFTER_FILE}" 2>/dev/null || printf '0')"
+        ready_counter=0
+        if [[ -f "${K3S_READY_COUNTER_FILE}" ]]; then
+          ready_counter="$(cat "${K3S_READY_COUNTER_FILE}")"
+        fi
+        ready_counter="$((ready_counter + 1))"
+        printf '%s\n' "${ready_counter}" > "${K3S_READY_COUNTER_FILE}"
+        if [[ "${ready_counter}" -le "${ready_after}" ]]; then
+          printf 'False\n'
+        else
+          printf 'True\n'
+        fi
         ;;
       deployment)
         printf 'ourbox-system\tlanding\n'
@@ -134,6 +145,9 @@ EOF_K3S
 chmod +x "${BIN_DIR}/k3s"
 
 touch "${TMP_ROOT}/kubeconfig"
+export K3S_READY_AFTER_FILE="${TMP_ROOT}/ready-after"
+export K3S_READY_COUNTER_FILE="${TMP_ROOT}/ready-counter"
+printf '0\n' > "${K3S_READY_AFTER_FILE}"
 
 bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
   --kubeconfig "${TMP_ROOT}/kubeconfig" \
@@ -143,7 +157,35 @@ bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
   --release-file "${TMP_ROOT}/release.env" \
   --route-base-url "http://127.0.0.1:${PORT}"
 
+printf '2\n' > "${K3S_READY_AFTER_FILE}"
+rm -f "${K3S_READY_COUNTER_FILE}"
+bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
+  --kubeconfig "${TMP_ROOT}/kubeconfig" \
+  --k3s-bin "${BIN_DIR}/k3s" \
+  --render-dir "${RENDER_DIR}" \
+  --contract-dir "${CONTRACT_DIR}" \
+  --release-file "${TMP_ROOT}/release.env" \
+  --route-base-url "http://127.0.0.1:${PORT}" \
+  --ready-nodes-timeout-secs 5 \
+  --ready-nodes-poll-interval-secs 1
+
 set +e
+printf '99\n' > "${K3S_READY_AFTER_FILE}"
+rm -f "${K3S_READY_COUNTER_FILE}"
+bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
+  --kubeconfig "${TMP_ROOT}/kubeconfig" \
+  --k3s-bin "${BIN_DIR}/k3s" \
+  --render-dir "${RENDER_DIR}" \
+  --contract-dir "${CONTRACT_DIR}" \
+  --release-file "${TMP_ROOT}/release.env" \
+  --route-base-url "http://127.0.0.1:${PORT}" \
+  --ready-nodes-timeout-secs 2 \
+  --ready-nodes-poll-interval-secs 1 \
+  >"${TMP_ROOT}/node-timeout.log" 2>&1
+node_status=$?
+
+printf '0\n' > "${K3S_READY_AFTER_FILE}"
+rm -f "${K3S_READY_COUNTER_FILE}"
 bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
   --kubeconfig "${TMP_ROOT}/kubeconfig" \
   --k3s-bin "${BIN_DIR}/k3s" \
@@ -155,6 +197,14 @@ bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
 status=$?
 set -e
 
+[[ "${node_status}" -ne 0 ]] || {
+  echo "verify-runtime should time out when no k3s node becomes Ready" >&2
+  exit 1
+}
+grep -F "No Ready k3s nodes found after 2s" "${TMP_ROOT}/node-timeout.log" >/dev/null || {
+  cat "${TMP_ROOT}/node-timeout.log" >&2
+  exit 1
+}
 [[ "${status}" -ne 0 ]] || {
   echo "verify-runtime should reject malformed release metadata" >&2
   exit 1
