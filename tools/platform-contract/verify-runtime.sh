@@ -180,8 +180,11 @@ fi
 [[ -f "${HTTP_ROUTES_FILE}" ]] || die "http-routes.tsv not found: ${HTTP_ROUTES_FILE}"
 
 count_ready_nodes() {
-  kubectl_cmd get nodes -o jsonpath='{range .items[*]}{range .status.conditions[?(@.type=="Ready")]}{.status}{"\n"}{end}{end}' \
-    | grep -c '^True$' || true
+  local node_statuses
+  node_statuses="$(
+    kubectl_cmd get nodes -o jsonpath='{range .items[*]}{range .status.conditions[?(@.type=="Ready")]}{.status}{"\n"}{end}{end}'
+  )" || return 1
+  awk 'BEGIN { count = 0 } /^True$/ { count++ } END { print count }' <<< "${node_statuses}"
 }
 
 wait_for_ready_nodes() {
@@ -189,7 +192,7 @@ wait_for_ready_nodes() {
   deadline=$((SECONDS + READY_NODES_TIMEOUT_SECS))
 
   while true; do
-    ready_count="$(count_ready_nodes)"
+    ready_count="$(count_ready_nodes)" || die "Failed to query k3s nodes"
     if [[ "${ready_count}" -gt 0 ]]; then
       log "Found ${ready_count} Ready k3s node(s)"
       return 0

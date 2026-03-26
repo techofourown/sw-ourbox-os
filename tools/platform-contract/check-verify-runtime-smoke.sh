@@ -87,6 +87,11 @@ case "${1:-}" in
   get)
     case "${2:-}" in
       nodes)
+        fail_get_nodes="$(cat "${K3S_FAIL_GET_NODES_FILE}" 2>/dev/null || printf '0')"
+        if [[ "${fail_get_nodes}" == "1" ]]; then
+          echo "mock: unable to query nodes" >&2
+          exit 1
+        fi
         ready_after="$(cat "${K3S_READY_AFTER_FILE}" 2>/dev/null || printf '0')"
         ready_counter=0
         if [[ -f "${K3S_READY_COUNTER_FILE}" ]]; then
@@ -147,7 +152,9 @@ chmod +x "${BIN_DIR}/k3s"
 touch "${TMP_ROOT}/kubeconfig"
 export K3S_READY_AFTER_FILE="${TMP_ROOT}/ready-after"
 export K3S_READY_COUNTER_FILE="${TMP_ROOT}/ready-counter"
+export K3S_FAIL_GET_NODES_FILE="${TMP_ROOT}/fail-get-nodes"
 printf '0\n' > "${K3S_READY_AFTER_FILE}"
+printf '0\n' > "${K3S_FAIL_GET_NODES_FILE}"
 
 bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
   --kubeconfig "${TMP_ROOT}/kubeconfig" \
@@ -184,6 +191,21 @@ bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
   >"${TMP_ROOT}/node-timeout.log" 2>&1
 node_status=$?
 
+printf '1\n' > "${K3S_FAIL_GET_NODES_FILE}"
+rm -f "${K3S_READY_COUNTER_FILE}"
+bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
+  --kubeconfig "${TMP_ROOT}/kubeconfig" \
+  --k3s-bin "${BIN_DIR}/k3s" \
+  --render-dir "${RENDER_DIR}" \
+  --contract-dir "${CONTRACT_DIR}" \
+  --release-file "${TMP_ROOT}/release.env" \
+  --route-base-url "http://127.0.0.1:${PORT}" \
+  --ready-nodes-timeout-secs 5 \
+  --ready-nodes-poll-interval-secs 1 \
+  >"${TMP_ROOT}/node-query-error.log" 2>&1
+query_status=$?
+
+printf '0\n' > "${K3S_FAIL_GET_NODES_FILE}"
 printf '0\n' > "${K3S_READY_AFTER_FILE}"
 rm -f "${K3S_READY_COUNTER_FILE}"
 bash "${ROOT}/tools/platform-contract/verify-runtime.sh" \
@@ -203,6 +225,18 @@ set -e
 }
 grep -F "No Ready k3s nodes found after 2s" "${TMP_ROOT}/node-timeout.log" >/dev/null || {
   cat "${TMP_ROOT}/node-timeout.log" >&2
+  exit 1
+}
+[[ "${query_status}" -ne 0 ]] || {
+  echo "verify-runtime should fail fast when the k3s node query errors" >&2
+  exit 1
+}
+grep -F "mock: unable to query nodes" "${TMP_ROOT}/node-query-error.log" >/dev/null || {
+  cat "${TMP_ROOT}/node-query-error.log" >&2
+  exit 1
+}
+grep -F "Failed to query k3s nodes" "${TMP_ROOT}/node-query-error.log" >/dev/null || {
+  cat "${TMP_ROOT}/node-query-error.log" >&2
   exit 1
 }
 [[ "${status}" -ne 0 ]] || {
