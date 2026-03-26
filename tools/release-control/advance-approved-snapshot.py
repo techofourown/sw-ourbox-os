@@ -5,9 +5,10 @@ Usage:
     python3 tools/release-control/advance-approved-snapshot.py v0.25.0
     python3 tools/release-control/advance-approved-snapshot.py v0.25.0 --root /path/to/repo
 
-Reads release/approved-upstream-inputs.json, replaces the snapshot version
-and all candidate channel tags with the new version (preserving arch
-suffixes), and writes the result back.
+Reads release/approved-upstream-inputs.json, replaces the snapshot version,
+all candidate channel tags (preserving arch suffixes), and all
+vendored_modules revision tags with the new version, then writes the result
+back.
 """
 from __future__ import annotations
 
@@ -43,6 +44,12 @@ def advance(new_version: str, root: pathlib.Path) -> str:
                 channel_value,
             )
             channels[channel_key] = updated
+
+    for _key, module in data.get("vendored_modules", {}).items():
+        revision = module.get("revision", "")
+        if not revision:
+            continue
+        module["revision"] = re.sub(r"^v\d+\.\d+\.\d+", new_version, revision)
 
     with snapshot_path.open("w", encoding="utf-8") as fh:
         json.dump(data, fh, indent=2)

@@ -26,5 +26,25 @@
         "nightly": "nightly-amd64"
       }
     }
+  },
+  "vendored_modules": {
+    "installer_ssh_helper": {
+      "repo": "techofourown/sw-ourbox-os",
+      "revision": "v0.24.0",
+      "path": "tools/installer-ssh-helper.sh"
+    },
+    "release_control": {
+      "repo": "techofourown/sw-ourbox-os",
+      "revision": "v0.24.0",
+      "base": "tools/release-control",
+      "files": [
+        "lib.sh",
+        "find-successful-candidate-run.sh",
+        "resolve-promotable-release.sh",
+        "resolve-promotion-context.sh",
+        "release_control.py",
+        "candidate-provenance.schema.json"
+      ]
+    }
   }
 }
