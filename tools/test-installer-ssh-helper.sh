@@ -14,6 +14,7 @@ reset_env() {
   unset OURBOX_INSTALLER_SSH_PASSWORD_HASH
   unset OURBOX_INSTALLER_SSH_AUTHORIZED_KEYS
   unset OURBOX_INSTALLER_SSH_ALLOW_ROOT
+  unset OURBOX_INSTALLER_SSH_GRANT_SUDO
   unset OURBOX_INSTALLER_SSH_GENERATE_PASSWORD_IF_EMPTY
 }
 
@@ -113,6 +114,33 @@ test_root_default_stays_off() {
   grep -qx 'PermitRootLogin no' "${config}"
 }
 
+test_grant_sudo_default_is_on() {
+  reset_env
+  OURBOX_INSTALLER_SSH_MODE="both"
+  OURBOX_INSTALLER_SSH_AUTHORIZED_KEYS="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKey test@test"
+  ourbox_installer_ssh_normalize_inputs
+  [[ "${OURBOX_INSTALLER_SSH_GRANT_SUDO}" == "1" ]] \
+    || { printf 'FAIL: grant_sudo_default_is_on\n' >&2; exit 1; }
+}
+
+test_grant_sudo_invalid_value_fails() {
+  reset_env
+  OURBOX_INSTALLER_SSH_MODE="both"
+  OURBOX_INSTALLER_SSH_AUTHORIZED_KEYS="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKey test@test"
+  OURBOX_INSTALLER_SSH_GRANT_SUDO="maybe"
+  expect_failure "grant_sudo invalid value fails normalize" ourbox_installer_ssh_normalize_inputs
+}
+
+test_grant_sudo_zero_accepted() {
+  reset_env
+  OURBOX_INSTALLER_SSH_MODE="both"
+  OURBOX_INSTALLER_SSH_AUTHORIZED_KEYS="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAITestKey test@test"
+  OURBOX_INSTALLER_SSH_GRANT_SUDO="0"
+  ourbox_installer_ssh_normalize_inputs
+  [[ "${OURBOX_INSTALLER_SSH_GRANT_SUDO}" == "0" ]] \
+    || { printf 'FAIL: grant_sudo_zero_accepted\n' >&2; exit 1; }
+}
+
 main() {
   test_off_renders_expected_fragment
   test_key_without_keys_fails_requested_posture
@@ -122,6 +150,9 @@ main() {
   test_both_with_keys_only_passes_materialized_auth
   test_both_with_hash_only_passes_materialized_auth
   test_root_default_stays_off
+  test_grant_sudo_default_is_on
+  test_grant_sudo_invalid_value_fails
+  test_grant_sudo_zero_accepted
   printf 'installer ssh helper tests: PASS\n'
 }
 
