@@ -229,6 +229,12 @@ ourbox_installer_ssh_apply_sudo_policy() {
   fi
 
   if [[ "${OURBOX_INSTALLER_SSH_GRANT_SUDO}" == "1" ]]; then
+    if ! command -v sudo >/dev/null 2>&1; then
+      ourbox_installer_ssh_log "sudo not available; skipping sudo policy for ${OURBOX_INSTALLER_SSH_USER}"
+      return 0
+    fi
+    mkdir -p "$(dirname "${sudoers_file}")" \
+      || ourbox_installer_ssh_die "failed to create $(dirname "${sudoers_file}")"
     printf '%s ALL=(ALL) NOPASSWD: ALL\n' "${OURBOX_INSTALLER_SSH_USER}" > "${sudoers_file}" \
       || ourbox_installer_ssh_die "failed to write ${sudoers_file}"
     chmod 0440 "${sudoers_file}" \
