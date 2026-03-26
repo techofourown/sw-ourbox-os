@@ -15,6 +15,7 @@ on:
       - 'CLAUDE.md'
       - 'package.json'
       - 'package-lock.json'
+      - 'tools/release-control/**'
   schedule:
     - cron: '0 3 * * *'
   workflow_run:

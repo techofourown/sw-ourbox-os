@@ -15,6 +15,7 @@ on:
       - 'CLAUDE.md'
       - 'package.json'
       - 'package-lock.json'
+      - 'tools/release-control/**'
   release:
     types: [published]
 
