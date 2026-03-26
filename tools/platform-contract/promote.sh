@@ -34,6 +34,9 @@ mkdir -p "${DIST_DIR}"
 existing_target_digest="$(oras resolve "${TARGET_REF}" 2>/dev/null || true)"
 if [[ -n "${existing_target_digest}" && "${existing_target_digest}" != "${IMMUTABLE_DIGEST}" ]]; then
   log "Tag ${TARGET_REF} already promoted to ${existing_target_digest}; skipping"
+  printf '%s\n' "${SOURCE_REF}" > "${DIST_DIR}/platform-contract.promote.source.ref"
+  printf '%s\n' "${PINNED_REF}" > "${DIST_DIR}/platform-contract.promote.digest.ref"
+  printf '%s\n' "${TARGET_REF}" > "${DIST_DIR}/platform-contract.promote.target.ref"
   exit 0
 fi
 
