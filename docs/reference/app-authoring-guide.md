@@ -281,14 +281,16 @@ Start from:
 
 Minimum contents:
 
+- `bootstrap.sh`
 - `catalog/catalog.json`
 - `catalog/image-sources.json`
 - `catalog/profile.env`
-- `scripts/render-catalog-bundle.sh`
-- `scripts/check-catalog-bundle-smoke.sh`
-- `scripts/check-image-refs-exist.sh`
 - `.github/workflows/ci.yml`
 - `.github/workflows/publish-catalog-bundle.yml`
+
+Shared tooling scripts (`render-catalog-bundle.sh`, `check-catalog-bundle-smoke.sh`,
+`check-image-refs-exist.sh`, and others) are pulled automatically at CI time by
+`bootstrap.sh`. They are not checked into the catalog repo.
 
 ### 4.7 Add the app entry to `catalog.json`
 
@@ -495,14 +497,12 @@ Recommended layout:
 ├── .github/workflows/
 │   ├── ci.yml
 │   └── publish-catalog-bundle.yml
+├── bootstrap.sh
 ├── catalog/
 │   ├── catalog.json
 │   ├── image-sources.json
 │   └── profile.env
-└── scripts/
-    ├── check-catalog-bundle-smoke.sh
-    ├── check-image-refs-exist.sh
-    └── render-catalog-bundle.sh
+└── scripts/              ← extracted by bootstrap.sh at CI time, gitignored
 ```
 
 ### 6.1 Required validation
@@ -685,6 +685,22 @@ be merged by the installer.
 `ghcr.io/<github-user-or-org>/<repo-name>/<app-id>`. The catalog's
 `image-sources.json` references these refs directly; no `techofourown`
 namespace is required.
+
+**Shared tooling.** External catalog repos use the same `bootstrap.sh` mechanism
+as first-party catalogs. The catalog-tooling OCI artifact is published publicly by
+`techofourown/sw-ourbox-os` and is accessible to any GitHub org or user account.
+No `techofourown` credentials are required to pull it.
+
+To override the tooling channel for testing, set `OURBOX_CATALOG_TOOLING_REF` before
+running bootstrap:
+
+```bash
+OURBOX_CATALOG_TOOLING_REF=ghcr.io/techofourown/sw-ourbox-os/catalog-tooling:edge \
+  bash bootstrap.sh
+```
+
+A working third-party example using the bootstrap mechanism is
+[`johnbenac/calculator-catalog`](https://github.com/johnbenac/calculator-catalog).
 
 **Selecting an external catalog in the installer.** At the application catalog
 selection step, customize the catalog set and add the OCI ref published by the
