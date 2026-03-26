@@ -10,7 +10,7 @@ rm -rf "${TOOLING_DIR}"
 mkdir -p "${TOOLING_DIR}"
 
 RESOLVED_DIGEST="$(oras resolve "${TOOLING_REF}")"
-PINNED_REF="${TOOLING_REF%%[:@]*}@${RESOLVED_DIGEST}"
+PINNED_REF="${TOOLING_REF%[:@]*}@${RESOLVED_DIGEST}"
 printf 'catalog-tooling: requested=%s resolved=%s\n' "${TOOLING_REF}" "${PINNED_REF}"
 
 oras pull "${PINNED_REF}" -o "${TOOLING_DIR}"
