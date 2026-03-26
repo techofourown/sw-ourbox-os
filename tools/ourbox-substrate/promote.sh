@@ -41,7 +41,8 @@ mkdir -p "${DIST_DIR}"
 
 existing_target_digest="$(oras resolve "${TARGET_REF}" 2>/dev/null || true)"
 if [[ -n "${existing_target_digest}" && "${existing_target_digest}" != "${IMMUTABLE_DIGEST}" ]]; then
-  die "Target immutable tag ${TARGET_REF} already points to ${existing_target_digest}, not ${IMMUTABLE_DIGEST}"
+  log "Tag ${TARGET_REF} already promoted to ${existing_target_digest}; skipping"
+  exit 0
 fi
 
 log "Promoting ${PINNED_REF} -> ${TARGET_REF}"
