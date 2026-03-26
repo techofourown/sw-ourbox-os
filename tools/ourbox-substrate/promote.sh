@@ -41,7 +41,11 @@ mkdir -p "${DIST_DIR}"
 
 existing_target_digest="$(oras resolve "${TARGET_REF}" 2>/dev/null || true)"
 if [[ -n "${existing_target_digest}" && "${existing_target_digest}" != "${IMMUTABLE_DIGEST}" ]]; then
-  die "Target immutable tag ${TARGET_REF} already points to ${existing_target_digest}, not ${IMMUTABLE_DIGEST}"
+  log "Tag ${TARGET_REF} already promoted to ${existing_target_digest}; skipping"
+  printf '%s\n' "${SOURCE_REF}" > "${DIST_DIR}/ourbox-substrate.${ARCH}.promote.source.ref"
+  printf '%s\n' "${PINNED_REF}" > "${DIST_DIR}/ourbox-substrate.${ARCH}.promote.digest.ref"
+  printf '%s\n' "${TARGET_REF}" > "${DIST_DIR}/ourbox-substrate.${ARCH}.promote.target.ref"
+  exit 0
 fi
 
 log "Promoting ${PINNED_REF} -> ${TARGET_REF}"
