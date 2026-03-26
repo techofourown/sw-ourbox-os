@@ -180,14 +180,15 @@ Downstream CI must diff-check the vendored files against that pinned upstream re
 Candidate workflows must emit `candidate-provenance.json`, and stable / exp-labs promotion
 must download, validate, and consume that provenance file only.
 
-**The revision pin in `.upstream.env` files must not be updated manually.** Per the
-intent / identity rule (see
-`docs/architecture/artifact-distribution-and-integration.md`), commit SHAs belong in
-generated outputs, not in human-maintained source files. The intended mechanism is that
-the upstream release process auto-advances the pin — so the `.upstream.env` file records
-an intent label (approved snapshot, moving tag, or equivalent), not a bare commit hash.
-If a `.upstream.env` file contains a hardcoded commit SHA today, that is a gap in the
-release automation that should be closed, not a pattern to follow.
+**The revision pin in `.upstream.env` files must not be updated manually.** The pin
+is correctly a specific immutable commit SHA — that is what makes the diff-check
+reproducible. What must not happen is a human updating that SHA. Per the no-manual-
+digest-update rule (see
+`docs/architecture/artifact-distribution-and-integration.md`), the upstream release
+process is responsible for auto-advancing the pin as part of publishing a new version.
+If a `.upstream.env` file contains a commit SHA that is only ever updated by hand,
+that is a gap in the release automation that should be closed, not a pattern to
+follow.
 
 ### Workflow safety rules
 
@@ -287,8 +288,8 @@ Wrong:
 
 - a checked-in `release/official-inputs.env`-style file is treated as the
   normative official approval surface for TOOO-produced upstream digests
-- a `.upstream.env` vendoring pin contains a bare commit SHA that a human is
-  expected to update when upstream changes
+- a `.upstream.env` vendoring pin contains a commit SHA that is only updated by
+  humans — automation must own that update, even though the SHA itself is correct
 
 Current steady-state:
 

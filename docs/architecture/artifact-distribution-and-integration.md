@@ -32,34 +32,49 @@ There is no special "developer lane." There is only explicit trust.
 
 ---
 
-## The rule: intent in source control, identity at build time
-
-Source-controlled official surfaces carry **intent**:
-approved snapshot name, repository, channel, profile, or policy label.
-
-Builds resolve **identity**: exact digest, exact commit SHA, exact version tag — at
-the moment the build runs.
+## The rule: no manual digest or version updates
 
 **No human should ever manually update a digest, version number, or commit SHA in
 source control.** If a human is typing a hash or version number into a checked-in
 file, the automation is incomplete.
 
-This applies uniformly to:
+The specific mechanism depends on what kind of dependency is being tracked, but the
+rule is the same in every case:
 
-- OCI artifact references (platform contract, substrate, install-defaults)
-- vendored tool revisions (installer SSH helper, release-control module, any shared
-  script vendored from an upstream repo)
-- any other generated lockfile or pinned-identity record
+### OCI artifact references (platform contract, substrate, install-defaults)
 
-A checked-in digest or hardcoded commit SHA is a symptom that the release automation
-has a gap. The right fix is to close the gap, not to normalize the manual step.
+Source control carries **intent**: approved snapshot name, repository, channel, or
+profile label. Builds resolve **identity** — the exact digest — at the moment the
+build runs via `oras resolve` or equivalent. The resolved digest is recorded in
+generated provenance outputs, not committed back to source.
 
-The automation rule is:
-1. upstream publishes (via its own release process)
-2. downstream source control records the approved intent (snapshot name, channel, or
-   equivalent policy label) — this is what humans commit
-3. build workflow resolves exact identity from that intent at build start
-4. resolved identity is recorded in generated provenance outputs, not in source control
+### Vendored tool revisions (installer SSH helper, release-control module, etc.)
+
+Vendored files require a different mechanism because the downstream repo keeps a local
+copy that must be diff-checked for auditability. The pin in a `.upstream.env` file is
+still a specific immutable commit SHA — that is correct and necessary for reproducible
+diff-checking. What must not happen is a human updating that SHA.
+
+The intended mechanism is that the upstream release process auto-advances the pin as
+part of publishing a new version: the upstream repo's release automation writes the
+new SHA, commits it, and the downstream CI diff-check enforces that the local copy
+matches the current pin. No manual PR in the downstream repo should be needed.
+
+A `.upstream.env` file containing a SHA that is only updated by humans — never by
+automation — is a gap in the release process, not a correct steady state.
+
+### The shared principle
+
+In both cases, the distinction is between what humans decide and what automation
+resolves:
+
+- humans decide **which upstream to trust and at which policy level**
+  (approve a snapshot, accept a channel, vendor a module)
+- automation resolves and records **the exact immutable identity** that corresponds
+  to that policy decision at a point in time
+
+If a human is typing a digest or SHA directly into source control, that boundary has
+collapsed and the automation needs to be extended.
 
 ---
 
