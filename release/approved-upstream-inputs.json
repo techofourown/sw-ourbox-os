@@ -1,12 +1,12 @@
 {
   "schema": 1,
   "kind": "approved-upstream-inputs",
-  "snapshot": "v0.25.2",
+  "snapshot": "v0.25.3",
   "artifacts": {
     "platform_contract": {
       "repo": "ghcr.io/techofourown/sw-ourbox-os/platform-contract",
       "channels": {
-        "candidate": "v0.25.2",
+        "candidate": "v0.25.3",
         "nightly": "edge"
       }
     },
@@ -14,7 +14,7 @@
       "target": "matchbox",
       "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
       "channels": {
-        "candidate": "v0.25.2-arm64",
+        "candidate": "v0.25.3-arm64",
         "nightly": "nightly-arm64"
       }
     },
@@ -22,7 +22,7 @@
       "target": "woodbox",
       "repo": "ghcr.io/techofourown/sw-ourbox-os/ourbox-substrate",
       "channels": {
-        "candidate": "v0.25.2-amd64",
+        "candidate": "v0.25.3-amd64",
         "nightly": "nightly-amd64"
       }
     }
@@ -30,12 +30,12 @@
   "vendored_modules": {
     "installer_ssh_helper": {
       "repo": "techofourown/sw-ourbox-os",
-      "revision": "v0.25.2",
+      "revision": "v0.25.3",
       "path": "tools/installer-ssh-helper.sh"
     },
     "release_control": {
       "repo": "techofourown/sw-ourbox-os",
-      "revision": "v0.25.2",
+      "revision": "v0.25.3",
       "base": "tools/release-control",
       "files": [
         "lib.sh",
