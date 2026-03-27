@@ -121,6 +121,21 @@ jobs:
       - name: Run PR batch comparison tool tests
         run: python3 tools/test_pr_batch_big_picture.py
 
+  catalog-tooling-smoke:
+    name: Catalog tooling smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install ORAS
+        uses: oras-project/setup-oras@v1
+
+      - name: Run catalog-tooling smoke test
+        run: |
+          cp -R templates/application-catalog-repo/catalog catalog-tooling/catalog
+          bash catalog-tooling/scripts/check-catalog-bundle-smoke.sh
+
   graphmd:
     runs-on: ubuntu-latest
     permissions:

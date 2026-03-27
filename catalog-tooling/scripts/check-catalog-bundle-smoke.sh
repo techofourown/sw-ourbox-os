@@ -245,4 +245,86 @@ if len(str(row.get("platform_images_lock_sha256", ""))) != 64:
     raise SystemExit(f"unexpected platform_images_lock_sha256: {row.get('platform_images_lock_sha256')!r}")
 PY
 
+# --- Test: merge with existing catalog (correct 10-col schema) ---
+CATALOG_ID="$(python3 -c "import json; print(json.loads(open('${WORK_ROOT}/catalog/catalog.json').read())['catalog_id'])")"
+EXISTING_CATALOG="${TMP_ROOT}/existing-catalog.tsv"
+printf 'channel\ttag\tcreated\tversion\trevision\tarch\tplatform_profile\tplatform_images_lock_sha256\tartifact_digest\tpinned_ref\n' \
+  > "${EXISTING_CATALOG}"
+printf 'stable\tsha-old-run-1\t2026-03-10T00:00:00Z\tmain-aabbccddeeff\taabbccddeeffaabbccddeeffaabbccddeeffaabb\tamd64\t%s\t%s\tsha256:%s\tghcr.io/example/old@sha256:%s\n' \
+  "${CATALOG_ID}" \
+  "$(printf '3%.0s' {1..64})" \
+  "$(printf '4%.0s' {1..64})" \
+  "$(printf '4%.0s' {1..64})" \
+  >> "${EXISTING_CATALOG}"
+
+python3 "${WORK_ROOT}/scripts/render-catalog-rows.py" \
+  --catalog-json "${WORK_ROOT}/catalog/catalog.json" \
+  --profile-env "${WORK_ROOT}/catalog/profile.env" \
+  --images-lock "${WORK_ROOT}/dist/images.lock.json" \
+  --existing-catalog "${EXISTING_CATALOG}" \
+  --out-catalog "${TMP_ROOT}/merged-catalog.tsv" \
+  --channel stable \
+  --tag "sha-merge-test-1" \
+  --created "2026-03-17T01:00:00Z" \
+  --version "main-deadbeefcafe" \
+  --revision "deadbeefcafedeadbeefcafedeadbeefcafedead" \
+  --arch amd64 \
+  --artifact-digest "sha256:5555555555555555555555555555555555555555555555555555555555555555" \
+  --pinned-ref "ghcr.io/example/new@sha256:5555555555555555555555555555555555555555555555555555555555555555"
+
+python3 - <<'PY' "${TMP_ROOT}/merged-catalog.tsv"
+import csv
+import sys
+from pathlib import Path
+
+EXPECTED_HEADER = [
+    "channel", "tag", "created", "version", "revision", "arch",
+    "platform_profile", "platform_images_lock_sha256",
+    "artifact_digest", "pinned_ref",
+]
+
+with Path(sys.argv[1]).open("r", encoding="utf-8") as f:
+    reader = csv.DictReader(f, delimiter="\t")
+    header = list(reader.fieldnames or [])
+    rows = list(reader)
+
+if header != EXPECTED_HEADER:
+    raise SystemExit(f"merged catalog has wrong header: {header}")
+if len(rows) != 2:
+    raise SystemExit(f"expected 2 rows after merge, got {len(rows)}")
+if rows[0]["tag"] != "sha-merge-test-1":
+    raise SystemExit(f"newest row should be first (desc created), got {rows[0]['tag']}")
+if rows[1]["tag"] != "sha-old-run-1":
+    raise SystemExit(f"old row should be second, got {rows[1]['tag']}")
+PY
+
+# --- Test: stale 11-col header is rejected ---
+STALE_CATALOG="${TMP_ROOT}/stale-catalog.tsv"
+printf 'channel\ttag\tcreated\tversion\trevision\tarch\tplatform_contract_digest\tplatform_profile\tplatform_images_lock_sha256\tartifact_digest\tpinned_ref\n' \
+  > "${STALE_CATALOG}"
+printf 'stable\tsha-stale-1\t2026-03-01T00:00:00Z\tmain-stale\taaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\tamd64\tsha256:%s\tstale-id\t%s\tsha256:%s\tghcr.io/example/stale@sha256:%s\n' \
+  "$(printf '2%.0s' {1..64})" \
+  "$(printf '3%.0s' {1..64})" \
+  "$(printf '4%.0s' {1..64})" \
+  "$(printf '4%.0s' {1..64})" \
+  >> "${STALE_CATALOG}"
+
+if python3 "${WORK_ROOT}/scripts/render-catalog-rows.py" \
+  --catalog-json "${WORK_ROOT}/catalog/catalog.json" \
+  --profile-env "${WORK_ROOT}/catalog/profile.env" \
+  --images-lock "${WORK_ROOT}/dist/images.lock.json" \
+  --existing-catalog "${STALE_CATALOG}" \
+  --out-catalog "${TMP_ROOT}/should-not-exist.tsv" \
+  --channel stable \
+  --tag "sha-reject-test-1" \
+  --created "2026-03-17T02:00:00Z" \
+  --version "main-deadbeefcafe" \
+  --revision "deadbeefcafedeadbeefcafedeadbeefcafedead" \
+  --arch amd64 \
+  --artifact-digest "sha256:6666666666666666666666666666666666666666666666666666666666666666" \
+  --pinned-ref "ghcr.io/example/reject@sha256:6666666666666666666666666666666666666666666666666666666666666666" 2>/dev/null; then
+  echo "ERROR: stale 11-col catalog should have been rejected" >&2
+  exit 1
+fi
+
 printf '[%s] catalog bundle smoke passed\n' "$(date -Is)"
