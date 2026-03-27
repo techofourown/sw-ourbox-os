@@ -130,6 +130,9 @@ Examples:
 - `sw-ourbox-catalog-hello-world`
 - `sw-ourbox-catalog-core`
 
+External orgs may use any repository name. See section 13 of the
+[app authoring guide](./app-authoring-guide.md) for naming guidance.
+
 Expected upstream inputs:
 
 - published images from one or more `sw-ourbox-apps-*` repositories
@@ -138,6 +141,13 @@ Current concrete repos:
 
 - `sw-ourbox-catalog-demo`
 - `sw-ourbox-catalog-hello-world`
+- `johnbenac/calculator-catalog` (third-party example)
+- `johnbenac/anagolay-catalog` (third-party example)
+
+Avoid using:
+
+- `substrate bundle` as the primary user-facing term
+- `app store` when no purchase or account model exists
 
 ## Shared tooling consumption
 
@@ -149,6 +159,8 @@ Application catalog repositories consume shared business logic from the
 Each catalog repo checks in a single `bootstrap.sh` (~25 lines) that pulls
 the catalog-tooling artifact from GHCR and extracts the scripts into
 `scripts/`. The default channel is `stable`.
+
+The `scripts/` directory is gitignored — scripts are never checked in.
 
 ### Interface version compatibility
 
@@ -172,35 +184,3 @@ produced each published bundle.
 - `catalog/profile.env` — catalog identity env vars
 - `.github/workflows/*.yml` — truly thin CI wrappers
 - `bootstrap.sh` — tooling artifact pull and validation
-
-## Naming
-
-Recommended user-facing terms:
-
-- `application catalog`
-- `application catalog bundle`
-- `selected applications`
-
-Recommended repository family:
-
-- `sw-ourbox-catalog-<catalog>`
-
-Examples:
-
-- `sw-ourbox-catalog-demo`
-- `sw-ourbox-catalog-hello-world`
-- `sw-ourbox-catalog-core`
-
-Expected upstream inputs:
-
-- published images from one or more `sw-ourbox-apps-*` repositories
-
-Current concrete repos:
-
-- `sw-ourbox-catalog-demo`
-- `sw-ourbox-catalog-hello-world`
-
-Avoid using:
-
-- `substrate bundle` as the primary user-facing term
-- `app store` when no purchase or account model exists
