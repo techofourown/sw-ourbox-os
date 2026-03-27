@@ -46,7 +46,11 @@ def load_existing_rows(path: Path | None) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle, delimiter="\t")
         if reader.fieldnames != HEADER:
-            raise SystemExit(f"{path} does not declare the expected catalog.tsv header")
+            raise SystemExit(
+                f"{path} has unexpected catalog.tsv header.\n"
+                f"  expected: {HEADER}\n"
+                f"  got:      {list(reader.fieldnames or [])}"
+            )
         return [{key: str(value or "").strip() for key, value in row.items()} for row in reader]
 
 
