@@ -298,7 +298,7 @@ if rows[1]["tag"] != "sha-old-run-1":
     raise SystemExit(f"old row should be second, got {rows[1]['tag']}")
 PY
 
-# --- Test: stale 11-col header is rejected ---
+# --- Test: stale 11-col header is discarded (warns, starts fresh) ---
 STALE_CATALOG="${TMP_ROOT}/stale-catalog.tsv"
 printf 'channel\ttag\tcreated\tversion\trevision\tarch\tplatform_contract_digest\tplatform_profile\tplatform_images_lock_sha256\tartifact_digest\tpinned_ref\n' \
   > "${STALE_CATALOG}"
@@ -309,22 +309,48 @@ printf 'stable\tsha-stale-1\t2026-03-01T00:00:00Z\tmain-stale\taaaaaaaaaaaaaaaaa
   "$(printf '4%.0s' {1..64})" \
   >> "${STALE_CATALOG}"
 
-if python3 "${WORK_ROOT}/scripts/render-catalog-rows.py" \
+STALE_STDERR="${TMP_ROOT}/stale-stderr.txt"
+python3 "${WORK_ROOT}/scripts/render-catalog-rows.py" \
   --catalog-json "${WORK_ROOT}/catalog/catalog.json" \
   --profile-env "${WORK_ROOT}/catalog/profile.env" \
   --images-lock "${WORK_ROOT}/dist/images.lock.json" \
   --existing-catalog "${STALE_CATALOG}" \
-  --out-catalog "${TMP_ROOT}/should-not-exist.tsv" \
+  --out-catalog "${TMP_ROOT}/stale-output.tsv" \
   --channel stable \
-  --tag "sha-reject-test-1" \
+  --tag "sha-stale-test-1" \
   --created "2026-03-17T02:00:00Z" \
   --version "main-deadbeefcafe" \
   --revision "deadbeefcafedeadbeefcafedeadbeefcafedead" \
   --arch amd64 \
   --artifact-digest "sha256:6666666666666666666666666666666666666666666666666666666666666666" \
-  --pinned-ref "ghcr.io/example/reject@sha256:6666666666666666666666666666666666666666666666666666666666666666" 2>/dev/null; then
-  echo "ERROR: stale 11-col catalog should have been rejected" >&2
+  --pinned-ref "ghcr.io/example/fresh@sha256:6666666666666666666666666666666666666666666666666666666666666666" 2>"${STALE_STDERR}"
+
+grep -q "stale catalog.tsv header" "${STALE_STDERR}" || {
+  echo "ERROR: expected stale-header warning on stderr" >&2
   exit 1
-fi
+}
+
+python3 - <<'PY' "${TMP_ROOT}/stale-output.tsv"
+import csv
+import sys
+from pathlib import Path
+
+with Path(sys.argv[1]).open("r", encoding="utf-8") as f:
+    reader = csv.DictReader(f, delimiter="\t")
+    header = list(reader.fieldnames or [])
+    rows = list(reader)
+
+expected_header = [
+    "channel", "tag", "created", "version", "revision", "arch",
+    "platform_profile", "platform_images_lock_sha256",
+    "artifact_digest", "pinned_ref",
+]
+if header != expected_header:
+    raise SystemExit(f"stale-test output has wrong header: {header}")
+if len(rows) != 1:
+    raise SystemExit(f"expected 1 row (old rows discarded), got {len(rows)}")
+if rows[0]["tag"] != "sha-stale-test-1":
+    raise SystemExit(f"expected fresh row, got tag={rows[0]['tag']}")
+PY
 
 printf '[%s] catalog bundle smoke passed\n' "$(date -Is)"

@@ -6,6 +6,7 @@ import csv
 import hashlib
 import json
 import re
+import sys
 from pathlib import Path
 
 PINNED_REF_RE = re.compile(r"^[^\s]+@sha256:[0-9a-f]{64}$")
@@ -46,11 +47,13 @@ def load_existing_rows(path: Path | None) -> list[dict[str, str]]:
     with path.open("r", encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle, delimiter="\t")
         if reader.fieldnames != HEADER:
-            raise SystemExit(
-                f"{path} has unexpected catalog.tsv header.\n"
+            print(
+                f"WARNING: {path} has stale catalog.tsv header — discarding old rows.\n"
                 f"  expected: {HEADER}\n"
-                f"  got:      {list(reader.fieldnames or [])}"
+                f"  got:      {list(reader.fieldnames or [])}",
+                file=sys.stderr,
             )
+            return []
         return [{key: str(value or "").strip() for key, value in row.items()} for row in reader]
 
 
